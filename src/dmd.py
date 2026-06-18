@@ -16,6 +16,9 @@ def fit_dmd(z_list: list[np.ndarray]) -> np.ndarray:
             continue
         z1_cols.append(z[:, :-1])
         z2_cols.append(z[:, 1:])
+    if not z1_cols:
+        raise ValueError(
+            "fit_dmd: aucune paire (z_t, z_{t+1}) — liste vide ou trajectoires de moins de 2 colonnes")
     Z1 = np.concatenate(z1_cols, axis=1)
     Z2 = np.concatenate(z2_cols, axis=1)
     return Z2 @ np.linalg.pinv(Z1)

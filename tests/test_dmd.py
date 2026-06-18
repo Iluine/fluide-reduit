@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from src.dmd import fit_dmd, rollout, spectral_radius
 
@@ -37,3 +38,8 @@ def test_rollout_matches_truth_for_known_system():
 def test_spectral_radius():
     A0 = np.diag([0.5, 1.2, 0.3])
     assert abs(spectral_radius(A0) - 1.2) < 1e-9
+
+
+def test_fit_dmd_raises_on_empty_input():
+    with pytest.raises(ValueError):
+        fit_dmd([])
