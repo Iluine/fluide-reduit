@@ -31,4 +31,9 @@ def test_save_animation_writes_a_file(tmp_path: Path):
     written = save_animation(tmp_path / "anim.gif", frames, fps=10, title="t")
     assert Path(written).exists()
     assert Path(written).stat().st_size > 0
-    assert Path(written).suffix == ".png"
+    # Pillow present → .gif fallback; Pillow absent → .png fallback
+    try:
+        import PIL  # noqa: F401
+        assert Path(written).suffix == ".gif"
+    except ImportError:
+        assert Path(written).suffix == ".png"
