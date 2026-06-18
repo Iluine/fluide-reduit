@@ -50,3 +50,43 @@ def test_reconstruction_error_decreases_with_k():
         z = encode(basis, X)
         errs.append(np.linalg.norm(decode(basis, z) - X) / np.linalg.norm(X))
     assert errs[0] >= errs[1] >= errs[2] - 1e-12
+
+
+import numpy as np
+
+from src.pod import (fit_pod, encode, decode, _channel_scale,
+                     stack_height, unstack_height)
+
+
+def test_channel_scale_single_channel_is_global_std():
+    rng = np.random.default_rng(0)
+    X = rng.normal(0, 3.0, size=(100, 20))
+    scale = _channel_scale(X, n_channels=1)
+    assert np.allclose(scale, scale[0])              # un seul bloc -> scale uniforme
+    assert np.isclose(scale[0], X.std())             # = écart-type global
+
+
+def test_channel_scale_default_is_three_blocks_unchanged():
+    rng = np.random.default_rng(1)
+    X = np.concatenate([rng.normal(0, 1, (30, 10)),
+                        rng.normal(0, 5, (30, 10)),
+                        rng.normal(0, 9, (30, 10))], axis=0)
+    scale = _channel_scale(X)  # défaut n_channels=3, comportement POC
+    assert not np.isclose(scale[0], scale[40])       # blocs distincts
+    assert not np.isclose(scale[40], scale[70])
+
+
+def test_height_pod_roundtrip():
+    rng = np.random.default_rng(2)
+    H = W = 8
+    T = 40
+    h_seq = rng.normal(1.0, 0.2, size=(T, H, W))
+    X = stack_height(h_seq)
+    assert X.shape == (H * W, T)
+    basis = fit_pod(X, energy_threshold=0.999, max_modes=64, n_channels=1)
+    z = encode(basis, X)
+    Xr = decode(basis, z)
+    seq_r = unstack_height(Xr, H, W)
+    assert seq_r.shape == (T, H, W)
+    # reconstruction fidèle au seuil d'énergie choisi
+    assert np.linalg.norm(seq_r - h_seq) / np.linalg.norm(h_seq) < 0.05
