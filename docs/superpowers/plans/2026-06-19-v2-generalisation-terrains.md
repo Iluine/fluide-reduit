@@ -1025,18 +1025,38 @@ def main() -> None:
     # verdict automatique sur le seuil de représentation
     extrap_errs = [m["err"] for r, m in res["regimes"].items() if r.startswith("extrap")]
     worst_extrap = max(extrap_errs) if extrap_errs else 0.0
+    ch = res["regimes"].get("extrap_channel", {}).get("err")  # signal porteur (topo neuve)
     if worst_extrap < 0.10:
         verdict = ("Plafond BAS (<10% même en extrapolation) : la base statique span "
-                   "le terrain nouveau. Le défaut probable est la DYNAMIQUE -> "
-                   "conditionner l'opérateur (V2 baseline puis V3b).")
+                   "le terrain nouveau dans le régime submergé. Défaut probable = la "
+                   "DYNAMIQUE -> conditionner l'opérateur (V2 baseline puis V3b).")
     elif worst_extrap < 0.30:
         verdict = ("Plafond INTERMÉDIAIRE (10–30% en extrapolation) : la base tient "
                    "l'interpolation mais peine en extrapolation -> évaluer V2, puis "
                    "conditionner la représentation (V3a : b en canal) si nécessaire.")
     else:
-        verdict = ("Plafond HAUT (>30% en extrapolation) : la base statique ne span "
-                   "PAS le terrain nouveau -> conditionner la REPRÉSENTATION (V3a), "
-                   "encodeur appris (V5) probablement requis.")
+        verdict = ("Plafond HAUT (>30% en extrapolation). NE PAS conclure tout de suite "
+                   "'base fondamentalement terrain-spécifique -> encodeur appris'. Avec "
+                   "~9 terrains la famille est sous-échantillonnée (cf. plafond vitesse "
+                   "du POC, en partie data-limité). CHECK BON MARCHÉ D'ABORD : le plafond "
+                   "baisse-t-il en ajoutant des terrains d'entraînement ? S'il baisse -> "
+                   "data-limité (ajouter des terrains, garder la base statique). S'il "
+                   "tient -> structurel (alors V3a / encodeur V5 justifié).")
+
+    # corollaire : extrap_channel (topologie jamais vue) donne ses dents au diagnostic ;
+    # interp/extrap_obstacle restent du régime de réfraction douce.
+    if ch is not None:
+        verdict += (f" Signal porteur : extrap_channel (topologie jamais vue) = {ch:.4f}"
+                    f" ; ne pas conclure 'ça généralise' sur les seuls cas de réfraction"
+                    f" douce (interp/extrap_obstacle).")
+
+    # portée du résultat (toujours écrite, pour calibrer le ✅)
+    scope = ("Tous les terrains sont SUBMERGÉS : la dépendance au terrain passe par la "
+             "réfraction (contraste de célérité ~1.7×, réel mais modéré). Un V1 qui "
+             "passe certifie la généralisation DANS le régime submergé/réfraction — pas "
+             "sur tout terrain de jeu. Le sec / les îles (sillages, séparation) sont un "
+             "régime distinct plus dur, reporté en v2.5 (solveur mouillé/sec "
+             "positivity-preserving & well-balanced).")
 
     OUT_DOC.parent.mkdir(parents=True, exist_ok=True)
     lines = ["# V1 — Plafond de représentation inter-terrain (hauteur)", "",
@@ -1051,12 +1071,13 @@ def main() -> None:
              "| régime | err | err_max (par frame) |", "|---|---|---|"]
     for r, m in res["regimes"].items():
         lines.append(f"| {r} | {m['err']:.4f} | {m['err_max']:.4f} |")
-    lines += ["", "## Verdict", "", verdict, "",
-              f"Figure : `{fig_path.relative_to(ROOT)}`."]
+    lines += ["", "## Verdict", "", verdict, "", "## Portée du résultat (calibrage du ✅)",
+              "", scope, "", f"Figure : `{fig_path.relative_to(ROOT)}`."]
     OUT_DOC.write_text("\n".join(lines))
     print(f"[V1] figure -> {fig_path}")
     print(f"[V1] note   -> {OUT_DOC}")
     print(f"[V1] VERDICT : {verdict}")
+    print(f"[V1] PORTÉE  : {scope}")
 
 
 if __name__ == "__main__":

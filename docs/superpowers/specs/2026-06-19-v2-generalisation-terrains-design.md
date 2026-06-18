@@ -269,3 +269,29 @@ parasites. Trois garde-fous avant de faire confiance aux chiffres (surtout extra
    gradients. Quantifie ce que « regarder l'animation » fait à l'œil.
 3. **Sanity visuel** : animations oracle `η = h + b` des terrains extrap
    (« est-ce que ça ressemble encore à de l'eau physique ? »).
+
+### A.7 Lentilles de lecture de V1 (ne pas sur-lire le chiffre)
+
+Deux calibrages à appliquer **au moment où le chiffre tombe** (câblés dans le verdict
+automatique du script V1) :
+
+1. **La portée est bornée par le choix submergé.** Rester mouillé partout garde
+   l'oracle valide (le bon arbitrage), mais la dépendance au terrain passe alors
+   **uniquement par la réfraction** — contraste de célérité ~1.7× (√(g·0.5) vs
+   √(g·1.5)), réel mais **modéré**. Les écoulements submergés sont des déformations
+   plus douces entre eux que ne le seraient des sillages autour d'îles sèches. Donc un
+   V1 qui passe certifie « la base généralise **dans le régime submergé/réfraction** »
+   — **pas** « sur tout terrain de jeu ». Le sec / les îles sont un régime distinct,
+   plus dur, reporté en v2.5 (solveur mouillé/sec). Corollaire : c'est
+   **`extrap_channel`** (topologie jamais vue) qui donne ses dents au diagnostic ; si
+   `interp` et `extrap_obstacle` ressortent tous bas, c'est le canal qui porte le vrai
+   signal — ne pas conclure « ça généralise » sur les seuls cas de réfraction douce.
+2. **Le plafond peut être limité par les données, pas par la base.** Avec ~9 terrains
+   on sous-échantillonne la famille (exactement le piège du plafond vitesse du POC,
+   ~30 % en partie faute de CI d'entraînement). Donc si le plafond ressort **haut**,
+   ne pas sauter à « base fondamentalement terrain-spécifique → encodeur appris ».
+   Distinguer d'abord **fondamental** vs **9 terrains, trop peu** : check bon marché =
+   « le plafond baisse-t-il en ajoutant des terrains d'entraînement ? ». S'il baisse →
+   data-limité (ajouter des terrains, garder la base statique) ; s'il tient →
+   structurel (et là l'encodeur V5 / GPU se justifie). Évite d'escalader prématurément
+   vers le GPU pour un problème que des données régleraient.
