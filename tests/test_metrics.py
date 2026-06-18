@@ -15,6 +15,7 @@ def test_total_mass_and_series():
 def test_relative_l2_error():
     a = np.array([3.0, 4.0])
     assert relative_l2_error(a, a) == 0.0
+    assert isinstance(relative_l2_error(a, a), float)
     # pred=0 vs true=a -> ||a||/||a|| = 1
     assert abs(relative_l2_error(np.zeros_like(a), a) - 1.0) < 1e-9
 
@@ -35,4 +36,4 @@ def test_seam_jump_positive_on_discontinuity():
     field = np.zeros((16, 16))
     field[4:10, 4:10] = 1.0  # bloc à 1 entouré de 0 -> saut de 1 au bord
     j = seam_jump(field, 4, 4, 6)
-    assert j > 0.5  # saut moyen proche de 1 sur les bords internes
+    assert abs(j - 1.0) < 1e-9
