@@ -18,6 +18,8 @@ def test_dataset_roundtrip(tmp_path: Path):
     save_dataset(p, ds)
     out = load_dataset(p)
     assert np.allclose(out.h, ds.h)
+    assert np.allclose(out.u, ds.u)
+    assert np.allclose(out.v, ds.v)
     assert np.allclose(out.b, ds.b)
     assert out.h.dtype == np.float64
     assert out.meta["ci"] == "drop"
@@ -29,3 +31,4 @@ def test_save_animation_writes_a_file(tmp_path: Path):
     written = save_animation(tmp_path / "anim.gif", frames, fps=10, title="t")
     assert Path(written).exists()
     assert Path(written).stat().st_size > 0
+    assert Path(written).suffix == ".png"

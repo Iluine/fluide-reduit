@@ -88,7 +88,7 @@ def save_animation(path: str | Path, frames: np.ndarray, *, fps: int = 20,
     try:
         from matplotlib.animation import FuncAnimation, PillowWriter
         import PIL  # noqa: F401  (vérifie la présence de Pillow)
-    except Exception:
+    except ImportError:
         return _save_montage(path, frames, cmap, title, vmin, vmax)
 
     fig, ax = plt.subplots(figsize=(4, 4))
