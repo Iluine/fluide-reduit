@@ -7,11 +7,12 @@ jamais le régime humide validé du POC ; le lit sec serait une défaillance de
 solveur, pas un plafond de représentation)."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace as _dc_replace
 
 import numpy as np
 
-from config import GridConfig
+from config import GridConfig, SolverConfig
+from src.solver import simulate
 
 REST_SURFACE: float = 1.5      # surface libre au repos (eta0)
 MIN_REST_DEPTH: float = 0.2    # marge de submersion minimale imposée à la CI
@@ -162,3 +163,22 @@ def sample_split(grid: GridConfig, seed: int = SAMPLE_SEED) -> list[SplitEntry]:
         ("drop_new",)))
 
     return entries
+
+
+# --- Garde-fou d'oracle : résidu au repos (well-balancedness) ---
+
+
+def rest_residual(grid: GridConfig, b: np.ndarray, solver_cfg: SolverConfig,
+                  rest_surface: float = REST_SURFACE, n_steps: int = 50
+                  ) -> tuple[float, float]:
+    """Simule l'état au repos (h = rest_surface − b, u=v=0, SANS goutte) sur n_steps
+    pas et mesure les artefacts du schéma non-well-balanced : déviation de surface
+    max |η − rest_surface| et vitesse parasite max √(u²+v²). Petit = oracle sain."""
+    h0 = rest_surface - b
+    z = np.zeros_like(b)
+    cfg = _dc_replace(solver_cfg, n_steps=n_steps)
+    hs, us, vs, _dt = simulate(h0, z.copy(), z.copy(), b, grid, cfg)
+    eta = hs + b
+    surf_dev = float(np.abs(eta - rest_surface).max())
+    speed = float(np.sqrt(us ** 2 + vs ** 2).max())
+    return surf_dev, speed

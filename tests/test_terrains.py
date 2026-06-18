@@ -126,3 +126,27 @@ def test_holdout_uses_new_ic():
         if e.role.startswith("holdout"):
             assert e.ic_ids == ("drop_new",)
     assert "drop_new" in DROP_ICS and "drop_center" in DROP_ICS
+
+
+from config import SolverConfig
+from src.terrains import rest_residual
+
+_SOLVER = SolverConfig(cfl=0.45, n_steps=800, save_every=4, min_depth=1e-3)
+
+
+def test_rest_residual_flat_is_near_zero():
+    # bathymétrie plate + surface constante = lac au repos exact : aucun courant parasite
+    b = np.zeros((64, 64), dtype=np.float64)
+    surf_dev, speed = rest_residual(GRID, b, _SOLVER, n_steps=30)
+    assert surf_dev < 1e-9
+    assert speed < 1e-9
+
+
+def test_rest_residual_detects_bathymetry_but_stays_bounded():
+    b = gaussian_terrain(GRID, amp=0.4, x0_frac=0.5, y0_frac=0.5, sigma=10.0, slope=0.0)
+    surf_dev, speed = rest_residual(GRID, b, _SOLVER, n_steps=30)
+    # le schéma n'est pas well-balanced -> résidu non nul, mais doit rester petit
+    # (terrain doux) : ni explosion, ni NaN
+    assert np.isfinite(surf_dev) and np.isfinite(speed)
+    assert surf_dev > 0.0          # détecte bien le gradient de bathymétrie
+    assert surf_dev < 0.2          # reste borné (oracle sain pour un terrain doux)
