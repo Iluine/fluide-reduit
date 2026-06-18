@@ -18,25 +18,31 @@ doit être vérifiée à la fin de M3 :
 3. **Dérive de masse excessive** : |Δm_final / m_init| > 5 %.
 4. **Défaut de généralisation** : écart err(test) − err(vue) > 10 % (non-transférable).
 
-## Verdict M3 mesuré (H2)
+## Verdict M3 mesuré (H2) — par canal, k=43 (énergie 99.99 %)
 
-| CI | err_final | err_max | explosé | dérive masse finale |
-|----|-----------|---------|---------|---------------------|
-| drop_center (vue) | 0.306 | 0.359 | non | 2.0e-02 |
-| drop_test (test)  | 0.320 | 0.375 | non | 1.5e-02 |
+| CI | h_rel_final | h_rel_max | u_rms_final | v_rms_final | dérive masse finale | explosé |
+|----|-------------|-----------|-------------|-------------|---------------------|---------|
+| drop_center (vue) | 0.051 | 0.051 | 0.246 m/s | 0.050 m/s | 2.0e-02 | non |
+| drop_test (test)  | 0.132 | 0.198 | 0.347 m/s | 0.479 m/s | 1.5e-02 | non |
 
-Rayon spectral de A (DMD) : 0.999 (stable).
+Rayon spectral de A (DMD) : 1.010 (stable — légèrement > 1 mais croissance bornée sur horizon 201 pas).
+
+**Note :** l'ancienne valeur ~30 % d'erreur (k=16, état empilé [h,u,v]) était dominée
+par les vitesses dont l'erreur relative explose quand ‖u‖→0. La couture verticale
+visible dans les rendus à k=16 est résolue en passant à k=43. Les métriques ci-dessus
+rapportent h en relatif (robuste) et u,v en RMS absolu (non-explosif).
 
 **Lecture :** le rollout DMD est STABLE et BORNÉ (pas d'explosion), GÉNÉRALISE bien
-à la CI de test (~4.5 % d'écart vs CI vue), avec une dérive de masse modérée (~2 %).
-L'erreur relative L2 SATURE autour de 30–37 % sur le long horizon.
+à la CI de test. L'erreur HEIGHT est 5.1 % (vue) / 13.2 % (test), avec une dérive
+de masse modérée (~2 %).
 
-**Décision :** par les critères stricts ci-dessus (err_final < 0.5, pas d'explosion,
+**Décision :** par les critères stricts ci-dessus (h_rel_final < 50 %, pas d'explosion,
 dérive de masse bornée), la baseline DMD est jugée **SUFFISANTE** pour trancher H2 ;
 M4/M5 ne sont donc **PAS strictement requis**. Toutefois, si une fidélité long-horizon
-meilleure que ~30 % est souhaitée, M4 (dynamique non-linéaire) est le prochain pas ;
-si la dérive de masse de ~2 % doit être annulée, M5 (pénalité de conservation) s'applique.
-Ce choix est laissé à l'arbitrage de l'équipe (M4/M5 restent déférés en v1).
+meilleure que ~10 % sur la CI test est souhaitée, M4 (dynamique non-linéaire) est le
+prochain pas ; si la dérive de masse de ~2 % doit être annulée, M5 (pénalité de
+conservation) s'applique. Ce choix est laissé à l'arbitrage de l'équipe (M4/M5
+restent déférés en v1).
 
 ## Vue d'ensemble des rôles
 

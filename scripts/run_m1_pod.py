@@ -19,7 +19,7 @@ from src.io_utils import load_dataset
 from src.pod import PODBasis, stack_snapshots, fit_pod, encode, decode, cumulative_energy
 
 # ----------------------------- CONFIG ------------------------------------
-POD = PODConfig(energy_threshold=0.99, max_modes=128)
+POD = PODConfig(energy_threshold=0.9999, max_modes=128)
 TRAIN_CASES = ["drop_center", "drop_offset", "dam_break"]  # CI vues
 DATA = ROOT / "data" / "ground_truth"
 OUT = ROOT / "outputs"

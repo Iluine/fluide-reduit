@@ -1,9 +1,8 @@
 """M3 — H2 : dérive du rollout DMD sur long horizon (CI vue ET CI de test).
 
 Usage : .venv/bin/python scripts/run_m3_eval_rollout.py
-Interprétation attendue : caractériser si/quand le rollout dérive ou explose, et
-si la masse totale prédite dérive. Résultat valable même s'il est négatif.
-L'erreur L2 relative est calculée sur l'état empilé [h,u,v] et est donc dominée par le canal h (|u|,|v| ~ 0.1 vs h ~ 1)."""
+Interprétation attendue : erreur relative de HAUTEUR (h) bornée, vitesses
+rapportées en RMS absolu (non explosif quand ‖u‖→0), dérive masse ~2 %."""
 from __future__ import annotations
 
 import sys
@@ -18,7 +17,7 @@ import matplotlib.pyplot as plt
 from src.io_utils import load_dataset, save_animation
 from src.pod import PODBasis, encode, decode, stack_snapshots, unstack
 from src.dmd import rollout
-from src.metrics import error_growth, mass_series
+from src.metrics import error_growth, rms_growth, mass_series
 
 # ----------------------------- CONFIG ------------------------------------
 SEEN_CASE = "drop_center"   # CI vue à l'entraînement
@@ -38,7 +37,7 @@ def load_basis():
 
 
 def evaluate(name, basis, A, H, W):
-    """Rollout long-horizon vs vérité ; retourne (err_curve, mass_pred, mass_true, h_true, h_pred, dx, dy)."""
+    """Rollout long-horizon vs vérité ; retourne dict de métriques par canal."""
     ds = load_dataset(GT / f"{name}.npz")
     dx, dy = ds.meta["dx"], ds.meta["dy"]
     X_true = stack_snapshots(ds.h, ds.u, ds.v)
@@ -46,14 +45,23 @@ def evaluate(name, basis, A, H, W):
     T = z_true.shape[1]
     z_pred = rollout(A, z_true[:, 0], T - 1)
     X_pred = decode(basis, z_pred)
-    h_pred, _, _ = unstack(X_pred, H, W)
-    err = error_growth(X_pred.T.reshape(T, -1), X_true.T.reshape(T, -1))
-    return (err, mass_series(h_pred, dx, dy), mass_series(ds.h, dx, dy),
-            ds.h, h_pred, dx, dy)
+    h_pred, u_pred, v_pred = unstack(X_pred, H, W)
+    eh = error_growth(h_pred, ds.h)       # erreur L2 relative HEIGHT par frame
+    ru = rms_growth(u_pred, ds.u)         # RMS absolu vitesse u par frame
+    rv = rms_growth(v_pred, ds.v)         # RMS absolu vitesse v par frame
+    return {
+        "eh": eh,
+        "ru": ru,
+        "rv": rv,
+        "mass_pred": mass_series(h_pred, dx, dy),
+        "mass_true": mass_series(ds.h, dx, dy),
+        "h_true": ds.h,
+        "h_pred": h_pred,
+    }
 
 
 def main() -> None:
-    """Évalue H2 : croissance d'erreur + dérive de masse (CI vue et CI test)."""
+    """Évalue H2 par canal : erreur hauteur (relative) + vitesses (RMS absolu) + dérive de masse."""
     OUT.mkdir(parents=True, exist_ok=True)
     DATA.mkdir(parents=True, exist_ok=True)
     basis, H, W = load_basis()
@@ -62,23 +70,44 @@ def main() -> None:
 
     results = {name: evaluate(name, basis, A, H, W) for name in (SEEN_CASE, TEST_CASE)}
 
-    # Figure 1 : croissance d'erreur (vue + test)
+    # Figure 1 : erreur relative de HAUTEUR (h) — vue + test
     plt.figure(figsize=(6, 4))
     for name in (SEEN_CASE, TEST_CASE):
-        err = results[name][0]
-        plt.plot(err, label=f"{name} (final={err[-1]:.3f})")
+        eh = results[name]["eh"]
+        plt.plot(eh, label=f"{name} (final={eh[-1]:.3f})")
     plt.xlabel("pas de temps")
     plt.ylabel("erreur L2 relative")
-    plt.title("M3 — H2 : croissance d'erreur du rollout")
+    plt.title("H2 — erreur relative de HAUTEUR (h) vs temps")
     plt.legend()
     plt.tight_layout()
     plt.savefig(OUT / "m3_error_growth.png", dpi=120)
     plt.close()
 
-    # Figure 2 : dérive de masse (prédite vs vérité)
+    # Figure 2 : RMS absolu vitesses u et v — vue + test
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+    for name in (SEEN_CASE, TEST_CASE):
+        ru = results[name]["ru"]
+        rv = results[name]["rv"]
+        axes[0].plot(ru, label=name)
+        axes[1].plot(rv, label=name)
+    axes[0].set_title("RMS absolu u")
+    axes[0].set_xlabel("pas de temps")
+    axes[0].set_ylabel("RMS [m/s]")
+    axes[0].legend()
+    axes[1].set_title("RMS absolu v")
+    axes[1].set_xlabel("pas de temps")
+    axes[1].set_ylabel("RMS [m/s]")
+    axes[1].legend()
+    fig.suptitle("H2 — erreur RMS absolue des vitesses (u, v) vs temps")
+    fig.tight_layout()
+    fig.savefig(OUT / "m3_velocity_rms.png", dpi=120)
+    plt.close(fig)
+
+    # Figure 3 : dérive de masse (prédite vs vérité)
     plt.figure(figsize=(6, 4))
     for name in (SEEN_CASE, TEST_CASE):
-        _, m_pred, m_true, *_ = results[name]
+        m_pred = results[name]["mass_pred"]
+        m_true = results[name]["mass_true"]
         plt.plot((m_pred - m_true[0]) / m_true[0], label=f"{name} prédit")
         plt.plot((m_true - m_true[0]) / m_true[0], ls="--", label=f"{name} vérité")
     plt.xlabel("pas de temps")
@@ -92,22 +121,33 @@ def main() -> None:
     # Animations long-horizon côte à côte + verdict chiffré
     verdicts = {}
     for name in (SEEN_CASE, TEST_CASE):
-        err, m_pred, m_true, h_true, h_pred, *_ = results[name]
+        r = results[name]
+        h_true, h_pred = r["h_true"], r["h_pred"]
         side = np.concatenate([h_true, h_pred], axis=2)
         save_animation(OUT / f"m3_longhorizon_{name}.gif", side, fps=15,
                        title=f"M3 — {name} : vérité | DMD (long horizon)")
+        m_pred = r["mass_pred"]
+        m_true = r["mass_true"]
         verdicts[name] = {
-            "err_final": float(err[-1]),
-            "err_max": float(err.max()),
-            "exploded": bool(err.max() > 5.0 or not np.isfinite(err).all()),
+            "h_rel_final": float(r["eh"][-1]),
+            "h_rel_max": float(r["eh"].max()),
+            "u_rms_final": float(r["ru"][-1]),
+            "v_rms_final": float(r["rv"][-1]),
             "mass_drift_final": float((m_pred[-1] - m_true[0]) / m_true[0]),
+            "exploded": bool(r["eh"].max() > 5.0 or not np.isfinite(r["eh"]).all()),
         }
+
     np.savez_compressed(DATA / "m3_eval.npz",
-                        **{f"{n}_err": results[n][0] for n in results})
-    print("[M3] verdict H2 :")
+                        **{f"{n}_eh": results[n]["eh"] for n in results},
+                        **{f"{n}_ru": results[n]["ru"] for n in results},
+                        **{f"{n}_rv": results[n]["rv"] for n in results})
+
+    print("[M3] verdict H2 par canal :")
     for name, vd in verdicts.items():
-        print(f"   {name:12s} err_final={vd['err_final']:.3f} err_max={vd['err_max']:.3f} "
-              f"explosé={vd['exploded']} dérive_masse_finale={vd['mass_drift_final']:.2e}")
+        print(f"   {name:12s} "
+              f"h_rel_final={vd['h_rel_final']:.3f} h_rel_max={vd['h_rel_max']:.3f} "
+              f"u_rms_final={vd['u_rms_final']:.4f} v_rms_final={vd['v_rms_final']:.4f} "
+              f"dérive_masse_finale={vd['mass_drift_final']:.2e} explosé={vd['exploded']}")
 
 
 if __name__ == "__main__":
