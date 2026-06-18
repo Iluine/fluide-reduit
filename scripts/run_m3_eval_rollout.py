@@ -27,6 +27,7 @@ DATA = ROOT / "data"; GT = DATA / "ground_truth"; OUT = ROOT / "outputs"
 
 
 def load_basis():
+    """Recharge la base POD (data/pod_basis.npz) en PODBasis + (H, W)."""
     d = np.load(DATA / "pod_basis.npz")
     return PODBasis(d["mean"], d["scale"], d["Phi"], d["singular_values"]), int(d["H"]), int(d["W"])
 
@@ -47,6 +48,7 @@ def evaluate(name, basis, A, H, W):
 
 
 def main() -> None:
+    """Évalue H2 : croissance d'erreur + dérive de masse (CI vue et CI test)."""
     basis, H, W = load_basis()
     A = np.load(DATA / "dmd_A.npz")["A"]
 
