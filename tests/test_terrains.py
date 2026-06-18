@@ -1,13 +1,16 @@
 import numpy as np
 import pytest
 
-from config import GridConfig
+from config import GridConfig, SolverConfig
 from src.solver import make_terrain
 from src.terrains import (REST_SURFACE, MIN_REST_DEPTH, TerrainParams,
                           gaussian_terrain, channel_terrain,
-                          make_terrain_from_params, rest_state_ic)
+                          make_terrain_from_params, rest_state_ic,
+                          DROP_ICS, SplitEntry, sample_split, SAMPLE_SEED,
+                          rest_residual)
 
 GRID = GridConfig(H=64, W=64, dx=1.0, dy=1.0)
+_SOLVER = SolverConfig(cfl=0.45, n_steps=800, save_every=4, min_depth=1e-3)
 
 
 def test_gaussian_terrain_matches_poc_bump():
@@ -78,9 +81,6 @@ def test_rest_state_ic_rejects_unsubmerged_terrain():
                       drop_y0_frac=0.5, drop_width_frac=0.1)
 
 
-from src.terrains import DROP_ICS, SplitEntry, sample_split, SAMPLE_SEED
-
-
 def test_sample_split_counts_and_topologies():
     entries = sample_split(GRID)
     roles = [e.role for e in entries]
@@ -128,12 +128,6 @@ def test_holdout_uses_new_ic():
     assert "drop_new" in DROP_ICS and "drop_center" in DROP_ICS
 
 
-from config import SolverConfig
-from src.terrains import rest_residual
-
-_SOLVER = SolverConfig(cfl=0.45, n_steps=800, save_every=4, min_depth=1e-3)
-
-
 def test_rest_residual_flat_is_near_zero():
     # bathymétrie plate + surface constante = lac au repos exact : aucun courant parasite
     b = np.zeros((64, 64), dtype=np.float64)
@@ -149,4 +143,5 @@ def test_rest_residual_detects_bathymetry_but_stays_bounded():
     # (terrain doux) : ni explosion, ni NaN
     assert np.isfinite(surf_dev) and np.isfinite(speed)
     assert surf_dev > 0.0          # détecte bien le gradient de bathymétrie
+    assert speed > 0.0             # les courants parasites sont strictement positifs
     assert surf_dev < 0.2          # reste borné (oracle sain pour un terrain doux)
