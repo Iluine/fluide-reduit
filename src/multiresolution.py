@@ -34,7 +34,8 @@ def upsample(coarse: np.ndarray, factor: int) -> np.ndarray:
 
 def compose_multiresolution(field: np.ndarray, window: Window,
                             coarse_factor: int, blend_width: int = 0) -> np.ndarray:
-    """Fond grossier (down+up) + fenêtre fine. blend_width>0 = fondu fine->grossier."""
+    """Fond grossier (down+up) + fenêtre fine. blend_width>0 = fondu fine->grossier vers la
+    valeur du voisin extérieur le plus proche, garantissant la continuité à la couture."""
     background = upsample(downsample(field, coarse_factor), coarse_factor)
     out = background.copy()
     i0, j0, s = window.i0, window.j0, window.size
@@ -59,8 +60,7 @@ def compose_multiresolution(field: np.ndarray, window: Window,
     dy = np.minimum(yy - i0, i1 - 1 - yy)
     dx = np.minimum(xx - j0, j1 - 1 - xx)
     use_y = dy <= dx
-    target_i = np.where(use_y, ii_out, yy)
-    target_j = np.where(use_y, jj_out, jj_out)  # pour les coins, y prend le dessus
+    # Cible de fondu : fond au voisin extérieur le plus proche, le long du bord dominant
     target_i = np.where(use_y, ii_out, yy)
     target_j = np.where(use_y, xx, jj_out)
     blend_target = background[target_i, target_j]
