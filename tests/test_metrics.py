@@ -1,7 +1,7 @@
 import numpy as np
 
 from src.metrics import (total_mass, mass_series, relative_l2_error,
-                         error_growth, seam_jump)
+                         error_growth, seam_jump, rms_growth)
 
 
 def test_total_mass_and_series():
@@ -37,3 +37,17 @@ def test_seam_jump_positive_on_discontinuity():
     field[4:10, 4:10] = 1.0  # bloc à 1 entouré de 0 -> saut de 1 au bord
     j = seam_jump(field, 4, 4, 6)
     assert abs(j - 1.0) < 1e-9
+
+
+def test_rms_growth_shape_and_zero():
+    seq = np.random.default_rng(0).random((6, 5, 5))
+    g = rms_growth(seq, seq)
+    assert g.shape == (6,)
+    assert np.allclose(g, 0.0)
+
+
+def test_rms_growth_known_value():
+    pred = np.zeros((2, 2, 2))
+    true = np.full((2, 2, 2), 3.0)   # constant error 3 everywhere -> RMS = 3 each frame
+    g = rms_growth(pred, true)
+    assert np.allclose(g, 3.0)

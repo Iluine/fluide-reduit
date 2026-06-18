@@ -31,6 +31,15 @@ def error_growth(pred_seq: np.ndarray, true_seq: np.ndarray) -> np.ndarray:
     return np.array([relative_l2_error(pred_seq[t], true_seq[t]) for t in range(T)])
 
 
+def rms_growth(pred_seq: np.ndarray, true_seq: np.ndarray) -> np.ndarray:
+    """Erreur RMS absolue par frame d'une séquence (T,...) vs (T,...) -> (T,).
+
+    Métrique non normalisée (pas de division par la norme de la vérité), donc
+    bien définie même quand le champ vrai s'approche de zéro (phases calmes)."""
+    T = pred_seq.shape[0]
+    return np.array([float(np.sqrt(np.mean((pred_seq[t] - true_seq[t]) ** 2))) for t in range(T)])
+
+
 def seam_jump(field: np.ndarray, i0: int, j0: int, size: int) -> float:
     """Saut absolu moyen à travers les 4 bords d'une fenêtre carrée.
 
