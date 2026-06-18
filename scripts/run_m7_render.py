@@ -25,6 +25,7 @@ DATA = ROOT / "data"; GT = DATA / "ground_truth"; OUT = ROOT / "outputs"
 
 
 def main() -> None:
+    OUT.mkdir(parents=True, exist_ok=True)
     d = np.load(DATA / "pod_basis.npz")
     basis = PODBasis(d["mean"], d["scale"], d["Phi"], d["singular_values"])
     H, W = int(d["H"]), int(d["W"])

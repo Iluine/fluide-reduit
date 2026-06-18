@@ -30,6 +30,7 @@ DATA = ROOT / "data" / "ground_truth"; OUT = ROOT / "outputs"
 
 
 def main() -> None:
+    OUT.mkdir(parents=True, exist_ok=True)
     ds = load_dataset(DATA / f"{SOURCE_CASE}.npz")
     h = ds.h                      # (T,H,W) — on observe le canal hauteur
     T, H, W = h.shape

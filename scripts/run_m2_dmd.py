@@ -32,6 +32,8 @@ def load_basis() -> tuple[PODBasis, int, int]:
 
 
 def main() -> None:
+    OUT.mkdir(parents=True, exist_ok=True)
+    DATA.mkdir(parents=True, exist_ok=True)
     basis, H, W = load_basis()
     z_list = []
     for name in TRAIN_CASES:

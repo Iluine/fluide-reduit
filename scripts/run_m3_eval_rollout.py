@@ -2,7 +2,8 @@
 
 Usage : .venv/bin/python scripts/run_m3_eval_rollout.py
 Interprétation attendue : caractériser si/quand le rollout dérive ou explose, et
-si la masse totale prédite dérive. Résultat valable même s'il est négatif."""
+si la masse totale prédite dérive. Résultat valable même s'il est négatif.
+L'erreur L2 relative est calculée sur l'état empilé [h,u,v] et est donc dominée par le canal h (|u|,|v| ~ 0.1 vs h ~ 1)."""
 from __future__ import annotations
 
 import sys
@@ -49,6 +50,8 @@ def evaluate(name, basis, A, H, W):
 
 def main() -> None:
     """Évalue H2 : croissance d'erreur + dérive de masse (CI vue et CI test)."""
+    OUT.mkdir(parents=True, exist_ok=True)
+    DATA.mkdir(parents=True, exist_ok=True)
     basis, H, W = load_basis()
     A = np.load(DATA / "dmd_A.npz")["A"]
 

@@ -27,6 +27,8 @@ OUT = ROOT / "outputs"
 
 
 def main() -> None:
+    OUT.mkdir(parents=True, exist_ok=True)
+    (ROOT / "data").mkdir(parents=True, exist_ok=True)
     cols = []
     H = W = None
     for name in TRAIN_CASES:

@@ -103,7 +103,7 @@ multiresolution (down/up, fendu mobile), rendu (heatmap, surface).
 
 - **H1 ✅** : POD reconstruit à 99 % d'énergie avec k=16 modes (sur 603 snapshots) ; DMD reproduit la dynamique à court horizon. Voir `m1_energy.png`, `m2_dmd_vs_truth.gif`.
 
-- **H2 (caractérisé)** : Rollout stable/borné, erreur ~30–37 %, dérive masse ~2 %, généralise (test≈vue). Voir `m3_error_growth.png`, `m3_mass_drift.png`.
+- **H2 (caractérisé)** : Rollout stable/borné, erreur ~30–37 % (erreur L2 calculée sur l'état empilé [h,u,v], dominée par le canal h), dérive masse ~2 %, généralise (test≈vue). Voir `m3_error_growth.png`, `m3_mass_drift.png`.
 
 - **H3 (caractérisé)** : Couture cohérente ; saut moyen collage dur 0.029 / max 0.081, fondu w=3 0.010 / max 0.020 (−67 %/−75 %). Voir `m6_seam_jump.png`.
 
