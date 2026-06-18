@@ -94,3 +94,71 @@ def rest_state_ic(grid: GridConfig, b: np.ndarray, drop_amp: float,
     h = (rest_surface - b) + drop
     z = np.zeros((H, W), dtype=np.float64)
     return h, z.copy(), z.copy()
+
+
+# --- Tirage du split train/holdout (append à src/terrains.py) ---
+
+DROP_ICS: dict[str, dict] = {
+    # CI vues en entraînement
+    "drop_center": dict(drop_amp=0.4, drop_x0_frac=0.5, drop_y0_frac=0.5, drop_width_frac=0.1),
+    "drop_offset": dict(drop_amp=0.4, drop_x0_frac=0.3, drop_y0_frac=0.6, drop_width_frac=0.1),
+    # CI nouvelle, réservée aux terrains holdout
+    "drop_new":    dict(drop_amp=0.4, drop_x0_frac=0.6, drop_y0_frac=0.4, drop_width_frac=0.1),
+}
+
+
+@dataclass(frozen=True)
+class SplitEntry:
+    terrain_id: str
+    role: str       # "train" | "holdout_interp" | "holdout_extrap"
+    regime: str     # "train" | "interp" | "extrap_obstacle" | "extrap_channel"
+    params: TerrainParams
+    ic_ids: tuple[str, ...]
+
+
+def sample_split(grid: GridConfig, seed: int = SAMPLE_SEED) -> list[SplitEntry]:
+    """Tirage déterministe : 9 terrains train (5 bosses + 4 obstacles submergés,
+    répartis sur les deux topologies), 1 holdout interp (dans la plage, non tiré),
+    2 holdout extrap (obstacle submergé très étroit hors plage de géométrie +
+    canal, topologie absente du train). Holdout = CI nouvelle (drop_new)."""
+    rng = np.random.default_rng(seed)
+    train_ics = ("drop_center", "drop_offset")
+    entries: list[SplitEntry] = []
+
+    for i in range(5):  # bosses douces
+        p = TerrainParams("bump",
+                          amp=float(rng.uniform(0.2, 0.5)),
+                          x0_frac=float(rng.uniform(0.4, 0.6)),
+                          y0_frac=float(rng.uniform(0.4, 0.6)),
+                          sigma=float(rng.uniform(8.0, 13.0)),
+                          slope=float(rng.uniform(0.0, 0.01)))
+        entries.append(SplitEntry(f"train_bump{i}", "train", "train", p, train_ics))
+
+    for i in range(4):  # obstacles submergés (σ petit, amplitude haute mais < surface)
+        p = TerrainParams("obstacle",
+                          amp=float(rng.uniform(0.6, 1.0)),
+                          x0_frac=float(rng.uniform(0.4, 0.6)),
+                          y0_frac=float(rng.uniform(0.4, 0.6)),
+                          sigma=float(rng.uniform(4.0, 7.0)),
+                          slope=0.0)
+        entries.append(SplitEntry(f"train_obst{i}", "train", "train", p, train_ics))
+
+    # interp : dans les plages, distinct du tirage, CI nouvelle
+    entries.append(SplitEntry(
+        "holdout_interp", "holdout_interp", "interp",
+        TerrainParams("obstacle", amp=0.8, x0_frac=0.55, y0_frac=0.45, sigma=5.5, slope=0.0),
+        ("drop_new",)))
+
+    # extrap (géométrie) : obstacle submergé TRÈS étroit, position hors plage
+    entries.append(SplitEntry(
+        "holdout_extrap_obstacle", "holdout_extrap", "extrap_obstacle",
+        TerrainParams("obstacle", amp=1.0, x0_frac=0.3, y0_frac=0.65, sigma=3.0, slope=0.0),
+        ("drop_new",)))
+
+    # extrap (topologie nouvelle) : canal lissé, submergé
+    entries.append(SplitEntry(
+        "holdout_extrap_channel", "holdout_extrap", "extrap_channel",
+        TerrainParams("channel", amp=1.0, x0_frac=0.5, y0_frac=0.5, sigma=8.0, slope=2.0),
+        ("drop_new",)))
+
+    return entries

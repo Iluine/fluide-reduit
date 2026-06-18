@@ -76,3 +76,53 @@ def test_rest_state_ic_rejects_unsubmerged_terrain():
     with pytest.raises(AssertionError):
         rest_state_ic(GRID, b, drop_amp=0.4, drop_x0_frac=0.5,
                       drop_y0_frac=0.5, drop_width_frac=0.1)
+
+
+from src.terrains import DROP_ICS, SplitEntry, sample_split, SAMPLE_SEED
+
+
+def test_sample_split_counts_and_topologies():
+    entries = sample_split(GRID)
+    roles = [e.role for e in entries]
+    assert roles.count("train") == 9
+    assert roles.count("holdout_interp") == 1
+    assert roles.count("holdout_extrap") == 2
+    kinds = {e.params.kind for e in entries if e.role == "train"}
+    assert {"bump", "obstacle"} <= kinds  # les deux topologies présentes en train
+
+
+def test_sample_split_train_in_range_and_submerged():
+    for e in sample_split(GRID):
+        b = make_terrain_from_params(GRID, e.params)
+        assert REST_SURFACE - float(b.max()) >= MIN_REST_DEPTH  # submergé partout
+        if e.role == "train" and e.params.kind == "bump":
+            assert 0.2 <= e.params.amp <= 0.5
+            assert 8.0 <= e.params.sigma <= 13.0
+        if e.role == "train" and e.params.kind == "obstacle":
+            assert 0.6 <= e.params.amp <= 1.0
+            assert 4.0 <= e.params.sigma <= 7.0
+
+
+def test_sample_split_extrapolation_is_geometric():
+    entries = {e.regime: e for e in sample_split(GRID)}
+    assert "extrap_obstacle" in entries and "extrap_channel" in entries
+    obst = entries["extrap_obstacle"].params
+    # extrapolation par la GÉOMÉTRIE : sigma sous la plage train [4,7], amp submergée
+    assert obst.sigma < 4.0
+    assert obst.amp <= 1.0
+    # topologie nouvelle
+    assert entries["extrap_channel"].params.kind == "channel"
+
+
+def test_sample_split_is_deterministic():
+    a = sample_split(GRID, seed=SAMPLE_SEED)
+    b = sample_split(GRID, seed=SAMPLE_SEED)
+    assert [e.params.to_vector().tolist() for e in a] == \
+           [e.params.to_vector().tolist() for e in b]
+
+
+def test_holdout_uses_new_ic():
+    for e in sample_split(GRID):
+        if e.role.startswith("holdout"):
+            assert e.ic_ids == ("drop_new",)
+    assert "drop_new" in DROP_ICS and "drop_center" in DROP_ICS
