@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 from config import PODConfig
 from src.io_utils import load_dataset
-from src.pod import stack_snapshots, unstack, fit_pod, encode, decode, cumulative_energy
+from src.pod import PODBasis, stack_snapshots, fit_pod, encode, decode, cumulative_energy
 
 # ----------------------------- CONFIG ------------------------------------
 POD = PODConfig(energy_threshold=0.99, max_modes=128)
@@ -59,7 +59,8 @@ def main() -> None:
     ks = [k_ for k_ in (1, 2, 4, 8, 16, 32, 64, 128) if k_ <= basis.Phi.shape[1]]
     errs = []
     for k_ in ks:
-        b_k = type(basis)(basis.mean, basis.scale, basis.Phi[:, :k_], basis.singular_values)
+        b_k = PODBasis(mean=basis.mean, scale=basis.scale,
+                       Phi=basis.Phi[:, :k_], singular_values=basis.singular_values)
         errs.append(np.linalg.norm(decode(b_k, encode(b_k, X)) - X) / np.linalg.norm(X))
     plt.figure(figsize=(5, 4))
     plt.semilogy(ks, errs, marker="o")
