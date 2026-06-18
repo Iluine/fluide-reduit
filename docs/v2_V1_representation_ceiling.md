@@ -2,7 +2,7 @@
 
 Base POD hauteur seule (n_channels=1), seuil d'énergie 0.9999.
 
-- **k = 32** (énergie cumulée 0.999904). Pour mémoire, le POC mono-terrain donnait k≈43 ; un k plus grand ici est attendu et mesure la complexité accrue de la famille.
+- **k = 32** (énergie cumulée 0.999904). Ce k n'est pas directement comparable au k≈43 du POC mono-terrain : le POC comptait les modes pour l'état à 3 canaux [h, u, v] (les vitesses ajoutent des modes), alors que cette base V1 est HAUTEUR SEULE (n_channels=1). k=32 sur 9 terrains est modeste et indique que le champ de hauteur dans le régime submergé lisse est intrinsèquement bas-dimensionnel — cohérent avec les faibles plafonds interp/extrap_obstacle (un k élevé aurait signalé la base statique en difficulté, ce qui n'est pas le cas pour ces régimes).
 - Erreur de reconstruction train (plancher in-sample) : 0.0004.
 
 ## Plafond par régime (erreur L2 relative de h)

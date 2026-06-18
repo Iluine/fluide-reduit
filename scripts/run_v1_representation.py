@@ -46,16 +46,18 @@ def representation_ceiling(train_h_seqs, holdout_h_seqs, H: int, W: int,
     train_err = relative_l2_error(decode(basis, encode(basis, X_train)), X_train)
 
     regimes = {}
+    basis_seqs = {}
     for regime, h_seq in holdout_h_seqs.items():
         X = stack_height(h_seq)
         Xr = decode(basis, encode(basis, X))
         seq_r = unstack_height(Xr, H, W)
+        basis_seqs[regime] = seq_r
         regimes[regime] = {
             "err": relative_l2_error(seq_r, h_seq),
             "err_max": float(error_growth(seq_r, h_seq).max()),
         }
     return {"k": k, "energy_at_k": energy_at_k, "train_err": float(train_err),
-            "regimes": regimes}
+            "regimes": regimes, "basis_seqs": basis_seqs}
 
 
 def _load_split():
@@ -68,6 +70,7 @@ def _load_split():
             if e["role"] == "train":
                 train.append(ds.h)
             else:
+                assert e["regime"] not in holdout, f"régime {e['regime']} déjà chargé (1 CI/régime attendu)"
                 holdout[e["regime"]] = ds.h  # un holdout par régime (1 CI chacun)
     return H, W, train, holdout
 
@@ -105,13 +108,7 @@ def _render_figure(res: dict, H: int, W: int, holdout_h: dict, basis_seqs: dict)
 def main() -> None:
     H, W, train, holdout = _load_split()
     res = representation_ceiling(train, holdout, H, W, ENERGY_THRESHOLD, MAX_MODES)
-
-    # reconstruire les séquences holdout pour la figure (résidus)
-    X_train = np.concatenate([stack_height(s) for s in train], axis=1)
-    basis = fit_pod(X_train, ENERGY_THRESHOLD, MAX_MODES, n_channels=1)
-    basis_seqs = {r: unstack_height(decode(basis, encode(basis, stack_height(h))), H, W)
-                  for r, h in holdout.items()}
-    fig_path = _render_figure(res, H, W, holdout, basis_seqs)
+    fig_path = _render_figure(res, H, W, holdout, res["basis_seqs"])
 
     print(f"[V1] k={res['k']} (énergie {res['energy_at_k']:.6f}), "
           f"erreur train (plancher) = {res['train_err']:.4f}")
@@ -159,8 +156,13 @@ def main() -> None:
              f"Base POD hauteur seule (n_channels=1), seuil d'énergie {ENERGY_THRESHOLD}.",
              "",
              f"- **k = {res['k']}** (énergie cumulée {res['energy_at_k']:.6f}). "
-             f"Pour mémoire, le POC mono-terrain donnait k≈43 ; un k plus grand ici "
-             f"est attendu et mesure la complexité accrue de la famille.",
+             f"Ce k n'est pas directement comparable au k≈43 du POC mono-terrain : "
+             f"le POC comptait les modes pour l'état à 3 canaux [h, u, v] (les vitesses "
+             f"ajoutent des modes), alors que cette base V1 est HAUTEUR SEULE (n_channels=1). "
+             f"k=32 sur 9 terrains est modeste et indique que le champ de hauteur dans le "
+             f"régime submergé lisse est intrinsèquement bas-dimensionnel — cohérent avec "
+             f"les faibles plafonds interp/extrap_obstacle (un k élevé aurait signalé la "
+             f"base statique en difficulté, ce qui n'est pas le cas pour ces régimes).",
              f"- Erreur de reconstruction train (plancher in-sample) : "
              f"{res['train_err']:.4f}.", "",
              "## Plafond par régime (erreur L2 relative de h)", "",
@@ -169,7 +171,7 @@ def main() -> None:
         lines.append(f"| {r} | {m['err']:.4f} | {m['err_max']:.4f} |")
     lines += ["", "## Verdict", "", verdict, "", "## Portée du résultat (calibrage du ✅)",
               "", scope, "", f"Figure : `{fig_path.relative_to(ROOT)}`."]
-    OUT_DOC.write_text("\n".join(lines))
+    OUT_DOC.write_text("\n".join(lines) + "\n")
     print(f"[V1] figure -> {fig_path}")
     print(f"[V1] note   -> {OUT_DOC}")
     print(f"[V1] VERDICT : {verdict}")
