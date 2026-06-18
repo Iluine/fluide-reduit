@@ -21,7 +21,7 @@ uv pip install --python .venv/bin/python -r requirements.txt
 Le pipeline complet (M0 → M1 → M2 → M3 → M6 → M7) s'exécute en cascade par :
 
 ```bash
-.venv/bin/python scripts/run_m0_generate.py   # Oracle : 603 snapshots shallow-water
+.venv/bin/python scripts/run_m0_generate.py   # Oracle : 4 rollouts × 201 frames (603 snapshots d'entraînement)
 .venv/bin/python scripts/run_m1_pod.py        # POD : réduction k=16 modes
 .venv/bin/python scripts/run_m2_dmd.py        # DMD : apprise du système réduit
 .venv/bin/python scripts/run_m3_eval_rollout.py  # H2 : évaluation long-horizon
@@ -45,12 +45,12 @@ multiresolution (down/up, fendu mobile), rendu (heatmap, surface).
 
 | Module | Rôle |
 |--------|------|
-| `src/solver.py` | Solveur shallow-water 2D Lax-Friedrichs conservatif (M0) |
+| `src/solver.py` | Solveur shallow-water 2D, flux de Rusanov (Lax-Friedrichs local) conservatif (M0) |
 | `src/pod.py` | SVD réduit + encode/decode (M1) |
 | `src/dmd.py` | DMD (fit moindres carrés, rollout autorégressif) (M2) |
 | `src/metrics.py` | Évaluations H2/H3 : erreur L2, dérive masse, saut couture |
-| `src/multiresolution.py` | Downsampling/upsampling + fendu de Hanning mobile (M6) |
-| `src/render.py` | Heatmap (hauteur) + surface paramétrée (η) (M7) |
+| `src/multiresolution.py` | Downsampling/upsampling + fondu linéaire dans une fenêtre mobile (M6) |
+| `src/render.py` | Heatmap de la hauteur h + surface libre η=h+b (M7) |
 | `src/io_utils.py` | Charge/sauvegarde GIF (PIL fallback matplotlib) |
 | `config.py` | Constantes partagées (gravité, grille, solver, POD) |
 
@@ -58,12 +58,12 @@ multiresolution (down/up, fendu mobile), rendu (heatmap, surface).
 
 ### M0 — Oracle (solveur complet)
 
-- `m0_control_drop_center.gif` : Animation shallow-water (CI gouttelette centrée, 400 pas)
+- `m0_control_drop_center.gif` : Animation shallow-water (CI goutte centrée, 800 pas → 201 frames)
 
 ### M1 — POD (réduit k=16)
 
 - `m1_energy.png` : Courbe d'énergie cumulée vs nombre de modes → seuil 99 % atteint en k=16
-- `m1_modes.png` : Visualisation des 4 premiers modes spatiaux (h, u, v)
+- `m1_modes.png` : Visualisation des 4 premiers modes spatiaux (canal h)
 - `m1_recon_error_vs_k.png` : Erreur de reconstruction (L2 test) vs k
 
 ### M2 — DMD (apprentissage du système réduit)
@@ -72,7 +72,7 @@ multiresolution (down/up, fendu mobile), rendu (heatmap, surface).
 
 ### M3 — Évaluation H2 (rollout long-horizon)
 
-- `m3_longhorizon_drop_center.gif` : Rollout DMD sur CI vue (400 pas, prédiction vs vérité superposées)
+- `m3_longhorizon_drop_center.gif` : Rollout DMD sur CI vue (201 frames, vérité | prédiction côte à côte)
 - `m3_longhorizon_drop_test.gif` : Rollout DMD sur CI test (généralisation)
 - `m3_error_growth.png` : Croissance d'erreur L2 relative vs temps (vue vs test)
 - `m3_mass_drift.png` : Dérive de masse (différentiel hauteur intégré) vs temps
@@ -80,12 +80,12 @@ multiresolution (down/up, fendu mobile), rendu (heatmap, surface).
 ### M6 — Évaluation H3 (multirésolution + couture)
 
 - `m6_seam_jump.png` : Saut de couture (saut moyen vs max, collage dur vs fondu w=3)
-- `m6_window_moving.gif` : Fenêtre de Hanning mobile et composition (illustration du fondu)
+- `m6_window_moving.gif` : Fenêtre fine mobile sur fond grossier (illustration du fondu linéaire)
 
 ### M7 — Rendu
 
-- `m7_height_heatmap.gif` : Animation heatmap de hauteur (η) sur grille fine
-- `m7_surface_eta.gif` : Surface 3D paramétrée de l'état réduit
+- `m7_height_heatmap.gif` : Animation heatmap de la hauteur d'eau h prédite
+- `m7_surface_eta.gif` : Surface libre η = h + b (heatmap, cmap 'terrain')
 
 ## Interprétation des résultats
 
@@ -119,8 +119,8 @@ envisagés. **Ces modules restent déférés en v1** ; voir
 ## Notes
 
 - **Indexation des tableaux** : `array[y, x]` (axe 0 = y = lignes = H, axe 1 = x = colonnes = W).
-- **Shallow-water 2D** : conservative + CFL = 0.45 + Lax-Friedrichs.
+- **Shallow-water 2D** : volumes finis, flux de Rusanov (LF local), conservatif, CFL 2D = 0.45.
 - **POD** : SVD + dimensionnement par canal (h, u, v).
 - **DMD** : Moindres carrés + rayon spectral pour stabilité.
-- **Multirésolution** : Downsampling par bloc, upsampling linéaire, fendu Hanning mobile pour
-  lissage de la couture entre résolutions.
+- **Multirésolution** : Downsampling par bloc, upsampling linéaire, fondu linéaire dans une fenêtre mobile pour
+  lisser la couture entre résolutions.

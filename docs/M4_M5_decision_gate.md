@@ -88,8 +88,8 @@ Décision d'activation : réunion d'équipe post-M3 sur base des chiffres mesur�
 M4/M5 nécessitent **PyTorch** (GPU CUDA RTX 3050 Ti ≤ 4 Go, AMP recommandé) :
 
 ```bash
-# NE PAS installer avant M4 (lourd, GPU-spécifique).
-pip install torch>=2.2 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# NE PAS installer avant M4 (lourd, GPU-spécifique). Utiliser uv comme pour le reste :
+uv pip install --python .venv/bin/python "torch>=2.2"
 ```
 
 ## Références
