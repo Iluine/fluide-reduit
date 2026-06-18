@@ -1,0 +1,13 @@
+# Cœur (CPU) — POC fluide réduit
+numpy>=1.26
+scipy>=1.11
+matplotlib>=3.8
+
+# Tests (dev uniquement)
+pytest>=8.0
+
+# Optionnel : export GIF des animations. Sans pillow, fallback montage PNG (matplotlib seul).
+# pillow>=10.0
+
+# M4/M5 uniquement (déféré, GPU CUDA RTX 3050 Ti <=4 Go, AMP). NE PAS installer avant M4.
+# torch>=2.2
