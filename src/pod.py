@@ -25,7 +25,8 @@ class PODBasis:
 def stack_snapshots(h: np.ndarray, u: np.ndarray, v: np.ndarray) -> np.ndarray:
     """(T,H,W)*3 -> X (3*H*W, T), canaux empilés dans l'ordre [h,u,v]."""
     T, H, W = h.shape
-    flat = lambda a: a.reshape(T, H * W).T          # (H*W, T)
+    def flat(a: np.ndarray) -> np.ndarray:
+        return a.reshape(T, H * W).T
     return np.concatenate([flat(h), flat(u), flat(v)], axis=0)
 
 
@@ -76,5 +77,7 @@ def decode(basis: PODBasis, z: np.ndarray) -> np.ndarray:
 def cumulative_energy(singular_values: np.ndarray) -> np.ndarray:
     """Énergie cumulée normalisée (cumsum des sigma^2 / somme)."""
     e2 = singular_values ** 2
-    total = float(e2.sum()) + _EPS
+    total = float(e2.sum())
+    if total < _EPS:
+        return np.ones(len(singular_values))
     return np.cumsum(e2) / total
