@@ -21,7 +21,7 @@ from config import GridConfig, SolverConfig
 from src.terrains import (REST_SURFACE, DROP_ICS, sample_split,
                           make_terrain_from_params, rest_state_ic, rest_residual)
 from src.solver import simulate
-from src.io_utils import Dataset, save_dataset, save_animation
+from src.io_utils import save_animation
 from src.metrics import mass_series
 from src.render import surface_height
 
@@ -86,10 +86,8 @@ def generate_split(out_data_dir, out_fig_dir, grid: GridConfig, solver_cfg: Solv
             meta = {"dx": grid.dx, "dy": grid.dy, "dt": dt, "schema": "lax-friedrichs",
                     "cfl": solver_cfg.cfl, "terrain_id": e.terrain_id, "ic_id": ic_id,
                     "regime": e.regime, "role": e.role, "rest_surface": rest_surface}
-            ds = Dataset(hs, us, vs, b, meta)
             path = out_data_dir / f"{e.terrain_id}__{ic_id}.npz"
             # save_dataset n'écrit pas theta : on l'ajoute via un re-dump complet
-            path.parent.mkdir(parents=True, exist_ok=True)
             np.savez_compressed(
                 path, h=hs.astype(np.float64), u=us.astype(np.float64),
                 v=vs.astype(np.float64), b=b.astype(np.float64),

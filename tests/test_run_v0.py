@@ -14,7 +14,7 @@ from src.terrains import sample_split
 
 
 def test_generate_split_writes_contract(tmp_path):
-    from scripts.run_v0_generate import generate_split
+    from scripts.run_v0_generate import generate_split, POSITIVITY_MARGIN
     grid = GridConfig(H=64, W=64, dx=1.0, dy=1.0)
     # config réduite pour un test rapide : peu de pas, sous-ensemble de terrains
     solver = SolverConfig(cfl=0.45, n_steps=12, save_every=4, min_depth=1e-3)
@@ -42,5 +42,5 @@ def test_generate_split_writes_contract(tmp_path):
 
     # garde-fous reportés et respectés
     assert report["max_mass_drift"] < 1e-7
-    assert report["min_depth"] > 0.0
+    assert report["min_depth"] > POSITIVITY_MARGIN
     assert all(np.isfinite(v) for v in report["rest_residual_surf"].values())
