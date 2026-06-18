@@ -153,7 +153,7 @@ def sample_split(grid: GridConfig, seed: int = SAMPLE_SEED) -> list[SplitEntry]:
     # extrap (géométrie) : obstacle submergé TRÈS étroit, position hors plage
     entries.append(SplitEntry(
         "holdout_extrap_obstacle", "holdout_extrap", "extrap_obstacle",
-        TerrainParams("obstacle", amp=1.0, x0_frac=0.3, y0_frac=0.65, sigma=3.0, slope=0.0),
+        TerrainParams("obstacle", amp=0.6, x0_frac=0.3, y0_frac=0.65, sigma=3.0, slope=0.0),
         ("drop_new",)))
 
     # extrap (topologie nouvelle) : canal lissé, submergé
