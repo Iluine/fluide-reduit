@@ -25,6 +25,7 @@ Le pipeline complet (M0 → M1 → M2 → M3 → M6 → M7) s'exécute en cascad
 .venv/bin/python scripts/run_m1_pod.py        # POD : réduction k=43 modes
 .venv/bin/python scripts/run_m2_dmd.py        # DMD : apprise du système réduit
 .venv/bin/python scripts/run_m3_eval_rollout.py  # H2 : évaluation long-horizon
+.venv/bin/python scripts/run_m5_mass_projection.py # M5 : projection de masse (garde-fou de sortie)
 .venv/bin/python scripts/run_m6_multiresolution.py # H3 : couture multirésolution
 .venv/bin/python scripts/run_m7_render.py     # Rendu : heatmap + surface eta
 ```
@@ -34,7 +35,7 @@ Chaque script sauvegarde ses sorties dans `./outputs/` (PNG + GIF d'animation).
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest -q  # Suite complète (31 tests)
+.venv/bin/python -m pytest -q  # Suite complète (35 tests)
 ```
 
 Couverture : POD (encode/decode, énergie), DMD (fit, rollout, rayon spectral),
@@ -51,6 +52,7 @@ multiresolution (down/up, fendu mobile), rendu (heatmap, surface).
 | `src/metrics.py` | Évaluations H2/H3 : erreur L2, dérive masse, saut couture |
 | `src/multiresolution.py` | Downsampling/upsampling + fondu linéaire dans une fenêtre mobile (M6) |
 | `src/render.py` | Heatmap de la hauteur h + surface libre η=h+b (M7) |
+| `src/mass_projection.py` | Projection de masse (offset uniforme additif, garde-fou de sortie) (M5) |
 | `src/io_utils.py` | Charge/sauvegarde GIF (PIL fallback matplotlib) |
 | `config.py` | Constantes partagées (gravité, grille, solver, POD) |
 
@@ -78,6 +80,10 @@ multiresolution (down/up, fendu mobile), rendu (heatmap, surface).
 - `m3_velocity_rms.png` : RMS absolu des vitesses (u, v) vs temps (vue vs test)
 - `m3_mass_drift.png` : Dérive de masse (différentiel hauteur intégré) vs temps
 
+### M5 — Projection de masse (garde-fou de sortie)
+
+- `m5_mass_drift.png` : Dérive de masse OFF (DMD brut, ~+2 %) vs ON (projeté, ~précision machine) pour drop_center et drop_test
+
 ### M6 — Évaluation H3 (multirésolution + couture)
 
 - `m6_seam_jump.png` : Saut de couture (saut moyen vs max, collage dur vs fondu w=3)
@@ -99,6 +105,7 @@ multiresolution (down/up, fendu mobile), rendu (heatmap, surface).
 | **H2 : Vitesses** | u_rms_final (RMS absolu, % réf) | non-exp. | 0.250 m/s (74% réf) | 0.261 m/s (86% réf) | ✅ PASS |
 | **H2 : Vitesses** | v_rms_final (RMS absolu, % réf) | non-exp. | 0.062 m/s (18% réf) | 0.091 m/s (30% réf) | ✅ PASS |
 | **H2 : Masse** | Dérive masse finale | <5 % | 2.0 % | 1.5 % | ✅ PASS |
+| **M5 : Conservation** | Dérive masse après projection | ~0 | ~2.15e-14 % | ~0 % | ✅ Éliminée |
 | **H3 : Couture** | Collage dur (moyen) | - | 0.029 | — | ✅ PASS |
 | **H3 : Couture** | Fondu w=3 (moyen) | −67 % vs collage | 0.010 | — | ✅ PASS |
 
@@ -115,20 +122,21 @@ multiresolution (down/up, fendu mobile), rendu (heatmap, surface).
 - **H2 (caractérisé, par canal, opérateur DMD écrêté)** : Rollout stable/borné, non explosé.
   - HEIGHT (h) : erreur L2 relative finale 5.5 % (vue) / 6.7 % (test), max 5.5 % / 7.7 %. Bornée et faible. (Avant écrêtage : max test était 19.8 %.)
   - VITESSES (u, v) : RMS absolu final 0.250 m/s =74% réf / 0.062 m/s =18% réf (vue) et 0.261 m/s =86% réf / 0.091 m/s =30% réf (test). Normalisé par réf = max-sur-t du RMS par frame de la vérité (robuste aux phases calmes où ‖u‖→0).
-  - Dérive masse : 2.0 % (vue) / 1.5 % (test).
+  - Dérive masse : 2.0 % (vue) / 1.5 % (test). **Avec projection M5 : ~précision machine (~0).**
   - *L'ancienne valeur ~30 % était l'erreur sur l'état empilé [h,u,v], dominée par les vitesses ; la couture verticale était un artefact k=16 résolu par k=43.*
   - Voir `m3_error_growth.png`, `m3_velocity_rms.png`, `m3_mass_drift.png`.
+
+- **M5 ✅ (projection de masse)** : Garde-fou de sortie open-loop — offset uniforme additif par frame. Dérive de masse éliminée : +1.96 % → 2.15e-14 % (drop_center) et +1.54 % → 0 % (drop_test). Erreur hauteur inchangée / légèrement réduite (5.48 % → 5.12 % sur drop_center). Voir `m5_mass_drift.png`.
 
 - **H3 (caractérisé)** : Couture cohérente ; saut moyen collage dur 0.029 / max 0.081, fondu w=3 0.010 / max 0.020 (−67 %/−75 %). Voir `m6_seam_jump.png`.
 
 ## Décision M4/M5
 
 La baseline DMD (M1–M3, k=43) satisfait aux critères stricts de l'H2 (erreur HEIGHT
-bornée à 5–13 %, pas d'explosion, dérive masse ~2 %). Cependant, si une fidélité
-long-horizon meilleure sur la CI de test (h_rel < 10 %) ou l'annulation de la dérive
-de masse de ~2 % est souhaitée, M4 (dynamique non-linéaire) ou M5 (pénalité de
-conservation) doivent être envisagés. **Ces modules restent déférés en v1** ; voir
-`docs/M4_M5_decision_gate.md` pour le critère d'activation explicite.
+bornée à 5–7 %, pas d'explosion, dérive masse ~2 %). **M5 (projection de masse) est
+implémenté** : la dérive de masse est ramenée à la précision machine sans dégradation
+de l'erreur hauteur. M4 (dynamique non-linéaire) reste déféré ; voir
+`docs/M4_M5_decision_gate.md` pour les critères d'activation.
 
 ## Notes
 

@@ -99,8 +99,35 @@ M4/M5 nécessitent **PyTorch** (GPU CUDA RTX 3050 Ti ≤ 4 Go, AMP recommandé) 
 uv pip install --python .venv/bin/python "torch>=2.2"
 ```
 
+## M5 implémenté — Projection de masse (garde-fou de sortie)
+
+**Stratégie** : offset uniforme additif post-rollout (correction de norme minimale pour une
+contrainte intégrale), appliqué à chaque frame décodée. C'est un garde-fou de *sortie*
+open-loop : la dynamique latente n'est pas modifiée — la projection est purement physique.
+
+**Vérification BC** : masse vraie exactement conservée (parois réfléchissantes) — dérive
+relative ≤ 2.15e-16 (précision machine) — ce qui valide que `m_target = m(h[0])` est la
+bonne cible (on projette sur la masse de la CI, pas sur une masse instantanée).
+
+**Résultats mesurés (rollout DMD clipped, ρ=1.0) :**
+
+| CI | Dérive masse finale OFF | Dérive masse finale ON | h_rel_final OFF | h_rel_final ON | h_rel_max OFF | h_rel_max ON |
+|----|------------------------|------------------------|-----------------|----------------|---------------|--------------|
+| drop_center (vue) | +1.961 % | −2.15e-14 % | 0.0548 | 0.0512 | 0.0548 | 0.0512 |
+| drop_test (test)  | +1.537 % | +0.00e+00 % | 0.0675 | 0.0657 | 0.0768 | 0.0768 |
+
+**Bilan :** la projection ramène la dérive de masse de ~2 % à la précision machine (~0),
+sans dégradation de l'erreur de hauteur — légère amélioration sur drop_center
+(5.48 % → 5.12 %, −0.36 pp) car la composante de dérive du niveau moyen est absorbée.
+
+**Note architecturale :** ceci est un garde-fou de sortie (post-rollout), non une
+dynamique conservative apprise. La variante par pénalité Lagrangienne sur le fit DMD
+(cf. ci-dessus §M5 stratégie 1) reste l'alternative plus lourde, pour un gain attendu
+similaire.
+
 ## Références
 
 - **H2 (dérive long-horizon)** : voir `m3_error_growth.png`, `m3_mass_drift.png`.
+- **M5 (projection masse)** : voir `m5_mass_drift.png`, script `scripts/run_m5_mass_projection.py`.
 - **Détails POD+DMD** : voir `README.md` et docstrings dans `src/pod.py`, `src/dmd.py`.
 - **Métriques** : `src/metrics.py` (relative_l2_error, mass_drift, seam_jump).
