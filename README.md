@@ -102,7 +102,7 @@ L'ancienne valeur ~30 % d'erreur était un artefact de métrique : l'état empil
 ### H1 — Colonne vertébrale POD+DMD ✅
 
 - **POD (M1)** : k=43 modes à seuil énergie 0.9999 (99.99 % d'énergie
-  cumulative). Compression ≈ 43/603 ≈ 7 %. Standardisation per-canal (`scale`).
+  cumulative). Compression d'état : **43 coordonnées latentes** pour un état complet de 3 canaux × 64 × 64 = **12 288 valeurs**, soit **≈ 0,35 % (réduction ≈ 286×)**. Les 43 modes sont retenus à partir de 603 snapshots d'entraînement — c'est le rang de la base, à ne pas confondre avec le taux de compression. Standardisation per-canal (`scale`).
   Contrat : `X ≈ scale·(Phi·z) + mean`.
 - **DMD (M2)** : opérateur linéaire A (43×43) par moindres carrés. Rayon
   spectral brut ρ=1.010 (2 valeurs propres > 1) → écrêté à ρ=1.000.
@@ -229,6 +229,8 @@ les résultats mesurés complets.
 ---
 
 ## Limites caractérisées
+
+**Portée de la validation** : ces résultats valent dans un cadre frugal — un seul terrain (bathymétrie statique), des régimes doux (gouttes gaussiennes, rupture de barrage modérée ; pas de choc transcritique ni de turbulence), 2D uniquement (ni 3D/voxel), hors-ligne (pas de temps-réel), et la généralisation n'est testée que sur **une** condition initiale jamais vue, sur le **même** terrain. Les trois hypothèses sont donc tranchées *dans ce périmètre*, pas prouvées en général.
 
 - **Vitesses (plafond de représentation)** : sur les CI non vues, les vitesses
   atteignent ~30 % d'erreur relative. Ce plafond est structurel : augmenter k
