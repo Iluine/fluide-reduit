@@ -1,9 +1,9 @@
 """M0 — Oracle shallow-water 2D (Saint-Venant) sur terrain.
 
-Schéma : Lax-Friedrichs en forme conservative (flux d'interface global LF),
-exactement conservatif en masse. Paroi réfléchissante (cellules fantômes :
-hauteur en Neumann, composante normale de la quantité de mouvement négée).
-Variables conservées internes : q1=h, q2=h*u, q3=h*v.
+Schéma : Rusanov / Lax-Friedrichs local (flux d'interface à viscosité numérique
+locale par interface), exactement conservatif en masse. Paroi réfléchissante
+(cellules fantômes : hauteur en Neumann, composante normale de la quantité de
+mouvement négée). Variables conservées internes : q1=h, q2=h*u, q3=h*v.
 
 Indexation array[y, x] : axe 0 = y (H lignes), axe 1 = x (W colonnes).
 u = vitesse selon x, v = vitesse selon y. b = bathymétrie (terrain) fixe."""
@@ -54,10 +54,15 @@ def initial_condition_gaussian_drop(grid: GridConfig, base: float = 1.0,
 
 def cfl_dt(h: np.ndarray, u: np.ndarray, v: np.ndarray,
            grid: GridConfig, cfl: float) -> float:
-    """Pas de temps limité par la CFL : cfl * min(dx,dy) / max(|u|+c, |v|+c)."""
+    """Pas de temps CFL 2D : cfl / (max(|u|+c)/dx + max(|v|+c)/dy).
+
+    Forme combinée 2D (somme des contributions x et y), qui est la condition de
+    stabilité de l'intégration explicite (Euler avant + flux de Rusanov). Avec
+    cfl < 1 on conserve une marge même si les vitesses montent au fil du temps."""
     c = np.sqrt(GRAVITY * np.maximum(h, 0.0))
-    max_speed = max(float((np.abs(u) + c).max()), float((np.abs(v) + c).max()), 1e-12)
-    return cfl * min(grid.dx, grid.dy) / max_speed
+    inv_dt = (float((np.abs(u) + c).max()) / grid.dx
+              + float((np.abs(v) + c).max()) / grid.dy)
+    return cfl / max(inv_dt, 1e-12)
 
 
 def _pad_reflective(q1: np.ndarray, q2: np.ndarray, q3: np.ndarray):
@@ -79,7 +84,7 @@ def _pad_reflective(q1: np.ndarray, q2: np.ndarray, q3: np.ndarray):
 def lax_friedrichs_step(h: np.ndarray, u: np.ndarray, v: np.ndarray,
                         b: np.ndarray, dt: float, grid: GridConfig,
                         min_depth: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Un pas de temps Lax-Friedrichs conservatif (flux d'interface global LF).
+    """Un pas de temps Rusanov / LF local conservatif (vitesse d'onde locale par interface).
 
     Conservatif en masse : le flux numérique de h aux parois est nul."""
     g = GRAVITY
@@ -94,13 +99,21 @@ def lax_friedrichs_step(h: np.ndarray, u: np.ndarray, v: np.ndarray,
     F1, F2, F3 = p2, p2 * up + 0.5 * g * p1 ** 2, p2 * vp     # flux selon x
     G1, G2, G3 = p3, p3 * up, p3 * vp + 0.5 * g * p1 ** 2     # flux selon y
 
-    ax, ay = dx / (2.0 * dt), dy / (2.0 * dt)  # coefficients diffusifs LF global
+    # Flux de Rusanov : viscosité numérique = vitesse d'onde LOCALE par interface
+    # (max des deux cellules adjacentes), découplée de dt. Reste correctement
+    # dissipative quand |u|,|v| augmentent (contrairement au LF global dont la
+    # viscosité dx/2dt, figée par le dt initial, devient insuffisante).
+    cwave = np.sqrt(g * hp)
+    sx = np.abs(up) + cwave   # vitesse d'onde selon x, par cellule (H+2, W+2)
+    sy = np.abs(vp) + cwave   # vitesse d'onde selon y, par cellule (H+2, W+2)
 
     def fx(F, U):  # flux numérique aux interfaces x -> (H+2, W+1)
-        return 0.5 * (F[:, :-1] + F[:, 1:]) - ax * (U[:, 1:] - U[:, :-1])
+        alpha = np.maximum(sx[:, :-1], sx[:, 1:])
+        return 0.5 * (F[:, :-1] + F[:, 1:]) - 0.5 * alpha * (U[:, 1:] - U[:, :-1])
 
     def fy(G, U):  # flux numérique aux interfaces y -> (H+1, W+2)
-        return 0.5 * (G[:-1, :] + G[1:, :]) - ay * (U[1:, :] - U[:-1, :])
+        alpha = np.maximum(sy[:-1, :], sy[1:, :])
+        return 0.5 * (G[:-1, :] + G[1:, :]) - 0.5 * alpha * (U[1:, :] - U[:-1, :])
 
     Fx1, Fx2, Fx3 = fx(F1, p1), fx(F2, p2), fx(F3, p3)
     Gy1, Gy2, Gy3 = fy(G1, p1), fy(G2, p2), fy(G3, p3)
