@@ -68,6 +68,7 @@ def test_simulate_shapes_and_mass_conservation():
     b = make_terrain(grid, "flat")
     hs, us, vs, dt = simulate(h0, u0, v0, b, grid, cfg)
     assert hs.shape == (40 // 4 + 1, 24, 24)
+    assert us.shape == vs.shape == hs.shape
     assert dt > 0
     masses = hs.sum(axis=(1, 2))
     assert (abs(masses - masses[0]) / masses[0]).max() < 1e-9

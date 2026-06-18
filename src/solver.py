@@ -141,7 +141,8 @@ def lax_friedrichs_step(h: np.ndarray, u: np.ndarray, v: np.ndarray,
 
 
 def simulate(h0: np.ndarray, u0: np.ndarray, v0: np.ndarray, b: np.ndarray,
-             grid: GridConfig, cfg: SolverConfig):
+             grid: GridConfig, cfg: SolverConfig
+             ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
     """Intègre la dynamique sur cfg.n_steps avec un dt FIXE (échantillonnage
     temporel uniforme requis par POD/DMD). Assert CFL à chaque pas.
 
