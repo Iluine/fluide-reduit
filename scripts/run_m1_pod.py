@@ -27,6 +27,7 @@ OUT = ROOT / "outputs"
 
 
 def main() -> None:
+    """Calcule la base POD, sauvegarde pod_basis.npz et génère les figures d'énergie."""
     OUT.mkdir(parents=True, exist_ok=True)
     (ROOT / "data").mkdir(parents=True, exist_ok=True)
     cols = []
@@ -53,9 +54,13 @@ def main() -> None:
     plt.plot(np.arange(1, len(energy) + 1), energy, marker=".")
     plt.axhline(POD.energy_threshold, color="r", ls="--", label=f"{POD.energy_threshold:.0%}")
     plt.axvline(k, color="g", ls="--", label=f"k={k}")
-    plt.xlabel("nombre de modes"); plt.ylabel("énergie cumulée"); plt.legend()
-    plt.title("M1 — énergie cumulée POD"); plt.tight_layout()
-    plt.savefig(OUT / "m1_energy.png", dpi=120); plt.close()
+    plt.xlabel("nombre de modes")
+    plt.ylabel("énergie cumulée")
+    plt.legend()
+    plt.title("M1 — énergie cumulée POD")
+    plt.tight_layout()
+    plt.savefig(OUT / "m1_energy.png", dpi=120)
+    plt.close()
 
     # Figure 2 : erreur de reconstruction vs k
     ks = [k_ for k_ in (1, 2, 4, 8, 16, 32, 64, 128) if k_ <= basis.Phi.shape[1]]
@@ -66,9 +71,12 @@ def main() -> None:
         errs.append(np.linalg.norm(decode(b_k, encode(b_k, X)) - X) / np.linalg.norm(X))
     plt.figure(figsize=(5, 4))
     plt.semilogy(ks, errs, marker="o")
-    plt.xlabel("k (nombre de modes)"); plt.ylabel("erreur L2 relative")
-    plt.title("M1 — erreur de reconstruction vs k"); plt.tight_layout()
-    plt.savefig(OUT / "m1_recon_error_vs_k.png", dpi=120); plt.close()
+    plt.xlabel("k (nombre de modes)")
+    plt.ylabel("erreur L2 relative")
+    plt.title("M1 — erreur de reconstruction vs k")
+    plt.tight_layout()
+    plt.savefig(OUT / "m1_recon_error_vs_k.png", dpi=120)
+    plt.close()
     print("[M1] erreur recon par k :", {k_: round(e, 4) for k_, e in zip(ks, errs)})
 
     # Figure 3 : 4 premiers modes spatiaux (canal h)
@@ -77,9 +85,12 @@ def main() -> None:
     for m in range(min(4, basis.Phi.shape[1])):
         mode_h = basis.Phi[:hw, m].reshape(H, W)
         axes[m].imshow(mode_h, cmap="RdBu_r", origin="lower")
-        axes[m].set_title(f"mode {m} (h)"); axes[m].axis("off")
+        axes[m].set_title(f"mode {m} (h)")
+        axes[m].axis("off")
     fig.suptitle("M1 — premiers modes spatiaux POD (canal h)")
-    fig.tight_layout(); fig.savefig(OUT / "m1_modes.png", dpi=120); plt.close(fig)
+    fig.tight_layout()
+    fig.savefig(OUT / "m1_modes.png", dpi=120)
+    plt.close(fig)
 
 
 if __name__ == "__main__":

@@ -38,7 +38,7 @@ def save_dataset(path: str | Path, ds: Dataset) -> None:
 def load_dataset(path: str | Path) -> Dataset:
     """Relit un dataset écrit par save_dataset."""
     with np.load(path, allow_pickle=False) as data:
-        meta = json.loads(str(data["meta_json"]))
+        meta = json.loads(data["meta_json"].item())
         return Dataset(
             h=data["h"].astype(np.float64),
             u=data["u"].astype(np.float64),

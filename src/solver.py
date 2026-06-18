@@ -36,7 +36,7 @@ def initial_condition_dam_break(grid: GridConfig, depth_left: float = 2.0,
     h = np.full((H, W), depth_right, dtype=np.float64)
     split = int(split_frac * W)
     h[:, :split] = depth_left
-    return h, np.zeros((H, W)), np.zeros((H, W))
+    return h, np.zeros((H, W), dtype=np.float64), np.zeros((H, W), dtype=np.float64)
 
 
 def initial_condition_gaussian_drop(grid: GridConfig, base: float = 1.0,
@@ -49,7 +49,7 @@ def initial_condition_gaussian_drop(grid: GridConfig, base: float = 1.0,
     sigma = width_frac * min(H, W)
     r2 = (xx - cx) ** 2 + (yy - cy) ** 2
     h = base + amp * np.exp(-r2 / (2.0 * sigma ** 2))
-    return h, np.zeros((H, W)), np.zeros((H, W))
+    return h, np.zeros((H, W), dtype=np.float64), np.zeros((H, W), dtype=np.float64)
 
 
 def cfl_dt(h: np.ndarray, u: np.ndarray, v: np.ndarray,

@@ -25,11 +25,13 @@ COARSE_FACTOR = 4    # 64 -> 16 grossier
 WINDOW_SIZE = 16
 BLEND_WIDTH = 3      # largeur d'anneau de fondu (variante atténuée)
 AXIS = "x"
-DATA = ROOT / "data" / "ground_truth"; OUT = ROOT / "outputs"
+DATA = ROOT / "data" / "ground_truth"
+OUT = ROOT / "outputs"
 # -------------------------------------------------------------------------
 
 
 def main() -> None:
+    """Évalue la cohérence de couture multiresolution (H3) et génère les figures."""
     OUT.mkdir(parents=True, exist_ok=True)
     ds = load_dataset(DATA / f"{SOURCE_CASE}.npz")
     h = ds.h                      # (T,H,W) — on observe le canal hauteur
@@ -54,8 +56,11 @@ def main() -> None:
     plt.plot(jumps_soft, label=f"fondu w={BLEND_WIDTH} (moy={jumps_soft.mean():.3f})")
     plt.xlabel("pas de temps (fenêtre en déplacement)")
     plt.ylabel("saut de couture moyen")
-    plt.title("M6 — H3 : saut à la couture vs temps"); plt.legend()
-    plt.tight_layout(); plt.savefig(OUT / "m6_seam_jump.png", dpi=120); plt.close()
+    plt.title("M6 — H3 : saut à la couture vs temps")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(OUT / "m6_seam_jump.png", dpi=120)
+    plt.close()
 
     written = save_animation(OUT / "m6_window_moving.gif", composed_frames, fps=15,
                              title="M6 — fenêtre fine mobile (fond grossier)")

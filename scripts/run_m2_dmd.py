@@ -21,17 +21,21 @@ from src.dmd import fit_dmd, rollout, spectral_radius
 TRAIN_CASES = ["drop_center", "drop_offset", "dam_break"]
 DEMO_CASE = "drop_center"   # rollout démontré
 SHORT_HORIZON = 40          # nombre de pas du rollout court
-DATA = ROOT / "data"; GT = DATA / "ground_truth"; OUT = ROOT / "outputs"
+DATA = ROOT / "data"
+GT = DATA / "ground_truth"
+OUT = ROOT / "outputs"
 # -------------------------------------------------------------------------
 
 
 def load_basis() -> tuple[PODBasis, int, int]:
-    d = np.load(DATA / "pod_basis.npz")
-    basis = PODBasis(d["mean"], d["scale"], d["Phi"], d["singular_values"])
-    return basis, int(d["H"]), int(d["W"])
+    with np.load(DATA / "pod_basis.npz") as d:
+        basis = PODBasis(d["mean"], d["scale"], d["Phi"], d["singular_values"])
+        H, W = int(d["H"]), int(d["W"])
+    return basis, H, W
 
 
 def main() -> None:
+    """Entraîne le modèle DMD sur les trajectoires latentes et génère l'animation de comparaison."""
     OUT.mkdir(parents=True, exist_ok=True)
     DATA.mkdir(parents=True, exist_ok=True)
     basis, H, W = load_basis()

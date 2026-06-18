@@ -41,6 +41,7 @@ CASES = [
 
 
 def main() -> None:
+    """Génère les rollouts oracle pour toutes les CI et sauvegarde les datasets."""
     b = make_terrain(GRID, TERRAIN_KIND)
     for name, ci_fn, is_test in CASES:
         h0, u0, v0 = ci_fn(GRID)

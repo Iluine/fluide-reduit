@@ -23,14 +23,18 @@ from src.metrics import error_growth, mass_series
 # ----------------------------- CONFIG ------------------------------------
 SEEN_CASE = "drop_center"   # CI vue à l'entraînement
 TEST_CASE = "drop_test"     # CI mise de côté (généralisation)
-DATA = ROOT / "data"; GT = DATA / "ground_truth"; OUT = ROOT / "outputs"
+DATA = ROOT / "data"
+GT = DATA / "ground_truth"
+OUT = ROOT / "outputs"
 # -------------------------------------------------------------------------
 
 
 def load_basis():
     """Recharge la base POD (data/pod_basis.npz) en PODBasis + (H, W)."""
-    d = np.load(DATA / "pod_basis.npz")
-    return PODBasis(d["mean"], d["scale"], d["Phi"], d["singular_values"]), int(d["H"]), int(d["W"])
+    with np.load(DATA / "pod_basis.npz") as d:
+        basis = PODBasis(d["mean"], d["scale"], d["Phi"], d["singular_values"])
+        H, W = int(d["H"]), int(d["W"])
+    return basis, H, W
 
 
 def evaluate(name, basis, A, H, W):
@@ -53,7 +57,8 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     DATA.mkdir(parents=True, exist_ok=True)
     basis, H, W = load_basis()
-    A = np.load(DATA / "dmd_A.npz")["A"]
+    with np.load(DATA / "dmd_A.npz") as _d:
+        A = _d["A"]
 
     results = {name: evaluate(name, basis, A, H, W) for name in (SEEN_CASE, TEST_CASE)}
 
@@ -62,9 +67,13 @@ def main() -> None:
     for name in (SEEN_CASE, TEST_CASE):
         err = results[name][0]
         plt.plot(err, label=f"{name} (final={err[-1]:.3f})")
-    plt.xlabel("pas de temps"); plt.ylabel("erreur L2 relative")
-    plt.title("M3 — H2 : croissance d'erreur du rollout"); plt.legend()
-    plt.tight_layout(); plt.savefig(OUT / "m3_error_growth.png", dpi=120); plt.close()
+    plt.xlabel("pas de temps")
+    plt.ylabel("erreur L2 relative")
+    plt.title("M3 — H2 : croissance d'erreur du rollout")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(OUT / "m3_error_growth.png", dpi=120)
+    plt.close()
 
     # Figure 2 : dérive de masse (prédite vs vérité)
     plt.figure(figsize=(6, 4))
@@ -72,9 +81,13 @@ def main() -> None:
         _, m_pred, m_true, *_ = results[name]
         plt.plot((m_pred - m_true[0]) / m_true[0], label=f"{name} prédit")
         plt.plot((m_true - m_true[0]) / m_true[0], ls="--", label=f"{name} vérité")
-    plt.xlabel("pas de temps"); plt.ylabel("dérive relative de masse")
-    plt.title("M3 — H2 : dérive de la masse totale"); plt.legend()
-    plt.tight_layout(); plt.savefig(OUT / "m3_mass_drift.png", dpi=120); plt.close()
+    plt.xlabel("pas de temps")
+    plt.ylabel("dérive relative de masse")
+    plt.title("M3 — H2 : dérive de la masse totale")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(OUT / "m3_mass_drift.png", dpi=120)
+    plt.close()
 
     # Animations long-horizon côte à côte + verdict chiffré
     verdicts = {}

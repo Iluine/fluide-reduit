@@ -20,16 +20,20 @@ from src.render import surface_height, render_rollout
 
 # ----------------------------- CONFIG ------------------------------------
 CASE = "drop_center"
-DATA = ROOT / "data"; GT = DATA / "ground_truth"; OUT = ROOT / "outputs"
+DATA = ROOT / "data"
+GT = DATA / "ground_truth"
+OUT = ROOT / "outputs"
 # -------------------------------------------------------------------------
 
 
 def main() -> None:
+    """Génère les animations de rendu du rollout prédit (heatmap h et surface eta)."""
     OUT.mkdir(parents=True, exist_ok=True)
-    d = np.load(DATA / "pod_basis.npz")
-    basis = PODBasis(d["mean"], d["scale"], d["Phi"], d["singular_values"])
-    H, W = int(d["H"]), int(d["W"])
-    A = np.load(DATA / "dmd_A.npz")["A"]
+    with np.load(DATA / "pod_basis.npz") as d:
+        basis = PODBasis(d["mean"], d["scale"], d["Phi"], d["singular_values"])
+        H, W = int(d["H"]), int(d["W"])
+    with np.load(DATA / "dmd_A.npz") as _d:
+        A = _d["A"]
 
     ds = load_dataset(GT / f"{CASE}.npz")
     z_true = encode(basis, stack_snapshots(ds.h, ds.u, ds.v))
