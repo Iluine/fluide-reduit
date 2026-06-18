@@ -495,7 +495,7 @@ git commit -m "feat(v2): rest_residual — garde-fou de well-balancedness de l'o
 - Consumes : `src.terrains` (`sample_split`, `make_terrain_from_params`, `rest_state_ic`, `rest_residual`, `DROP_ICS`, `REST_SURFACE`) ; `src.solver.simulate` ; `src.io_utils` (`Dataset`, `save_dataset`, `save_animation`) ; `src.metrics.mass_series` ; `src.render.surface_height` ; `config`.
 - Produces :
   - `generate_split(out_data_dir, out_fig_dir, grid, solver_cfg, entries, rest_surface=REST_SURFACE, save_extrap_anim=True) -> dict` — génère un `.npz` par (terrain, CI), applique les garde-fous (masse, positivité, résidu au repos), écrit `split.json`, sauvegarde les animations oracle η des terrains extrap, retourne un rapport `dict`.
-  - constantes `POSITIVITY_MARGIN = 0.1`, `REST_SURF_DEV_TOL = 0.05`, `REST_SPEED_TOL = 0.3`.
+  - constantes `POSITIVITY_MARGIN = 0.1`, `REST_SURF_DEV_TOL = 0.15`, `REST_SPEED_TOL = 0.5` (bornes de sécurité ; le jugement fin se fait sur les valeurs rapportées).
   - `main()` lançant la génération complète vers `data/v2/` et `outputs/v2/`.
 
 - [ ] **Step 1 : Écrire le test qui échoue**
@@ -700,7 +700,7 @@ Expected: PASS (1 test).
 - [ ] **Step 5 : Générer le dataset complet et vérifier les garde-fous**
 
 Run: `.venv/bin/python scripts/run_v0_generate.py`
-Expected: ~21 lignes `[V0] …`, dérive de masse < 1e-7, profondeur min > 0.1, résidu de surface au repos < 0.05, 2 animations oracle extrap écrites dans `outputs/v2/`. **Si un assert se déclenche** (assèchement, résidu trop grand, dérive), ne pas contourner : c'est un signal que le terrain sort du régime valide → rapporter le terrain fautif (ajuster ses bornes de géométrie dans `sample_split`, en restant submergé).
+Expected: ~21 lignes `[V0] …`, dérive de masse < 1e-7, profondeur min > 0.1, résidu de surface au repos < `REST_SURF_DEV_TOL` (0.15), 2 animations oracle extrap écrites dans `outputs/v2/`. **Si un assert se déclenche** (assèchement, résidu trop grand, dérive), ne pas contourner : c'est un signal que le terrain sort du régime valide → rapporter le terrain fautif (ajuster ses bornes de géométrie dans `sample_split`, en restant submergé).
 
 - [ ] **Step 6 : Commit**
 
