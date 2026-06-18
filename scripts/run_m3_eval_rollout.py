@@ -49,10 +49,15 @@ def evaluate(name, basis, A, H, W):
     eh = error_growth(h_pred, ds.h)       # erreur L2 relative HEIGHT par frame
     ru = rms_growth(u_pred, ds.u)         # RMS absolu vitesse u par frame
     rv = rms_growth(v_pred, ds.v)         # RMS absolu vitesse v par frame
+    # Reference velocity: max-over-time per-frame RMS of TRUE velocity
+    u_ref = float(np.max(np.sqrt(np.mean(ds.u**2, axis=(1, 2)))))
+    v_ref = float(np.max(np.sqrt(np.mean(ds.v**2, axis=(1, 2)))))
     return {
         "eh": eh,
         "ru": ru,
         "rv": rv,
+        "u_ref": u_ref,
+        "v_ref": v_ref,
         "mass_pred": mass_series(h_pred, dx, dy),
         "mass_true": mass_series(ds.h, dx, dy),
         "h_true": ds.h,
@@ -88,8 +93,10 @@ def main() -> None:
     for name in (SEEN_CASE, TEST_CASE):
         ru = results[name]["ru"]
         rv = results[name]["rv"]
-        axes[0].plot(ru, label=name)
-        axes[1].plot(rv, label=name)
+        u_ref = results[name]["u_ref"]
+        v_ref = results[name]["v_ref"]
+        axes[0].plot(ru, label=f"{name} (réf={u_ref:.3f} m/s)")
+        axes[1].plot(rv, label=f"{name} (réf={v_ref:.3f} m/s)")
     axes[0].set_title("RMS absolu u")
     axes[0].set_xlabel("pas de temps")
     axes[0].set_ylabel("RMS [m/s]")
@@ -133,6 +140,8 @@ def main() -> None:
             "h_rel_max": float(r["eh"].max()),
             "u_rms_final": float(r["ru"][-1]),
             "v_rms_final": float(r["rv"][-1]),
+            "u_ref": float(r["u_ref"]),
+            "v_ref": float(r["v_ref"]),
             "mass_drift_final": float((m_pred[-1] - m_true[0]) / m_true[0]),
             "exploded": bool(r["eh"].max() > 5.0 or not np.isfinite(r["eh"]).all()),
         }
@@ -144,9 +153,12 @@ def main() -> None:
 
     print("[M3] verdict H2 par canal :")
     for name, vd in verdicts.items():
+        u_pct = 100.0 * vd["u_rms_final"] / vd["u_ref"] if vd["u_ref"] > 0 else float("nan")
+        v_pct = 100.0 * vd["v_rms_final"] / vd["v_ref"] if vd["v_ref"] > 0 else float("nan")
         print(f"   {name:12s} "
               f"h_rel_final={vd['h_rel_final']:.3f} h_rel_max={vd['h_rel_max']:.3f} "
-              f"u_rms_final={vd['u_rms_final']:.4f} v_rms_final={vd['v_rms_final']:.4f} "
+              f"u_rms={vd['u_rms_final']:.4f} (={u_pct:.0f}% de la réf {vd['u_ref']:.3f} m/s) "
+              f"v_rms={vd['v_rms_final']:.4f} (={v_pct:.0f}% de la réf {vd['v_ref']:.3f} m/s) "
               f"dérive_masse_finale={vd['mass_drift_final']:.2e} explosé={vd['exploded']}")
 
 

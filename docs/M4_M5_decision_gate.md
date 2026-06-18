@@ -14,34 +14,35 @@ Pour justifier l'investissement en M4/M5, **au moins l'une** des conditions suiv
 doit être vérifiée à la fin de M3 :
 
 1. **Croissance d'erreur non bornée** : err_final ≥ 50 % sur horizon long (400 pas).
-2. **Instabilité (explosion)** : amplitude RMS > 10× l'état initial → rayon spectral A > 1.05.
+2. **Instabilité (explosion)** : amplitude RMS > 10× l'état initial → rayon spectral A > 1 (toute valeur propre hors du disque unité).
 3. **Dérive de masse excessive** : |Δm_final / m_init| > 5 %.
 4. **Défaut de généralisation** : écart err(test) − err(vue) > 10 % (non-transférable).
 
 ## Verdict M3 mesuré (H2) — par canal, k=43 (énergie 99.99 %)
 
-| CI | h_rel_final | h_rel_max | u_rms_final | v_rms_final | dérive masse finale | explosé |
-|----|-------------|-----------|-------------|-------------|---------------------|---------|
-| drop_center (vue) | 0.051 | 0.051 | 0.246 m/s | 0.050 m/s | 2.0e-02 | non |
-| drop_test (test)  | 0.132 | 0.198 | 0.347 m/s | 0.479 m/s | 1.5e-02 | non |
+**Opérateur DMD stabilisé par écrêtage des valeurs propres : ρ brut=1.010 → ρ écrêté=1.000 (disque unité).**
 
-Rayon spectral de A (DMD) : 1.010 (stable — légèrement > 1 mais croissance bornée sur horizon 201 pas).
+| CI | h_rel_final | h_rel_max | u_rms_final (% réf) | v_rms_final (% réf) | dérive masse finale | explosé |
+|----|-------------|-----------|---------------------|---------------------|---------------------|---------|
+| drop_center (vue) | 0.055 | 0.055 | 0.250 m/s (74% de 0.335 m/s) | 0.062 m/s (18% de 0.335 m/s) | 1.96e-02 | non |
+| drop_test (test)  | 0.067 | 0.077 | 0.261 m/s (86% de 0.304 m/s) | 0.091 m/s (30% de 0.304 m/s) | 1.54e-02 | non |
 
-**Note :** l'ancienne valeur ~30 % d'erreur (k=16, état empilé [h,u,v]) était dominée
-par les vitesses dont l'erreur relative explose quand ‖u‖→0. La couture verticale
-visible dans les rendus à k=16 est résolue en passant à k=43. Les métriques ci-dessus
-rapportent h en relatif (robuste) et u,v en RMS absolu (non-explosif).
+Rayon spectral de A (DMD) : brut=1.010 → écrêté=1.000 (stabilisé, toutes valeurs propres dans le disque unité).
+
+**Note :** l'écrêtage des valeurs propres (clip_eigenvalues) est appliqué après le fit DMD pour projeter
+les 2 modes instables (|λ|=1.01) sur le cercle unité. Ceci réduit l'artefact de croissance parasite
+sur les CI de test (h_rel_max test : 19.8 % → 7.7 %). L'écrêtage devient la baseline opérationnelle.
+Les métriques rapportent h en relatif (robuste) et u,v en RMS absolu normalisé par la réf d'échelle
+(max-sur-t du RMS par frame de la vérité).
 
 **Lecture :** le rollout DMD est STABLE et BORNÉ (pas d'explosion), GÉNÉRALISE bien
-à la CI de test. L'erreur HEIGHT est 5.1 % (vue) / 13.2 % (test), avec une dérive
+à la CI de test. L'erreur HEIGHT est 5.5 % (vue) / 6.7 % (test), avec une dérive
 de masse modérée (~2 %).
 
 **Décision :** par les critères stricts ci-dessus (h_rel_final < 50 %, pas d'explosion,
 dérive de masse bornée), la baseline DMD est jugée **SUFFISANTE** pour trancher H2 ;
-M4/M5 ne sont donc **PAS strictement requis**. Toutefois, si une fidélité long-horizon
-meilleure que ~10 % sur la CI test est souhaitée, M4 (dynamique non-linéaire) est le
-prochain pas ; si la dérive de masse de ~2 % doit être annulée, M5 (pénalité de
-conservation) s'applique. Ce choix est laissé à l'arbitrage de l'équipe (M4/M5
+M4/M5 ne sont donc **PAS strictement requis**. La dérive de masse de ~2 % reste le
+signal structurel motivant M5. Ce choix est laissé à l'arbitrage de l'équipe (M4/M5
 restent déférés en v1).
 
 ## Vue d'ensemble des rôles

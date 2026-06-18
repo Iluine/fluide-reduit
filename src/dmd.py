@@ -37,3 +37,16 @@ def rollout(A: np.ndarray, z0: np.ndarray, n_steps: int) -> np.ndarray:
 def spectral_radius(A: np.ndarray) -> float:
     """Rayon spectral max|eig(A)| (diagnostic de stabilité du rollout)."""
     return float(np.max(np.abs(np.linalg.eigvals(A))))
+
+
+def clip_eigenvalues(A: np.ndarray, max_modulus: float = 1.0) -> np.ndarray:
+    """Projette les valeurs propres de A dans le disque de rayon max_modulus.
+
+    Régularise l'opérateur DMD : les modes de queue mal contraints reçoivent
+    parfois |lambda|>1 (croissance parasite). On écrête |lambda| -> min(|lambda|,
+    max_modulus) en conservant la phase ; les paires conjuguées sont préservées
+    donc le résultat reste réel."""
+    lam, V = np.linalg.eig(A)
+    factor = np.minimum(1.0, max_modulus / np.abs(lam))
+    A_clipped = V @ np.diag(lam * factor) @ np.linalg.inv(V)
+    return A_clipped.real

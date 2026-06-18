@@ -34,7 +34,7 @@ Chaque script sauvegarde ses sorties dans `./outputs/` (PNG + GIF d'animation).
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest -q  # Suite complète (27 tests)
+.venv/bin/python -m pytest -q  # Suite complète (31 tests)
 ```
 
 Couverture : POD (encode/decode, énergie), DMD (fit, rollout, rayon spectral),
@@ -93,11 +93,11 @@ multiresolution (down/up, fendu mobile), rendu (heatmap, surface).
 | Hypothèse | Métrique | Seuil | Mesuré (drop_center) | Mesuré (drop_test) | Verdict |
 |-----------|----------|-------|----------------------|--------------------|---------|
 | **H1 : POD+DMD** | Énergie POD @ k=43 | ≥99.99 % | 99.99 % | — | ✅ PASS |
-| **H1 : POD+DMD** | Rayon spectral A (DMD) | <1.05 | 1.010 | — | ✅ PASS (stable) |
-| **H2 : Hauteur** | h_rel_final (err L2 relative h) | <50 % | 5.1 % | 13.2 % | ✅ PASS (borné) |
-| **H2 : Hauteur** | h_rel_max | <500 % | 5.1 % | 19.8 % | ✅ PASS |
-| **H2 : Vitesses** | u_rms_final (RMS absolu) | non-exp. | 0.246 m/s | 0.347 m/s | ✅ PASS |
-| **H2 : Vitesses** | v_rms_final (RMS absolu) | non-exp. | 0.050 m/s | 0.479 m/s | ✅ PASS |
+| **H1 : POD+DMD** | Rayon spectral A (DMD, écrêté) | ≤1.0 | 1.000 (brut=1.010) | — | ✅ PASS (stabilisé) |
+| **H2 : Hauteur** | h_rel_final (err L2 relative h) | <50 % | 5.5 % | 6.7 % | ✅ PASS (borné) |
+| **H2 : Hauteur** | h_rel_max | <500 % | 5.5 % | 7.7 % | ✅ PASS |
+| **H2 : Vitesses** | u_rms_final (RMS absolu, % réf) | non-exp. | 0.250 m/s (74% réf) | 0.261 m/s (86% réf) | ✅ PASS |
+| **H2 : Vitesses** | v_rms_final (RMS absolu, % réf) | non-exp. | 0.062 m/s (18% réf) | 0.091 m/s (30% réf) | ✅ PASS |
 | **H2 : Masse** | Dérive masse finale | <5 % | 2.0 % | 1.5 % | ✅ PASS |
 | **H3 : Couture** | Collage dur (moyen) | - | 0.029 | — | ✅ PASS |
 | **H3 : Couture** | Fondu w=3 (moyen) | −67 % vs collage | 0.010 | — | ✅ PASS |
@@ -110,11 +110,11 @@ multiresolution (down/up, fendu mobile), rendu (heatmap, surface).
 
 ## Résultats des hypothèses
 
-- **H1 ✅** : POD reconstruit à 99.99 % d'énergie avec k=43 modes (sur 603 snapshots) ; DMD reproduit la dynamique à court horizon (rayon spectral 1.010, stable). Voir `m1_energy.png`, `m2_dmd_vs_truth.gif`.
+- **H1 ✅** : POD reconstruit à 99.99 % d'énergie avec k=43 modes (sur 603 snapshots) ; DMD reproduit la dynamique à court horizon. L'opérateur DMD est stabilisé par écrêtage des valeurs propres (raw ρ=1.010 → ρ=1.000 — les 2 modes instables sont projetés sur le cercle unité). Voir `m1_energy.png`, `m2_dmd_vs_truth.gif`.
 
-- **H2 (caractérisé, par canal)** : Rollout stable/borné, non explosé.
-  - HEIGHT (h) : erreur L2 relative finale 5.1 % (vue) / 13.2 % (test), max 5.1 % / 19.8 %. Bornée et faible.
-  - VITESSES (u, v) : RMS absolu final 0.246 / 0.050 m/s (vue) et 0.347 / 0.479 m/s (test). Métrique non normalisée (robuste aux phases calmes où ‖u‖→0).
+- **H2 (caractérisé, par canal, opérateur DMD écrêté)** : Rollout stable/borné, non explosé.
+  - HEIGHT (h) : erreur L2 relative finale 5.5 % (vue) / 6.7 % (test), max 5.5 % / 7.7 %. Bornée et faible. (Avant écrêtage : max test était 19.8 %.)
+  - VITESSES (u, v) : RMS absolu final 0.250 m/s =74% réf / 0.062 m/s =18% réf (vue) et 0.261 m/s =86% réf / 0.091 m/s =30% réf (test). Normalisé par réf = max-sur-t du RMS par frame de la vérité (robuste aux phases calmes où ‖u‖→0).
   - Dérive masse : 2.0 % (vue) / 1.5 % (test).
   - *L'ancienne valeur ~30 % était l'erreur sur l'état empilé [h,u,v], dominée par les vitesses ; la couture verticale était un artefact k=16 résolu par k=43.*
   - Voir `m3_error_growth.png`, `m3_velocity_rms.png`, `m3_mass_drift.png`.
@@ -135,6 +135,6 @@ conservation) doivent être envisagés. **Ces modules restent déférés en v1**
 - **Indexation des tableaux** : `array[y, x]` (axe 0 = y = lignes = H, axe 1 = x = colonnes = W).
 - **Shallow-water 2D** : volumes finis, flux de Rusanov (LF local), conservatif, CFL 2D = 0.45.
 - **POD** : SVD + dimensionnement par canal (h, u, v).
-- **DMD** : Moindres carrés + rayon spectral pour stabilité.
+- **DMD** : Moindres carrés + écrêtage des valeurs propres (clip_eigenvalues, ρ≤1) + rayon spectral pour stabilité.
 - **Multirésolution** : Downsampling par bloc, upsampling linéaire, fondu linéaire dans une fenêtre mobile pour
   lisser la couture entre résolutions.

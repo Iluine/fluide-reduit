@@ -15,7 +15,7 @@ import numpy as np
 
 from src.io_utils import load_dataset, save_animation
 from src.pod import PODBasis, encode, decode, stack_snapshots, unstack
-from src.dmd import fit_dmd, rollout, spectral_radius
+from src.dmd import fit_dmd, rollout, spectral_radius, clip_eigenvalues
 
 # ----------------------------- CONFIG ------------------------------------
 TRAIN_CASES = ["drop_center", "drop_offset", "dam_break"]
@@ -43,10 +43,12 @@ def main() -> None:
     for name in TRAIN_CASES:
         ds = load_dataset(GT / f"{name}.npz")
         z_list.append(encode(basis, stack_snapshots(ds.h, ds.u, ds.v)))
-    A = fit_dmd(z_list)
+    A_raw = fit_dmd(z_list)
+    rho_raw = spectral_radius(A_raw)
+    A = clip_eigenvalues(A_raw)
+    rho_clipped = spectral_radius(A)
     np.savez_compressed(DATA / "dmd_A.npz", A=A)
-    rho = spectral_radius(A)
-    print(f"[M2] rayon spectral de A = {rho:.4f} ({'stable' if rho <= 1.0 else 'CROISSANT'})")
+    print(f"[M2] rayon spectral brut={rho_raw:.4f} -> écrêté={rho_clipped:.4f} ({'stable' if rho_clipped <= 1.0 else 'CROISSANT'})")
 
     ds = load_dataset(GT / f"{DEMO_CASE}.npz")
     z_true = encode(basis, stack_snapshots(ds.h, ds.u, ds.v))

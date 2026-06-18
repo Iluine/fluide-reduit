@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from src.dmd import fit_dmd, rollout, spectral_radius
+from src.dmd import fit_dmd, rollout, spectral_radius, clip_eigenvalues
 
 
 def _make_trajectory(A0, z0, T):
@@ -43,3 +43,19 @@ def test_spectral_radius():
 def test_fit_dmd_raises_on_empty_input():
     with pytest.raises(ValueError):
         fit_dmd([])
+
+
+def test_clip_eigenvalues_brings_spectral_radius_to_one():
+    # operator with an unstable eigenvalue (1.1) and a stable one (0.5)
+    A0 = np.diag([1.1, 0.5])
+    Ac = clip_eigenvalues(A0, max_modulus=1.0)
+    assert spectral_radius(Ac) <= 1.0 + 1e-9
+    assert abs(spectral_radius(Ac) - 1.0) < 1e-9   # the 1.1 mode clipped to 1.0
+    assert Ac.shape == A0.shape
+    assert np.isrealobj(Ac)
+
+
+def test_clip_eigenvalues_leaves_stable_operator_unchanged():
+    A0 = np.diag([0.9, 0.5, -0.3])   # already inside unit disk
+    Ac = clip_eigenvalues(A0, max_modulus=1.0)
+    assert np.allclose(Ac, A0, atol=1e-9)
