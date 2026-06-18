@@ -1,9 +1,9 @@
 import numpy as np
 
-from config import GridConfig, GRAVITY
+from config import GridConfig, GRAVITY, SolverConfig
 from src.solver import (make_terrain, initial_condition_dam_break,
                         initial_condition_gaussian_drop, cfl_dt,
-                        lax_friedrichs_step)
+                        lax_friedrichs_step, simulate)
 
 GRID = GridConfig(H=32, W=32, dx=1.0, dy=1.0)
 
@@ -59,3 +59,15 @@ def test_step_preserves_shape_and_dtype():
     h2, u2, v2 = lax_friedrichs_step(h, u, v, b, dt, GRID, 1e-3)
     assert h2.shape == (GRID.H, GRID.W)
     assert h2.dtype == np.float64
+
+
+def test_simulate_shapes_and_mass_conservation():
+    grid = GridConfig(H=24, W=24)
+    cfg = SolverConfig(cfl=0.45, n_steps=40, save_every=4, min_depth=1e-3)
+    h0, u0, v0 = initial_condition_gaussian_drop(grid)
+    b = make_terrain(grid, "flat")
+    hs, us, vs, dt = simulate(h0, u0, v0, b, grid, cfg)
+    assert hs.shape == (40 // 4 + 1, 24, 24)
+    assert dt > 0
+    masses = hs.sum(axis=(1, 2))
+    assert (abs(masses - masses[0]) / masses[0]).max() < 1e-9

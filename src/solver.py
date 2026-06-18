@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from config import GRAVITY, GridConfig
+from config import GRAVITY, GridConfig, SolverConfig
 
 
 def make_terrain(grid: GridConfig, kind: str = "bump") -> np.ndarray:
@@ -138,3 +138,31 @@ def lax_friedrichs_step(h: np.ndarray, u: np.ndarray, v: np.ndarray,
 
     h_safe = np.maximum(new1, min_depth)
     return new1, new2 / h_safe, new3 / h_safe
+
+
+def simulate(h0: np.ndarray, u0: np.ndarray, v0: np.ndarray, b: np.ndarray,
+             grid: GridConfig, cfg: SolverConfig):
+    """Intègre la dynamique sur cfg.n_steps avec un dt FIXE (échantillonnage
+    temporel uniforme requis par POD/DMD). Assert CFL à chaque pas.
+
+    Retourne (h_seq, u_seq, v_seq, dt) avec les séquences (T,H,W)."""
+    # dt FIXE (échantillonnage temporel uniforme requis par POD/DMD), choisi
+    # conservativement sur la CI avec une marge 0.5 : laisse ~2x de headroom pour
+    # la montée de vitesse (ex. rupture de barrage où |u|+sqrt(gh) augmente) avant
+    # que la CFL ne soit violée. La CFL est revérifiée à chaque pas ci-dessous.
+    dt = 0.5 * cfl_dt(h0, u0, v0, grid, cfg.cfl)
+
+    h, u, v = h0.copy(), u0.copy(), v0.copy()
+    hs, us, vs = [h.copy()], [u.copy()], [v.copy()]
+    for step in range(1, cfg.n_steps + 1):
+        # Vérifie la CFL pour l'état courant avec le dt fixe
+        dt_limit = cfl_dt(h, u, v, grid, cfg.cfl)
+        if dt > dt_limit + 1e-12:
+            raise RuntimeError(
+                f"CFL violée au pas {step}: dt={dt:.4e} > limite={dt_limit:.4e}")
+        h, u, v = lax_friedrichs_step(h, u, v, b, dt, grid, cfg.min_depth)
+        if step % cfg.save_every == 0:
+            hs.append(h.copy())
+            us.append(u.copy())
+            vs.append(v.copy())
+    return (np.stack(hs), np.stack(us), np.stack(vs), dt)
