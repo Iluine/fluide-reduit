@@ -40,3 +40,40 @@ def thacker_radial(grid: GridConfig, t: float, a: float = 1.0, h0: float = 0.1,
                 - (r2 / a ** 2) * ((1.0 - A ** 2) / denom ** 2 - 1.0))
     h = np.maximum(eta - b, 0.0)
     return h, b
+
+
+# --- Thacker planaire 1D (SWASHES §4.2.1) orienté en diagonale -> front translatant 2D ---
+
+def thacker_planar_period(a: float = 1.0, h0: float = 0.5) -> float:
+    """Période du slosh planaire : T = 2π/ω, ω = √(2 g h0)/a."""
+    return 2.0 * np.pi / (np.sqrt(2.0 * GRAVITY * h0) / a)
+
+
+def thacker_planar_diag(grid: GridConfig, t: float, a: float = 1.0, h0: float = 0.5,
+                        L: float = 4.0) -> tuple[np.ndarray, np.ndarray]:
+    """Solution planaire 1D de Thacker appliquée le long de la DIAGONALE (45°) : un front
+    droit qui TRANSLATE le long de s = ((x-L/2)+(y-L/2))/√2. Solution SWE exacte (rotation
+    rigide d'une solution 1D). Bol parabolique en s ; surface planaire oscillante."""
+    xx, yy = _centers(grid)
+    s = ((xx - L / 2.0) + (yy - L / 2.0)) / np.sqrt(2.0)   # coordonnée diagonale
+    b = h0 * (s ** 2 / a ** 2 - 1.0)                        # canal parabolique le long de s
+    omega = np.sqrt(2.0 * GRAVITY * h0) / a
+    B = np.sqrt(2.0 * GRAVITY * h0) / (2.0 * a)
+    inner = (s / a) + (B / np.sqrt(2.0 * GRAVITY * h0)) * np.cos(omega * t)
+    h = np.maximum(-h0 * (inner ** 2 - 1.0), 0.0)           # >0 sur la bande mouillée
+    return h, b
+
+
+def front_band_mask(h: np.ndarray, eps: float = 1e-3, width: int = 2) -> np.ndarray:
+    """Cellules MOUILLÉES au voisinage (width cellules) du trait d'eau (frontière
+    mouillé/sec). C'est là que se concentre l'erreur n-width ; le gate W0 s'y lit."""
+    wet = h > eps
+    dry = ~wet
+    # dilatation binaire de la zone sèche de `width` cellules (voisinage 4-connexe itéré)
+    grown = dry.copy()
+    for _ in range(width):
+        g = grown.copy()
+        g[1:, :] |= grown[:-1, :]; g[:-1, :] |= grown[1:, :]
+        g[:, 1:] |= grown[:, :-1]; g[:, :-1] |= grown[:, 1:]
+        grown = g
+    return wet & grown                                       # mouillé ET proche du sec
