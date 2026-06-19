@@ -95,6 +95,28 @@ def operator_and_rollout(seqs: list[dict], grid: GridConfig):
     return basis, A, z_list, rho_raw, rho_clip
 
 
+def _regime(name: str) -> str:
+    """Régime = préfixe du nom (runup | dambreakdry | bore)."""
+    return name.split("_")[0]
+
+
+def operators_per_regime(seqs, z_list):
+    """Un opérateur DMD écrêté PAR RÉGIME : ajusté sur les trajectoires de ce régime seul,
+    donc PAS de modes inter-régimes à fuir (la cause de la brisure de symétrie 1D du bore).
+    Base partagée gardée (acquis k) ; seule la dynamique est localisée. Le jeu connaît le
+    régime au rendu -> sélection gratuite."""
+    groups: dict[str, list[int]] = {}
+    for i, s in enumerate(seqs):
+        groups.setdefault(_regime(s["name"]), []).append(i)
+    ops = {}
+    for reg, idxs in groups.items():
+        A = fit_dmd([z_list[i] for i in idxs])
+        rr = spectral_radius(A)
+        A = clip_eigenvalues(A, 1.0)
+        ops[reg] = dict(A=A, rho_raw=rr, rho_clip=spectral_radius(A), n=len(idxs))
+    return ops
+
+
 def _rollout_scenario(basis, A, z0, n_steps, H, W):
     """Rollout autorégressif -> décode -> h_pred CLAMPÉ >=0 (correction 5 : analogue W3
     différé ; un h<0 au rendu serait lu à tort comme « opérateur casse »)."""
@@ -103,16 +125,17 @@ def _rollout_scenario(basis, A, z0, n_steps, H, W):
     return np.maximum(h_pred, 0.0)
 
 
-def render_scenarios(seqs, basis, A, z_list, grid, names):
-    """Frames côte à côte vérité vs surrogate (surface η) à t=0, mi, fin -> PNG (jugement
-    visuel). Retourne la L2 indicative par scénario (PAS un gate — critère = visuel)."""
+def render_scenarios(seqs, basis, get_A, z_list, grid, names, suffix):
+    """Frames côte à côte vérité vs surrogate (η) à t=0/mi/fin -> PNG (jugement visuel).
+    `get_A(i)` fournit l'opérateur du scénario i (global ou par-régime). Retourne la L2
+    indicative (PAS un gate — critère = visuel)."""
     H, W = grid.H, grid.W
     info = []
     for nm in names:
         i = next(j for j, s in enumerate(seqs) if s["name"] == nm)
         s = seqs[i]
         T = s["h_seq"].shape[0]
-        h_pred = _rollout_scenario(basis, A, z_list[i][:, 0], T - 1, H, W)
+        h_pred = _rollout_scenario(basis, get_A(i), z_list[i][:, 0], T - 1, H, W)
         eta_true = s["h_seq"] + s["b"]
         eta_pred = h_pred + s["b"]
         l2 = relative_l2_error(h_pred, s["h_seq"])
@@ -128,9 +151,10 @@ def render_scenarios(seqs, basis, A, z_list, grid, names):
             axes[1, c].set_title(f"surrogate t={t}", fontsize=9)
             for a in (axes[0, c], axes[1, c]):
                 a.set_xticks([]); a.set_yticks([])
-        fig.suptitle(f"{nm}  (η : vérité haut / surrogate bas ; L2={l2:.2f})", fontsize=10)
+        fig.suptitle(f"{nm}  [{suffix}]  (η : vérité haut / surrogate bas ; L2={l2:.2f})",
+                     fontsize=10)
         fig.tight_layout()
-        fig.savefig(OUT_FIG / f"surrogate_{nm}.png", dpi=110)
+        fig.savefig(OUT_FIG / f"surrogate_{nm}_{suffix}.png", dpi=110)
         plt.close(fig)
     return info
 
@@ -184,36 +208,51 @@ def main() -> None:
              f"- incrément marginal (dernier palier) : ~{marginal:.1f} modes/scénario", "",
              "## Verdict d'étendue", "", verdict, ""]
 
-    # ---- OPÉRATEUR (l'axe non testé) : un seul A global, écrêté, en rollout ----
-    basis, A, z_list, rho_raw, rho_clip = operator_and_rollout(seqs, GRID)
-    show = ["runup_island_x25_diag", "dambreakdry_x50_diag", "bore_x40_x"]  # >=1 run-up
+    # ---- OPÉRATEUR (l'axe non testé) : global vs PAR-RÉGIME, sur base partagée ----
+    basis, A_glob, z_list, rho_raw, rho_clip = operator_and_rollout(seqs, GRID)
+    ops = operators_per_regime(seqs, z_list)           # un A écrêté par régime (base partagée)
+    show = ["runup_island_x25_diag", "dambreakdry_x50_diag", "bore_x40_x"]
     show = [nm for nm in show if any(s["name"] == nm for s in seqs)]
-    info = render_scenarios(seqs, basis, A, z_list, GRID, show)
     k_state = basis.Phi.shape[1]
+    info_g = render_scenarios(seqs, basis, lambda i: A_glob, z_list, GRID, show, "global")
+    info_r = render_scenarios(seqs, basis, lambda i: ops[_regime(seqs[i]["name"])]["A"],
+                              z_list, GRID, show, "perregime")
+    l2g = dict(info_g)
+    l2r = dict(info_r)
 
-    print(f"[SURROGATE-OPERATOR] base état complet k={k_state} ; ρ(A) brut={rho_raw:.3f} "
-          f"-> écrêté={rho_clip:.3f} (correction 2 : |λ|<=1)")
-    for nm, l2 in info:
-        print(f"[SURROGATE-OPERATOR] rollout {nm:26s} L2 indicatif={l2:.3f} "
-              f"-> rendu outputs/v2.5/surrogate_{nm}.png")
-    print("[SURROGATE-OPERATOR] CRITÈRE = VISUEL : juger les rendus (vérité vs surrogate), "
-          "pas la L2. Remède orthogonal : base OK (étendue bornée) ; si l'opérateur casse "
-          "visuellement -> dynamique plus riche, PAS encodeur de base.")
+    print(f"[SURROGATE-OPERATOR] base partagée état complet k={k_state}")
+    print(f"[SURROGATE-OPERATOR] GLOBAL : ρ brut={rho_raw:.3f}->écrêté={rho_clip:.3f}")
+    for reg, d in sorted(ops.items()):
+        print(f"[SURROGATE-OPERATOR] PAR-RÉGIME {reg:12s} (n={d['n']}) : "
+              f"ρ brut={d['rho_raw']:.3f}->écrêté={d['rho_clip']:.3f}")
+    for nm in show:
+        print(f"[SURROGATE-OPERATOR] {nm:26s} L2 global={l2g[nm]:.3f} -> par-régime={l2r[nm]:.3f}"
+              f"   (rendus surrogate_{nm}_global.png / _perregime.png)")
+    print("[SURROGATE-OPERATOR] CRITÈRE = VISUEL. Attendu par-régime : symétrie 1D du bore "
+          "RESTAURÉE + mottling réduit (la fuite de modes inter-régimes disparaît) ; reste le "
+          "lissage de front INTRINSÈQUE au linéaire (seul candidat éventuel au non-linéaire).")
 
-    lines += ["## Opérateur single-global (l'axe non testé) — jugement VISUEL", "",
-              f"Un seul opérateur linéaire global (DMD écrêté |λ|≤1) sur le POD état complet "
-              f"[h,u,v] (k={k_state}) de tout le vocabulaire. ρ(A) brut **{rho_raw:.3f}** → "
-              f"écrêté **{rho_clip:.3f}** (correction 2 : un blow-up brut serait un faux "
-              "« opérateur casse »).", "",
-              "| scénario | L2 indicatif (PAS un gate) | rendu |", "|---|---|---|"]
-    for nm, l2 in info:
-        lines.append(f"| {nm} | {l2:.3f} | `outputs/v2.5/surrogate_{nm}.png` |")
-    lines += ["", "**Critère de succès = VISUEL** (plausibilité du rendu vérité vs surrogate), "
-              "pas la L2. Remède orthogonal : l'étendue (base) est bornée ; si l'opérateur "
-              "casse visuellement, le remède est une dynamique plus riche (pas un encodeur de "
-              "base). Décode clampé h≥0 (analogue W3 différé) pour ne pas lire un h<0 comme un "
-              "échec d'opérateur.", "",
-              "→ **Checkpoint : jugement visuel de l'utilisateur sur les rendus.**"]
+    lines += ["## Opérateur : global vs PAR-RÉGIME (base partagée) — jugement VISUEL", "",
+              f"Base partagée état complet [h,u,v] (k={k_state}). Deux types d'échec du global "
+              "décomposés : (1) **intrinsèque-linéaire** = lissage de front (nature du DMD, "
+              "aucun A linéaire ne garde un front net) ; (2) **globalité** = brisure de "
+              "symétrie 1D du bore + mottling (un A unique couple des modes inter-régimes). "
+              "Remède du (2), le moins cher : **un A par régime** (le jeu connaît le régime), "
+              "base partagée gardée — pas de modes 2D à fuir dans le bore 1D.", "",
+              f"ρ(A) global {rho_raw:.3f}→{rho_clip:.3f} (écrêté). Par-régime : "
+              + ", ".join(f"{r} {d['rho_raw']:.2f}→{d['rho_clip']:.2f}" for r, d in sorted(ops.items())) + ".", "",
+              "| scénario | L2 global | L2 par-régime | rendus |", "|---|---|---|---|"]
+    for nm in show:
+        lines.append(f"| {nm} | {l2g[nm]:.3f} | {l2r[nm]:.3f} | "
+                      f"`surrogate_{nm}_{{global,perregime}}.png` |")
+    lines += ["", "**Critère = VISUEL** (L2 cache la brisure de symétrie : erreur basse-énergie/"
+              "haute-saillance). Ordre disciplinaire : par-régime d'abord (corrige la globalité, "
+              "reste linéaire) ; le non-linéaire ne se discuterait qu'APRÈS, sur le seul lissage "
+              "intrinsèque résiduel, s'il est jugé trop mou. Remède orthogonal : base bornée "
+              "(k=46) acquise — l'encodeur de base est mort ; ceci est un raffinement LINÉAIRE "
+              "ciblé de la dynamique, pas un changement de classe de modèle.", "",
+              "→ **Checkpoint : juger les rendus par-régime — symétrie restaurée ? lissage "
+              "résiduel acceptable ?**"]
 
     OUT_DOC.write_text("\n".join(lines) + "\n")
     print(f"[SURROGATE] note -> {OUT_DOC}")
