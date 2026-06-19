@@ -149,7 +149,9 @@ def main() -> None:
              f"déroulé sur les terrains holdout depuis leur CI vraie.", "",
              "Décomposition : plancher = erreur de représentation (encode-décode du h "
              "vrai) ; rollout = erreur depuis la CI via l'opérateur ; gap = rollout − "
-             "plancher = erreur imputable à l'OPÉRATEUR.", "",
+             "plancher = erreur imputable à l'OPÉRATEUR. (Note : `fit_dmd` est homogène "
+             "mais la POD soustrait une moyenne -> la dynamique centrée est affine ; une "
+             "part du gap, même in-sample, est cet angle mort affine, cf. v2b.)", "",
              "| terrain | plancher (repr.) | rollout | rollout_max | gap (opérateur) |",
              "|---|---|---|---|---|"]
     for name, m in out["results"].items():

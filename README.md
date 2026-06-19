@@ -366,6 +366,8 @@ Le rollout canal résiduel (11.8 %) est **hérité de son plancher de représent
 
 → **Pour le but visuel : ni V3a, ni V3b, ni V5.** Un seul A global + base statique
 suffit, dès que le train **couvre le vocabulaire de topologies** (qu'un jeu contrôle).
+*(Supporté, pas prouvé : effondrement de couverture net mais établi sur le point de
+fonctionnement testé, ρ=1.0 marginal.)*
 La foresight transport était juste sur le *lieu* : le résidu transport est dans la
 **représentation**, pas l'opérateur. Détails : `docs/v2_V2_transfer.md`,
 `docs/v2_v2b_operator_coverage.md` (scripts `run_v2_transfer.py`, `exp_v2b_operator_coverage.py`).

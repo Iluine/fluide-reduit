@@ -59,16 +59,18 @@ def main() -> None:
         chan_trajs.append(per)
 
     print("[v2b] couverture-opérateur : rollout du canal holdout vs n canaux dans le fit")
-    print(f"{'n_canaux':>9} {'k':>4} {'rho':>6} {'train_ref':>10} {'interp':>8} "
-          f"{'obstacle':>9} {'CANAL roll':>11} {'CANAL floor':>12}")
+    print("      (roll = rollout ; flr = plancher de représentation ; gap = roll - flr)")
+    print(f"{'n':>3} {'k':>4} {'rho':>6} {'ref_roll':>9} {'obst_roll':>10} {'obst_flr':>9} "
+          f"{'obst_gap':>9} {'CAN_roll':>9} {'CAN_flr':>8} {'CAN_gap':>8}")
     for n in (0, 1, 2, 4):
         extra = [hs for per in chan_trajs[:n] for hs in per]  # n canaux x 2 CI
         out = evaluate_transfer(base_train + extra, eval_set, H, W, 0.9999, 2000)
         r = out["results"]
         ref = next(v for k, v in r.items() if k.startswith("train_ref"))
-        print(f"{n:>9} {out['k']:>4} {out['rho']:>6.3f} {ref['rollout']:>10.4f} "
-              f"{r['interp']['rollout']:>8.4f} {r['extrap_obstacle']['rollout']:>9.4f} "
-              f"{r['extrap_channel']['rollout']:>11.4f} {r['extrap_channel']['floor']:>12.4f}")
+        ob, ca = r["extrap_obstacle"], r["extrap_channel"]
+        print(f"{n:>3} {out['k']:>4} {out['rho']:>6.3f} {ref['rollout']:>9.4f} "
+              f"{ob['rollout']:>10.4f} {ob['floor']:>9.4f} {ob['gap']:>9.4f} "
+              f"{ca['rollout']:>9.4f} {ca['floor']:>8.4f} {ca['gap']:>8.4f}")
 
     print("\nLecture : CANAL roll vers ~obstacle => opérateur coverage-limited (V3b non "
           "requis) ; plafonne au-dessus => résidu (transport / besoin de conditionnement "

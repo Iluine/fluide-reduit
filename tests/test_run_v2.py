@@ -8,10 +8,18 @@ sys.path.insert(0, str(ROOT))
 
 
 def test_transfer_works_when_dynamics_is_shared():
-    """Si les trajectoires train ET éval suivent la MÊME dynamique latente linéaire,
-    l'opérateur DMD global doit transférer : rollout fidèle sur la trajectoire éval
-    (le rollout ne peut pas battre le plancher de représentation, mais doit s'en
-    approcher quand la dynamique est exactement partagée)."""
+    """Sanity de CÂBLAGE : si train ET éval suivent la MÊME dynamique latente linéaire,
+    l'opérateur DMD global doit transférer (rollout ≈ plancher). Attrape un DMD cassé
+    (transposé, paires à cheval entre trajectoires) qui ferait exploser le rollout.
+
+    PORTÉE (caveat, cf. revue) : ce test est volontairement construit dans le régime où
+    la dynamique CENTRÉE par la POD est exactement homogène — CI ±symétriques => moyenne
+    des snapshots nulle => le centrage est un no-op. Or `fit_dmd` ajuste une carte
+    HOMOGÈNE `z'=Az` alors que la POD soustrait une moyenne ; sur des données générales
+    la dynamique centrée est AFFINE (`z'=Az+c`), et un A homogène ne peut la suivre
+    exactement. Ce test ne teste donc PAS l'absence de ce biais affine — il valide le
+    câblage. Sur le vrai problème, ce biais est mesuré (et compté comme erreur opérateur)
+    par la décomposition plancher/rollout, pas masqué."""
     from scripts.run_v2_transfer import evaluate_transfer
     rng = np.random.default_rng(0)
     H = W = 8

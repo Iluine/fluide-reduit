@@ -31,14 +31,23 @@ Script : `scripts/exp_v2b_operator_coverage.py`.
 | train_ref (in-sample) | 2.4 % | 0.04 % | 2.4 % |
 | interp | 4.0 % | 0.6 % | 3.4 % |
 | **canal** | 11.8 % | **6.0 %** | **5.8 %** |
-| obstacle | 8.6 % | 1.8 % | 6.8 % |
+| obstacle | 8.6 % | 1.9 % | 6.7 % |
+
+> **Caveat méthodo (revue indépendante)** : `fit_dmd` ajuste une carte **homogène**
+> `z'=Az`, mais la POD soustrait une moyenne globale — la dynamique *centrée* est donc
+> **affine** (`z'=Az+c`), et la moyenne globale (mélange des rest states `η₀−b` de
+> terrains différents) n'est le point fixe d'**aucun** terrain. Un A homogène doit donc
+> compromettre : une partie du gap opérateur — y compris l'in-sample 2.4 % — est cet
+> **angle mort affine** (pas seulement la difficulté de transfert). La décomposition le
+> compte honnêtement comme « erreur opérateur » ; le lever (mode constant / DMD affine)
+> est une amélioration possible, hors-scope ici.
 
 ## Lecture
 
 1. **L'opérateur est *coverage-limited*, pas incapable.** Le cliff 157 % → 11.8 %
    s'effondre dès qu'un seul A global voit de la dynamique de canal — exactement
    l'analogue dynamique de v1b. Pas de plateau-au-catastrophique.
-2. **Le gap opérateur du canal (5.8 %) ≈ celui de l'obstacle (6.8 %).** L'opérateur ne
+2. **Le gap opérateur du canal (5.8 %) ≈ celui de l'obstacle (6.7 %).** L'opérateur ne
    traite pas la dynamique de *bande* plus mal que celle de *tache* une fois couverte ;
    il est quasi **topologie-agnostique**. Le rollout canal plus élevé (11.8 %) est
    **hérité de son plancher de représentation (6 %)** = le résidu transport/n-width de
@@ -55,7 +64,11 @@ vocabulaire de topologies** (représentation *et* dynamique), le surrogate rédu
 les topologies. Pour un livrable de jeu, on **contrôle** ce vocabulaire.
 
 - **V3b (opérateur conditionné terrain) n'est PAS requis** pour le but visuel : un A
-  global suffit une fois la topologie vue.
+  global suffit une fois la topologie vue. (Portée honnête : **supporté, pas prouvé** —
+  l'effondrement de couverture est net mais établi sur un point de fonctionnement,
+  n=4 canaux et deux jeux de params holdout, avec ρ=1.0 — stabilité marginale. Pas une
+  preuve générale ; un contre-exemple devrait surgir d'un balayage plus large avant de
+  re-considérer V3b.)
 - **V3a non plus** (v1b : pas de problème de représentation à corriger).
 - **V5 (encodeur appris) non plus** : `k` ne grossit pas.
 - La foresight transport était juste sur le *lieu* : le résidu transport est dans la

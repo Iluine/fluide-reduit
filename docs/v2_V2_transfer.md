@@ -2,7 +2,7 @@
 
 Base POD hauteur (k=32) + opérateur DMD global écrêté (ρ=1.0000) ajusté sur tous les terrains d'entraînement, déroulé sur les terrains holdout depuis leur CI vraie.
 
-Décomposition : plancher = erreur de représentation (encode-décode du h vrai) ; rollout = erreur depuis la CI via l'opérateur ; gap = rollout − plancher = erreur imputable à l'OPÉRATEUR.
+Décomposition : plancher = erreur de représentation (encode-décode du h vrai) ; rollout = erreur depuis la CI via l'opérateur ; gap = rollout − plancher = erreur imputable à l'OPÉRATEUR. (Note : `fit_dmd` est homogène mais la POD soustrait une moyenne -> la dynamique centrée est affine ; une part du gap, même in-sample, est cet angle mort affine, cf. v2b.)
 
 | terrain | plancher (repr.) | rollout | rollout_max | gap (opérateur) |
 |---|---|---|---|---|
