@@ -295,3 +295,30 @@ automatique du script V1) :
    data-limité (ajouter des terrains, garder la base statique) ; s'il tient →
    structurel (et là l'encodeur V5 / GPU se justifie). Évite d'escalader prématurément
    vers le GPU pour un problème que des données régleraient.
+
+### A.8 Résolution empirique (v1b) — couverture vs capacité, et routage révisé
+
+Les lentilles A.7 ont été testées après V1 (`docs/v2_v1b_coverage_vs_capacity.md`,
+`scripts/exp_v1b_channel_coverage.py`). Le plafond `extrap_channel` de 16.4 % était
+mesuré **topologie holdout-only** ; le test décisif (ajouter des canaux au train, params
+différents, re-mesurer le même canal holdout) donne :
+
+| canaux en train (×2 CI) | 0 | 1 | 2 | 4 |
+|--------------------------|----|----|----|----|
+| plafond canal | 16.4 % | 14.6 % | 9.3 % | **6.0 %** |
+| `k` | 32 | 24 | 24 | 25 |
+
+**Conclusions :** (1) le plafond canal est **dominé par la couverture** (chute monotone
+sans plateau) — pas une incapacité de la POD ; (2) il subsiste un **petit coût résiduel
+de la topologie bande** (~6 % vs ~1.9 % pour l'obstacle à couverture égale), une
+constante, pas un mur ; (3) **`k` n'explose pas** (24–32) en couvrant la topologie.
+
+**Routage révisé** (corrige A.7 et la prescription V3a de V1) : la représentation
+**tient** dès que le train couvre le vocabulaire de topologies — qu'on **contrôle** pour
+un livrable de jeu. Donc **V3a (mettre `b` en canal de la base) est le mauvais levier**
+(pas de problème de représentation à corriger). La vraie question ouverte de la v2 est
+la **dynamique** → **V2** (transfert DMD naïf : un opérateur global prédit-il le rollout
+quand `b` entre comme terme source ?), puis **V3b (opérateur conditionné terrain)** si
+le rollout rate, **pas V3a**. Le **gate V5** se juge sur **la croissance de `k`** quand
+on couvre tout le vocabulaire (s'il explose → encodeur non-linéaire), **pas** sur le
+plafond d'une seule topologie jamais vue.

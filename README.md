@@ -302,6 +302,27 @@ topologie *jamais vue* qui la met à l'épreuve (16 %).
 > 3 canaux [h,u,v]) — les vitesses ajoutent des modes. La représentation de
 > hauteur n'est donc pas le goulot pour les régimes doux.
 
+### Couverture vs capacité (v1b) — le 16 % du canal est de la *couverture*
+
+Le canal était **holdout-only** : le 16 % ne dit pas « la POD ne sait pas faire les
+canaux », il dit « la base entraînée sur bosses+obstacles n'a aucun mode en forme de
+bande ». La preuve est juste à côté — l'obstacle, **vu en train**, s'extrapole à 1.8 %
+malgré une géométrie hors plage. Un balayage de couverture le confirme : on ajoute des
+canaux (params différents) au train et on re-mesure le **même** canal holdout.
+
+| canaux en train (×2 CI) | k | canal |
+|--------------------------|----|-------|
+| 0 | 32 | 16.4 % |
+| 1 | 24 | 14.6 % |
+| 2 | 24 | 9.3 % |
+| 4 | 25 | **6.0 %** |
+
+Chute **monotone, sans plateau** → **dominé par la couverture**. À couverture égale à
+l'obstacle, le canal reste à ~6 % vs ~1.9 % (petit coût résiduel de la topologie
+*bande*, pas un mur). Surtout, **`k` n'explose pas** (24–32) — c'est le signal qui
+décide le gate V5 : couvrir une nouvelle topologie ne fait pas grossir la base linéaire
+→ **on reste sur base statique**. Détail : `docs/v2_v1b_coverage_vs_capacity.md`.
+
 ### Portée (calibrage du ✅)
 
 Tous les terrains sont **submergés** → la dépendance au terrain passe uniquement
@@ -323,11 +344,16 @@ plafond ? » passe **avant** d'escalader vers un encodeur appris (GPU).
 Spec : `docs/superpowers/specs/2026-06-19-v2-generalisation-terrains-design.md`.
 Plan : `docs/superpowers/plans/2026-06-19-v2-generalisation-terrains.md`.
 Verdict détaillé : `docs/v2_V1_representation_ceiling.md`.
+Couverture vs capacité : `docs/v2_v1b_coverage_vs_capacity.md`.
+Expérience : `scripts/exp_v1b_channel_coverage.py`.
 
-**Suite (non encore planifié)** : V2 (transfert DMD naïf sur terrain nouveau) pour
-voir si le gap *dynamique* suit le gap de *représentation* du canal ; puis
-conditionnement (V3a bathymétrie en canal de la base, V3b opérateur conditionné)
-seulement si nécessaire. V3 reste non planifié tant que V2 n'a pas tourné.
+**Suite (non encore planifié)** : v1b ayant montré que la représentation tient dès que
+le train couvre le vocabulaire (sans explosion de `k`), la vraie question est la
+**dynamique** — **V2** (transfert DMD naïf sur terrain nouveau) : un opérateur DMD
+global prédit-il le rollout quand `b` entre comme terme source ? Si le rollout rate, le
+levier est l'**opérateur** → **V3b** (opérateur conditionné terrain), **pas V3a** (la
+base n'a pas de problème de représentation à corriger). V3 reste non planifié tant que
+V2 n'a pas tourné.
 
 ---
 
