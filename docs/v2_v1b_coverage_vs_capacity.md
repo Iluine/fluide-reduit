@@ -74,3 +74,49 @@ Script : `scripts/exp_v1b_channel_coverage.py`.
 le train couvre le vocabulaire (k ne grossit pas). La substance réelle de la v2 est la
 **dynamique** : prochain pas = **V2** (transfert DMD naïf sur terrain nouveau), pour
 voir si le gap dynamique suit — ou non — le coût de représentation.
+
+## Interprétation — la limite de Kolmogorov n-width (transport)
+
+Le résidu ~3× (canal 6.0 % vs obstacle 1.9 % à couverture égale) n'est pas un hasard :
+c'est la **limite de largeur de Kolmogorov des bases linéaires pour le transport**. Une
+base POD interpole mal à travers les **translations** d'une structure (le « transport
+problem » du model order reduction : la n-width décroît lentement — algébriquement, pas
+exponentiellement — pour les features qui se déplacent). Le canal holdout diffère des
+canaux d'entraînement par sa position/largeur ; or translater une structure **étendue**
+(une bande qui traverse le domaine) modifie une bien plus grande fraction du champ que
+translater une structure **localisée** (une tache) → l'interpolation linéaire à travers
+les positions coûte plus cher pour la bande. D'où le ~3× : pas « les canaux sont durs »,
+mais « interpoler la position d'une bande étendue est précisément le point faible d'une
+base linéaire ».
+
+Cela réconcilie l'apparente tension `k`↓ vs résidu : **`k` baisse** (32→24) car un canal
+est très cohérent → peu de modes pour le représenter *une fois vu* ; mais « bas-rang
+quand vu » (compressibilité d'un champ donné) ≠ « bien interpolé à travers les positions »
+(n-width à travers les transformations). Le canal est le premier sans être le second ;
+les deux faits coexistent sans se contredire.
+
+> Vérification : le canal holdout (y0=0.5, demi-largeur 8) est en fait une
+> **interpolation** en (position, largeur) parmi les canaux d'entraînement
+> (y0∈{0.45,0.55,0.50,0.48}, hw∈{6,7,9,10}) — pas une extrapolation — et coûte quand
+> même 6 %. C'est donc bien le résidu de **transport**, pas de l'extrapolation de
+> paramètres.
+
+## Gate V5 affiné (au bon endroit)
+
+L'encodeur appris ne se justifie ni par « topologie nouvelle » (réglé par la
+couverture) ni par « `k` explose » (il n'explose pas), mais par **l'étendue de la plage
+de transport/translation des features**. Tant que les structures restent dans une plage
+de positions limitée, la base linéaire tient (`k` plat + 6 % gracieux le confirment). Le
+jour où le jeu demande des features à positions largement variables (beaucoup de
+translation), la n-width linéaire mord pour de bon → c'est **ce régime**, pas la
+nouveauté topologique, qui déclenche V5. Pour un but visuel à vocabulaire et positions
+**bornés**, on est confortablement en deçà.
+
+## Foresight V2 (le transport va revenir, dans la dynamique)
+
+DMD est un opérateur **linéaire**, et le transport est exactement là où les opérateurs
+linéaires souffrent le plus. Si le rollout V2 se dégrade sur terrain nouveau, vérifier
+si c'est **advectif** — features qui se déplacent, **floutées** ou en **retard de
+phase** — car ce serait la même limite n-width/transport, mais cette fois dans la
+**dynamique** plutôt que dans la représentation. Le résidu canal de V1 est, en somme, un
+avant-goût de ce que l'opérateur pourrait rencontrer en V2.
