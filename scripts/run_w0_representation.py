@@ -102,7 +102,13 @@ def main() -> None:
         verdict = (f"La base POD linéaire tient le front mobile (erreur front max "
                    f"{worst_band:.2f} <= 20%) — résultat peu attendu mais décisif : "
                    f"DMD linéaire reste candidat sur le régime sec. Continuer W2 avec "
-                   f"l'oracle W1 et le réduit linéaire.")
+                   f"l'oracle W1 et le réduit linéaire. ATTENTION (portée) : le front de "
+                   f"Thacker est un touchdown LISSE (h→0 paraboliquement), le meilleur cas "
+                   f"pour la POD. Un front de SOLVEUR (W1 : dam-break, sillages, "
+                   f"raidissement numérique) peut être bien plus dur. W0 qui passe est "
+                   f"NÉCESSAIRE, PAS SUFFISANT — le vrai test est W2 sur la dynamique "
+                   f"réelle ; le transport (planaire) plus dur que la forme (radial) "
+                   f"préfigure où ça pourrait mordre.")
 
     OUT_DOC.parent.mkdir(parents=True, exist_ok=True)
     lines = ["# W0 — Test forçant n-width (Thacker, sans solveur)", "",

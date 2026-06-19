@@ -16,5 +16,5 @@ def test_band_error_exceeds_global_on_moving_front():
     seq = np.stack([thacker_radial(g, t=ph * T)[0] for ph in np.linspace(0, 1, 60)])
     res = nwidth_ceiling(seq, 64, 64, energy_threshold=0.999, max_modes=64)
     assert res["k"] >= 1
-    assert 0.0 <= res["global_err"]
+    assert res["global_err"] < 0.05
     assert res["band_err"] > res["global_err"]    # le front est plus dur que le bulk
