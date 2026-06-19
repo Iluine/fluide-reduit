@@ -205,6 +205,172 @@ def _cfl_dt(h: np.ndarray, hu: np.ndarray, hv: np.ndarray, grid: GridConfig,
     return cfl * min(grid.dx, grid.dy) / max(smax, 1e-12)
 
 
+def _minmod(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Limiteur minmod (élément par élément) : 0 si signes opposés, sinon le plus petit
+    module en valeur signée. TVD, le plus diffusif (le plus sûr près du sec)."""
+    return np.where(a * b <= 0.0, 0.0,
+                    np.sign(a) * np.minimum(np.abs(a), np.abs(b)))
+
+
+def _slopes_x(arr: np.ndarray) -> np.ndarray:
+    """Pente x limitée (minmod) par cellule sur un tableau padé (H+2,W+2).
+    Colonnes fantômes (0, W+1) : pente 0 (reconstruction 1er ordre au mur)."""
+    s = np.zeros_like(arr)
+    bw = arr[:, 1:-1] - arr[:, :-2]   # différence arrière
+    fw = arr[:, 2:] - arr[:, 1:-1]    # différence avant
+    s[:, 1:-1] = _minmod(bw, fw)
+    return s
+
+
+def _slopes_y(arr: np.ndarray) -> np.ndarray:
+    """Pente y limitée (minmod) par cellule sur un tableau padé (H+2,W+2)."""
+    s = np.zeros_like(arr)
+    bw = arr[1:-1, :] - arr[:-2, :]
+    fw = arr[2:, :] - arr[1:-1, :]
+    s[1:-1, :] = _minmod(bw, fw)
+    return s
+
+
+def _rhs_o2(h: np.ndarray, hu: np.ndarray, hv: np.ndarray, b: np.ndarray,
+            grid: GridConfig, dry_eps: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Opérateur spatial L(U) au 2e ordre (MUSCL surface-gradient + hydrostatique).
+
+    Reconstruit la SURFACE LIBRE η = h + b (PAS h) par pentes minmod (surface gradient
+    method, Zhou et al. 2001) — au repos η=const → pente nulle → se réduit EXACTEMENT
+    au 1er ordre `_rhs` → C-property héritée. Le lit b N'EST PAS reconstruit (z* = max
+    des lits cellules, comme Audusse), ce qui garantit cette réduction. Réconciliation
+    η/positivité : si une face d'une cellule donne h reconstruit < 0, on annule la pente
+    de cette cellule (retour 1er ordre) → toutes les faces ont h ≥ 0. Puis reconstruction
+    hydrostatique (h* = max(0, η_face − z*)) + HLL + correction de pression, identiques
+    au 1er ordre mais sur les états reconstruits. Retourne (Lh, Lhu, Lhv) sur (H, W)."""
+    g = GRAVITY
+    dx, dy = grid.dx, grid.dy
+    hp, hup, hvp, bp = _pad_reflective(h, hu, hv, b)
+    etap = hp + bp
+    up = desingularize_velocity(hp, hup, dry_eps)
+    vp = desingularize_velocity(hp, hvp, dry_eps)
+
+    # ----- Pentes minmod + réconciliation positivité (par cellule, axe x) -----
+    seta_x, su_x, sv_x = _slopes_x(etap), _slopes_x(up), _slopes_x(vp)
+    hLf_x = (etap - 0.5 * seta_x) - bp          # h reconstruit, face gauche de chaque cellule
+    hRf_x = (etap + 0.5 * seta_x) - bp          # face droite
+    bad_x = (hLf_x < 0.0) | (hRf_x < 0.0)       # surface reconstruite sous le lit
+    seta_x = np.where(bad_x, 0.0, seta_x)
+    su_x = np.where(bad_x, 0.0, su_x)
+    sv_x = np.where(bad_x, 0.0, sv_x)
+
+    # ----- Interfaces x : état L = face droite cellule j ; R = face gauche cellule j+1 -----
+    etaL = etap[:, :-1] + 0.5 * seta_x[:, :-1]
+    etaR = etap[:, 1:] - 0.5 * seta_x[:, 1:]
+    uL = up[:, :-1] + 0.5 * su_x[:, :-1]
+    uR = up[:, 1:] - 0.5 * su_x[:, 1:]
+    vL = vp[:, :-1] + 0.5 * sv_x[:, :-1]
+    vR = vp[:, 1:] - 0.5 * sv_x[:, 1:]
+    bL_x, bR_x = bp[:, :-1], bp[:, 1:]          # lit cellule (NON reconstruit)
+    hL_x, hR_x = etaL - bL_x, etaR - bR_x       # profondeurs reconstruites aux faces
+    zstar_x = np.maximum(bL_x, bR_x)
+    hstarL_x = np.maximum(0.0, etaL - zstar_x)
+    hstarR_x = np.maximum(0.0, etaR - zstar_x)
+    Fh_x, Fhun_x = _hll_flux(hstarL_x, hstarL_x * uL, hstarR_x, hstarR_x * uR, dry_eps)
+    Fhvt_x = np.where(Fh_x >= 0.0, Fh_x * vL, Fh_x * vR)
+    Sx_L = 0.5 * g * (hL_x ** 2 - hstarL_x ** 2)
+    Sx_R = 0.5 * g * (hR_x ** 2 - hstarR_x ** 2)
+    Fhun_x_left = Fhun_x + Sx_L
+    Fhun_x_right = Fhun_x + Sx_R
+
+    # ----- Pentes + réconciliation (axe y) -----
+    seta_y, su_y, sv_y = _slopes_y(etap), _slopes_y(up), _slopes_y(vp)
+    hBf_y = (etap - 0.5 * seta_y) - bp
+    hTf_y = (etap + 0.5 * seta_y) - bp
+    bad_y = (hBf_y < 0.0) | (hTf_y < 0.0)
+    seta_y = np.where(bad_y, 0.0, seta_y)
+    su_y = np.where(bad_y, 0.0, su_y)
+    sv_y = np.where(bad_y, 0.0, sv_y)
+
+    # ----- Interfaces y : état B = face haute cellule i ; T = face basse cellule i+1 -----
+    etaB = etap[:-1, :] + 0.5 * seta_y[:-1, :]
+    etaT = etap[1:, :] - 0.5 * seta_y[1:, :]
+    vB = vp[:-1, :] + 0.5 * sv_y[:-1, :]
+    vT = vp[1:, :] - 0.5 * sv_y[1:, :]
+    uB = up[:-1, :] + 0.5 * su_y[:-1, :]
+    uT = up[1:, :] - 0.5 * su_y[1:, :]
+    bB_y, bT_y = bp[:-1, :], bp[1:, :]
+    hB_y, hT_y = etaB - bB_y, etaT - bT_y
+    zstar_y = np.maximum(bB_y, bT_y)
+    hstarB = np.maximum(0.0, etaB - zstar_y)
+    hstarT = np.maximum(0.0, etaT - zstar_y)
+    Gh_y, Ghvn_y = _hll_flux(hstarB, hstarB * vB, hstarT, hstarT * vT, dry_eps)
+    Ghut_y = np.where(Gh_y >= 0.0, Gh_y * uB, Gh_y * uT)
+    Sy_B = 0.5 * g * (hB_y ** 2 - hstarB ** 2)
+    Sy_T = 0.5 * g * (hT_y ** 2 - hstarT ** 2)
+    Ghvn_y_bot = Ghvn_y + Sy_B
+    Ghvn_y_top = Ghvn_y + Sy_T
+
+    # ----- Divergence (identique au 1er ordre) -----
+    def divx(Fmass, Fnorm_left, Fnorm_right, Ftang):
+        m, nl, nr, tg = (Fmass[1:-1, :], Fnorm_left[1:-1, :],
+                         Fnorm_right[1:-1, :], Ftang[1:-1, :])
+        dh = (m[:, 1:] - m[:, :-1]) / dx
+        dhun = (nl[:, 1:] - nr[:, :-1]) / dx
+        dhvt = (tg[:, 1:] - tg[:, :-1]) / dx
+        return dh, dhun, dhvt
+
+    def divy(Gmass, Gnorm_bot, Gnorm_top, Gtang):
+        m, nb, nt, tg = (Gmass[:, 1:-1], Gnorm_bot[:, 1:-1],
+                         Gnorm_top[:, 1:-1], Gtang[:, 1:-1])
+        dh = (m[1:, :] - m[:-1, :]) / dy
+        dhvn = (nb[1:, :] - nt[:-1, :]) / dy
+        dhut = (tg[1:, :] - tg[:-1, :]) / dy
+        return dh, dhvn, dhut
+
+    dxh, dxhun, dxhvt = divx(Fh_x, Fhun_x_left, Fhun_x_right, Fhvt_x)
+    dyh, dyhvn, dyhut = divy(Gh_y, Ghvn_y_bot, Ghvn_y_top, Ghut_y)
+    return -(dxh + dyh), -(dxhun + dyhut), -(dxhvt + dyhvn)
+
+
+def simulate_wetdry_o2(h0: np.ndarray, hu0: np.ndarray, hv0: np.ndarray, b: np.ndarray,
+                       grid: GridConfig, cfl: float = 0.4, t_end: float = 2.0,
+                       dry_eps: float = 1e-4
+                       ) -> tuple[list[float], np.ndarray, np.ndarray, np.ndarray]:
+    """Version 2e ordre (MUSCL surface-gradient) de simulate_wetdry. Même signature,
+    même boucle SSP-RK2 / dt CFL / plancher sec, mais opérateur spatial `_rhs_o2`.
+    Le 1er ordre `simulate_wetdry` reste inchangé (chemin séparé)."""
+    cfl = min(cfl, 0.4)
+    h, hu, hv = (np.asarray(h0, np.float64).copy(),
+                 np.asarray(hu0, np.float64).copy(),
+                 np.asarray(hv0, np.float64).copy())
+    b = np.asarray(b, np.float64)
+    h, hu, hv = _floor_dry(h, hu, hv, dry_eps)
+
+    times = [0.0]
+    hs, hus, hvs = [h.copy()], [hu.copy()], [hv.copy()]
+    t = 0.0
+    max_steps = 1_000_000
+    step = 0
+    while t < t_end - 1e-12 and step < max_steps:
+        step += 1
+        dt = _cfl_dt(h, hu, hv, grid, cfl, dry_eps)
+        if t + dt > t_end:
+            dt = t_end - t
+        L1h, L1hu, L1hv = _rhs_o2(h, hu, hv, b, grid, dry_eps)
+        h1 = h + dt * L1h
+        hu1 = hu + dt * L1hu
+        hv1 = hv + dt * L1hv
+        h1, hu1, hv1 = _floor_dry(h1, hu1, hv1, dry_eps)
+        L2h, L2hu, L2hv = _rhs_o2(h1, hu1, hv1, b, grid, dry_eps)
+        hn = 0.5 * h + 0.5 * (h1 + dt * L2h)
+        hun = 0.5 * hu + 0.5 * (hu1 + dt * L2hu)
+        hvn = 0.5 * hv + 0.5 * (hv1 + dt * L2hv)
+        h, hu, hv = _floor_dry(hn, hun, hvn, dry_eps)
+        t += dt
+        times.append(t)
+        hs.append(h.copy())
+        hus.append(hu.copy())
+        hvs.append(hv.copy())
+
+    return times, np.stack(hs), np.stack(hus), np.stack(hvs)
+
+
 def simulate_wetdry(h0: np.ndarray, hu0: np.ndarray, hv0: np.ndarray, b: np.ndarray,
                     grid: GridConfig, cfl: float = 0.4, t_end: float = 2.0,
                     dry_eps: float = 1e-4
