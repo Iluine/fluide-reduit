@@ -6,6 +6,13 @@ long-horizon stable et borné), H3 (couture multirésolution mobile cohérente).
 Le parcours de durcissement a isolé et résolu trois défauts orthogonaux —
 représentation, opérateur, conservation — avant de conclure.
 
+**v2 (en cours)** étend le POC à des **terrains nouveaux** (le POC tient sur un
+seul terrain fixe — tag `v1`). La colonne diagnostique V0+V1 mesure si une base
+POD statique de hauteur généralise hors du terrain d'entraînement. Verdict :
+**oui dans le régime submergé/réfraction** (interpolation et obstacle extrapolé
+< 2 %), mais une **topologie jamais vue (canal) coûte 16 %**. Détails dans la
+section **v2 — Généralisation inter-terrain** plus bas.
+
 ---
 
 ## Installation
@@ -44,13 +51,16 @@ Chaque script sauvegarde ses sorties dans `./outputs/`.
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest -q   # 35/35
+.venv/bin/python -m pytest -q   # 54/54 (35 POC + 19 v2)
 ```
 
-Couverture : POD (encode/decode, énergie), DMD (fit, rollout, rayon spectral,
+Couverture POC : POD (encode/decode, énergie), DMD (fit, rollout, rayon spectral,
 écrêtage), shallow-water (solver Rusanov, CFL 2D), métriques (relative_l2_error,
 rms_growth, mass_drift, seam_jump), multiresolution (down/up, fenêtre mobile,
 fondu linéaire), rendu (heatmap, surface η), mass_projection (offset, garde-fou).
+Couverture v2 : terrains (famille paramétrée, CI submergée, résidu au repos /
+well-balancedness), POD `n_channels` (hauteur seule, non-régression du chemin
+3-canaux), génération V0 (contrat données + garde-fous), plafond V1.
 
 ---
 
@@ -59,12 +69,13 @@ fondu linéaire), rendu (heatmap, surface η), mass_projection (offset, garde-fo
 | Module | Rôle |
 |--------|------|
 | `src/solver.py` | Solveur shallow-water 2D, flux de Rusanov (Lax-Friedrichs local), CFL 2D, parois réfléchissantes, masse conservée à ~2e-16 (M0) |
-| `src/pod.py` | SVD réduit, standardisation par canal (`scale`), encode/decode (M1) |
+| `src/pod.py` | SVD réduit, standardisation par canal (`scale`), encode/decode (M1) ; `n_channels` pour une POD hauteur seule (v2, défaut 3 = chemin POC inchangé) |
 | `src/dmd.py` | DMD — fit moindres carrés, rollout autorégressif, `clip_eigenvalues` (ρ≤1), rayon spectral (M2) |
 | `src/metrics.py` | `relative_l2_error`, `error_growth`, `rms_growth`, `mass_series`, `seam_jump` (H2/H3) |
 | `src/mass_projection.py` | Projection de masse — offset uniforme additif, garde-fou positivité (M5) |
 | `src/multiresolution.py` | Downsampling/upsampling par bloc, fondu linéaire dans une fenêtre mobile (M6) |
 | `src/render.py` | Heatmap hauteur h + surface libre η=h+b colormap terrain (M7) |
+| `src/terrains.py` | **(v2)** Famille de terrains paramétrée (bosse/obstacle gaussiens + canal tanh), CI au repos submergée, `rest_residual` (well-balancedness), tirage déterministe train/holdout |
 | `src/io_utils.py` | Chargement/sauvegarde GIF (PIL avec fallback matplotlib) |
 | `config.py` | Constantes partagées (gravité, grille, CFL, seuil énergie POD) |
 
@@ -239,6 +250,84 @@ les résultats mesurés complets.
 - **M5 est un garde-fou de sortie** : la projection de masse corrige la dérive
   en post-traitement open-loop ; ce n'est pas une dynamique conservative apprise.
   La variante par pénalité Lagrangienne sur le fit DMD reste une piste ouverte.
+
+---
+
+## v2 — Généralisation inter-terrain (V0+V1)
+
+La v2 attaque la première limite ci-dessus — *un seul terrain* — en restant sur
+le livrable visuel (hauteur ; les vitesses restent hors-scope). Elle réutilise le
+solveur, la POD et les métriques du POC (tag `v1`) et n'ajoute que `src/terrains.py`
+plus deux scripts. **Discipline diagnostic-first** : un seul pas décisif (V1) avant
+de construire le moindre conditionnement de dynamique.
+
+### V0 — Famille de terrains + oracle valide
+
+Famille paramétrée : bosse/obstacle gaussiens (même générateur, plages
+différentes) + un **canal à parois lissées (tanh)** réservé au holdout. Tirage
+déterministe : **9 terrains d'entraînement** (5 bosses + 4 obstacles) × 2 CI, plus
+3 holdout — 1 interpolation, 1 obstacle **extrapolé par la géométrie** (σ étroit
+hors plage + position hors plage), 1 canal (**topologie jamais vue**).
+
+CI au **repos submergé** (`h = η₀ − b`, η₀ = 1.5) : eau partout mouillée, la
+dépendance au terrain passe par la **réfraction** (célérité √(g·h)). Le lit sec
+est exclu volontairement — il mesurerait une défaillance du solveur (Rusanov non
+well-balanced), pas un plafond de représentation.
+
+Garde-fous d'oracle (la conservation de masse ~2e-16 est nécessaire mais **pas
+suffisante**) : positivité avec marge (`min(h) = 0.424 > 0.1`), **résidu au repos /
+well-balancedness** (max 0.106 < tol 0.15), sanity visuel des terrains extrap. Ce
+garde-fou a effectivement tripé sur l'obstacle extrap le plus raide → amplitude
+ramenée de 1.0 à 0.6 (résidu 0.188 → 0.106), σ géométrique conservé.
+
+### V1 — Plafond de représentation inter-terrain (le pas décisif)
+
+POD **hauteur seule** (k=32, seuil énergie 0.9999) ajustée sur les terrains
+d'entraînement ; encode-décode du h **vrai** des terrains holdout. **Aucune
+dynamique** — on mesure si la base statique *span* un terrain nouveau.
+
+| régime | erreur L2 relative (hauteur) |
+|--------|------------------------------|
+| plancher train (in-sample) | 0.0004 |
+| interpolation | 0.6 % |
+| extrapolation obstacle (géométrie) | 1.8 % |
+| extrapolation canal (topologie neuve) | **16.4 %** |
+
+**Verdict : INTERMÉDIAIRE**, porté **entièrement par le canal**. Une base POD
+statique de hauteur généralise presque trivialement dans le régime
+submergé/réfraction (interpolation et obstacle extrapolé < 2 %) ; c'est la
+topologie *jamais vue* qui la met à l'épreuve (16 %).
+
+> `k = 32` (hauteur seule) n'est **pas** comparable au `k = 43` du POC (état à
+> 3 canaux [h,u,v]) — les vitesses ajoutent des modes. La représentation de
+> hauteur n'est donc pas le goulot pour les régimes doux.
+
+### Portée (calibrage du ✅)
+
+Tous les terrains sont **submergés** → la dépendance au terrain passe uniquement
+par la réfraction (contraste de célérité ~1.7×, réel mais modéré). Un V1 qui passe
+certifie la généralisation **dans le régime submergé/réfraction** — pas sur tout
+terrain de jeu. Le sec / les îles (sillages, séparation) sont un régime distinct,
+plus dur, **reporté en v2.5** (solveur mouillé/sec positivity-preserving &
+well-balanced). Le plafond pourrait aussi être **data-limité** (9 terrains) : si un
+plafond ressort haut, le check bon marché « ajouter des terrains fait-il baisser le
+plafond ? » passe **avant** d'escalader vers un encodeur appris (GPU).
+
+### Scripts v2
+
+| Script | Rôle |
+|--------|------|
+| `scripts/run_v0_generate.py` | Génère le dataset (famille × CI) via le solveur, applique les garde-fous d'oracle, écrit `data/v2/<terrain>__<ci>.npz` + `data/v2/split.json` |
+| `scripts/run_v1_representation.py` | Mesure le plafond de représentation inter-terrain (interp / extrap_obstacle / extrap_channel), écrit le verdict chiffré |
+
+Spec : `docs/superpowers/specs/2026-06-19-v2-generalisation-terrains-design.md`.
+Plan : `docs/superpowers/plans/2026-06-19-v2-generalisation-terrains.md`.
+Verdict détaillé : `docs/v2_V1_representation_ceiling.md`.
+
+**Suite (non encore planifié)** : V2 (transfert DMD naïf sur terrain nouveau) pour
+voir si le gap *dynamique* suit le gap de *représentation* du canal ; puis
+conditionnement (V3a bathymétrie en canal de la base, V3b opérateur conditionné)
+seulement si nécessaire. V3 reste non planifié tant que V2 n'a pas tourné.
 
 ---
 
