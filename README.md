@@ -6,12 +6,23 @@ long-horizon stable et borné), H3 (couture multirésolution mobile cohérente).
 Le parcours de durcissement a isolé et résolu trois défauts orthogonaux —
 représentation, opérateur, conservation — avant de conclure.
 
-**v2 (en cours)** étend le POC à des **terrains nouveaux** (le POC tient sur un
+**v2 (terminé)** étend le POC à des **terrains nouveaux** (le POC tient sur un
 seul terrain fixe — tag `v1`). La colonne diagnostique V0+V1 mesure si une base
 POD statique de hauteur généralise hors du terrain d'entraînement. Verdict :
 **oui dans le régime submergé/réfraction** (interpolation et obstacle extrapolé
-< 2 %), mais une **topologie jamais vue (canal) coûte 16 %**. Détails dans la
-section **v2 — Généralisation inter-terrain** plus bas.
+< 2 %), une **topologie jamais vue (canal) coûte 16 %** — mais c'est de la
+*couverture*, pas de la capacité (v1b/v2b : un seul A global + base statique
+suffit dès que le train couvre le vocabulaire de topologies). Section
+**v2 — Généralisation inter-terrain** plus bas.
+
+**v2.5 (terminé)** franchit le régime **mouillé/sec** (îles, fronts, run-up) et
+**bâtit le surrogate**. Un solveur **2e ordre MUSCL well-balanced
+positivity-preserving** est construit et validé analytiquement ; la n-width d'un
+**front net** se révèle **bornée par la grille** (k ∼ 1/w) — la netteté seule ne
+force pas un encodeur. Le **surrogate linéaire mouillé/sec MARCHE** : base POD
+partagée bornée (k=46) + opérateurs linéaires écrêtés **par-régime** + routeur.
+L'encodeur appris n'a **jamais été nécessaire**, enterré sur preuve à chaque
+étage. Section **v2.5 — Régime mouillé/sec & surrogate** plus bas.
 
 ---
 
@@ -51,7 +62,7 @@ Chaque script sauvegarde ses sorties dans `./outputs/`.
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest -q   # 54/54 (35 POC + 19 v2)
+.venv/bin/python -m pytest -q   # 79/79 (35 POC + 19 v2 + 25 v2.5)
 ```
 
 Couverture POC : POD (encode/decode, énergie), DMD (fit, rollout, rayon spectral,
@@ -61,6 +72,9 @@ fondu linéaire), rendu (heatmap, surface η), mass_projection (offset, garde-fo
 Couverture v2 : terrains (famille paramétrée, CI submergée, résidu au repos /
 well-balancedness), POD `n_channels` (hauteur seule, non-régression du chemin
 3-canaux), génération V0 (contrat données + garde-fous), plafond V1.
+Couverture v2.5 : solveur mouillé/sec 1er & 2e ordre (C-property well-balanced,
+positivité, netteté), Stoker (auto-validation Rankine-Hugoniot), vocabulaire
+mouillé/sec (CI mobile η+u anti-scission, anti-dégénérescence, pesé run-up).
 
 ---
 
@@ -76,6 +90,9 @@ well-balancedness), POD `n_channels` (hauteur seule, non-régression du chemin
 | `src/multiresolution.py` | Downsampling/upsampling par bloc, fondu linéaire dans une fenêtre mobile (M6) |
 | `src/render.py` | Heatmap hauteur h + surface libre η=h+b colormap terrain (M7) |
 | `src/terrains.py` | **(v2)** Famille de terrains paramétrée (bosse/obstacle gaussiens + canal tanh), CI au repos submergée, `rest_residual` (well-balancedness), tirage déterministe train/holdout |
+| `src/solver_wetdry.py` | **(v2.5)** Solveur mouillé/sec well-balanced positivity-preserving — recon. hydrostatique d'Audusse + HLL + SSP-RK2 (`simulate_wetdry`, 1er ordre) ; MUSCL surface-gradient η + réconciliation η/positivité + limiteur minmod/MC (`simulate_wetdry_o2`, 2e ordre). `solver.py` jamais touché |
+| `src/stoker.py` | **(v2.5)** Solution exacte de Stoker (bore lit mouillé) — état intermédiaire par root-find Rankine-Hugoniot, auto-validé par ses résidus de saut (oracle du front net) |
+| `src/wetdry_vocab.py` | **(v2.5)** Vocabulaire de transport mouillé/sec : CI mobiles (onde η+u co-directionnelle bornée), dam-break, terrains pente/île ; ~14 scénarios pesés run-up, positions étalées |
 | `src/io_utils.py` | Chargement/sauvegarde GIF (PIL avec fallback matplotlib) |
 | `config.py` | Constantes partagées (gravité, grille, CFL, seuil énergie POD) |
 
@@ -374,8 +391,99 @@ La foresight transport était juste sur le *lieu* : le résidu transport est dan
 
 **Frontière restante (caractérisée, pas supposée)** : hors du régime
 submergé / réfraction / vocabulaire couvert & borné en translation — le sec / les îles
-(sillages, séparation → solveur mouillé/sec, **v2.5**) et les régimes à **forte
-translation** (où la n-width linéaire mordrait → encodeur appris). Hors-scope.
+(sillages, séparation → solveur mouillé/sec) et les régimes à **forte translation** (où
+la n-width linéaire pourrait mordre). **Franchie en v2.5** (section suivante).
+
+---
+
+## v2.5 — Régime mouillé/sec & surrogate
+
+La v2.5 franchit la frontière mouillé/sec (îles, fronts, run-up) **et bâtit le
+surrogate**. Toujours **diagnostic-first** : le test le moins cher qui peut échouer,
+posé avant chaque engagement, **au grade du but** (visuel) — pas au-dessus. L'encodeur
+appris reste gaté à chaque étage et n'est jamais construit.
+
+### W0 — Test forçant (n-width d'un front mobile lisse)
+POD intra-échantillon sur le front mobile **analytique** de Thacker, erreur
+**front-localisée** : une base linéaire tient le front lisse en translation (~7 %,
+*nécessaire non suffisant*). Le solveur n'est pas requis pour ce test — il l'est pour
+la suite.
+
+### W1 — Oracle mouillé/sec validé (1er ordre)
+Solveur `simulate_wetdry` : reconstruction hydrostatique d'**Audusse** + flux **HLL**
+dry-aware + **SSP-RK2** + plancher sec + CFL positivity-preserving. Validé contre **4
+analytiques** (Thacker radial & planaire, Ritter, C-property) — pas par la seule masse.
+**C-property à 1.23e-15** (well-balanced à la précision machine).
+
+### W2 — n-width intra-échantillon sur le solveur (1er ordre)
+Dam-break Ritter (front validé) balayé, POD intra-échantillon, plafond front-localisé :
+**tient (1.0 %, k=7)**. Mais le 1er ordre **sur-diffuse** le front en un phénomène
+rang-7 (plus facile que l'analytique de W0) — l'oracle 1er-ordre **ne peut pas poser la
+question du front net**. Ce résultat **gate** le pas suivant : le 2e ordre.
+
+### 2e ordre MUSCL + front net (bore)
+`simulate_wetdry_o2` : **surface gradient method** (reconstruire η=h+b, pas h →
+well-balancing hérité du 1er ordre au repos) + **réconciliation η/positivité** (annuler
+la pente d'une cellule si une face donne h<0) + limiteur minmod (MC dispo). Validé :
+**C-property 2e ordre 1.998e-15**, **conjonction Thacker-2e** (L2 baisse ET positivité
+tenue simultanément — la seule validation exerçant WB courbe + sec + mouvement
+ensemble), **bore Stoker** (choc ±0.4 cellule, 2 cellules de large vs 4 au 1er ordre).
+
+Le **bore net** (choc Stoker, intra-échantillon) **tient** (choc L2 0.7 %, k=29). Le
+signal n'est pas l'erreur mais le **coût en modes** : la n-width croît avec la netteté.
+Un balayage **contrôlé** (même CI Stoker, 1er → minmod → MC) mesure la loi :
+
+| schéma | largeur front w (cellules) | k requis @2 % |
+|--------|---------------------------:|--------------:|
+| 1er ordre | 4.61 | 11 |
+| 2e minmod | 2.64 | 20 |
+| 2e MC | 2.28 | 24 |
+
+**k ∼ w^(−1.1)** (loi bénigne `k∼1/w`), et `k_max=24 ≪ N²=4096` : la netteté d'un
+**front unique** est **bornée par la grille** → elle **ne peut pas** faire exploser k.
+La netteté n'était jamais le moteur d'un encodeur ; le vrai axe est l'**étendue du
+vocabulaire**.
+
+### Le surrogate — bâti, et jugé à l'œil
+Plutôt que mesurer un oracle Carrier-Greenspan au grade analytique (un *tapis roulant* :
+critère mesuré ≠ critère de succès visuel), on **bâtit le surrogate** ; les deux
+verdicts en tombent. Vocabulaire mouillé/sec **~14 scénarios pesés run-up** (seul régime
+exerçant l'assèchement, le cas opérateur le plus dur), positions étalées, par le solveur
+2e ordre validé.
+
+- **Étendue (base), mesurée** : POD hauteur combiné, **k=46 @2 %** ≪ N²=4096
+  (sous-additif, ~few modes/régime) → bornée pour vocabulaire borné → **l'encodeur de
+  base est mort**.
+- **Opérateur (dynamique), vu + mesuré** : un seul opérateur DMD **global** capte la
+  dynamique grossière de tous les régimes sans blow-up (écrêtage |λ|≤1 indispensable :
+  ρ 1.018→1.0), mais montre deux échecs — **lissage de front** (intrinsèque au linéaire)
+  + **brisure de symétrie 1D / mottling** (*globalité* : un A unique couple des modes
+  inter-régimes). Remède le moins cher : **opérateurs par-régime** sur la base partagée
+  (le jeu connaît le régime). Résultat : **L2 ÷ ~25** (médian **0.012** sur les 14, 0
+  aberrant), **symétrie restaurée**. Reste un lissage de front intrinsèque faible.
+
+**Le surrogate linéaire mouillé/sec MARCHE** : base partagée bornée (k=46) + opérateurs
+linéaires écrêtés **par-régime** + routeur de régime. La classe single-global de v2 a
+**tenu** (il a fallu la *localiser*, pas la repenser). Périmètre : **mono-régime** (un
+scénario mixte = bore frappant une île resterait une question d'**opérateur**, pas
+d'encodeur). Le lissage intrinsèque résiduel est un **levier non-linéaire futur borné**
+si la barre visuelle monte — pas une dette. Carrier-Greenspan reste un **outil de
+débogage contingent** (jamais nécessaire).
+
+### Scripts v2.5
+
+| Script | Rôle |
+|--------|------|
+| `scripts/run_w0_representation.py` | W0 — n-width front-localisée d'un front mobile analytique |
+| `scripts/run_w1_validate.py` | W1 — validation du solveur mouillé/sec (4 analytiques + budget masse) |
+| `scripts/run_w2_dambreak.py` | W2 — n-width intra-échantillon du dam-break (1er ordre) |
+| `scripts/run_o2_validate.py` | Validation 2e ordre (conjonction Thacker-2e + Stoker bore) |
+| `scripts/run_o2_bore_nwidth.py` | n-width du bore net (2e ordre) |
+| `scripts/run_o2_sharpness_scaling.py` | Loi d'échelle k(w) bornée par la grille |
+| `scripts/run_surrogate.py` | Surrogate : génération + endpoint d'étendue + opérateurs par-régime + rendu |
+
+Specs/plans : `docs/superpowers/specs/2026-06-19-v2.5-*.md`,
+`docs/superpowers/plans/2026-06-19-v2.5-*.md`. Verdicts : `docs/v2.5_*.md`.
 
 ---
 
@@ -383,6 +491,7 @@ translation** (où la n-width linéaire mordrait → encodeur appris). Hors-scop
 
 - **Indexation** : `array[y, x]` (axe 0 = y = lignes, axe 1 = x = colonnes).
 - **Solveur** : volumes finis, flux de Rusanov (LF local), CFL 2D, parois réfléchissantes.
+- **Solveur mouillé/sec (v2.5)** : reconstruction hydrostatique d'Audusse + HLL dry-aware + SSP-RK2 (1er ordre) ; MUSCL surface-gradient (reconstruire η=h+b) + réconciliation η/positivité + minmod/MC (2e ordre). `solver.py` (Rusanov submergé) jamais touché.
 - **POD** : SVD tronqué, seuil énergie 0.9999, standardisation per-canal (`scale`).
-- **DMD** : moindres carrés + `clip_eigenvalues` (ρ≤1) pour la stabilité du rollout.
+- **DMD** : moindres carrés + `clip_eigenvalues` (ρ≤1) pour la stabilité du rollout ; en v2.5, **un opérateur par régime** sur base partagée (le routage évite la fuite de modes inter-régimes).
 - **Métriques** : hauteur en erreur L2 relative, vitesses en RMS absolu normalisé par la référence d'échelle.
