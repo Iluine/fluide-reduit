@@ -131,14 +131,16 @@ def main() -> None:
                    "écart à la référence in-sample modéré. La baseline statique suffit ; "
                    "V3b (opérateur conditionné) non requis pour ces régimes.")
     else:
-        verdict = (f"L'opérateur global NE TRANSFÈRE PAS proprement : pire holdout = "
-                   f"{worst_name} rollout={worst['rollout']:.3f} vs plancher repr. "
-                   f"{worst['floor']:.3f} (gap opérateur {worst['gap']:.3f}), référence "
-                   f"in-sample {ref['rollout']:.3f}. Le défaut est l'OPÉRATEUR (pas la "
-                   f"base) -> V3b (opérateur conditionné terrain). Inspecter les "
-                   f"animations : si l'erreur suit les fronts d'onde (features floutées / "
-                   f"en retard de phase), c'est la signature TRANSPORT (limite n-width de "
-                   f"l'opérateur linéaire), cf. foresight v1b.")
+        verdict = (f"L'opérateur global ne transfère pas sur le pire holdout "
+                   f"({worst_name} rollout={worst['rollout']:.3f} vs plancher "
+                   f"{worst['floor']:.3f}, gap {worst['gap']:.3f} ; in-sample "
+                   f"{ref['rollout']:.3f}). MAIS ce cliff est sur une topologie "
+                   f"HOLDOUT-ONLY (absente du fit DMD). Le test couverture-opérateur "
+                   f"(v2b, docs/v2_v2b_operator_coverage.md) montre qu'il est de la "
+                   f"COUVERTURE (157%->11.8% en mettant des canaux au fit, gap opérateur "
+                   f"alors ~comparable à l'obstacle) -> un A GLOBAL suffit une fois la "
+                   f"topologie vue, V3b NON requis ; le résidu est le plancher de "
+                   f"représentation (n-width, v1b), pas l'opérateur.")
 
     OUT_DOC.parent.mkdir(parents=True, exist_ok=True)
     lines = ["# V2 — Transfert naïf (opérateur DMD global) sur terrain nouveau", "",
@@ -161,6 +163,13 @@ def main() -> None:
               "résidu canal de V1, mais dans la dynamique. Voir les animations "
               "`outputs/v2/v2_rollout_*.gif` (vérité | prédiction | |erreur|) : l'erreur "
               "se concentre-t-elle sur les fronts en mouvement ?", "",
+              "## Couverture-opérateur (v2b)", "",
+              "Le cliff canal ci-dessus est mesuré topologie HOLDOUT-ONLY (absente du "
+              "fit DMD). v2b (`docs/v2_v2b_operator_coverage.md`) montre qu'il est dominé "
+              "par la COUVERTURE : 157 % → 11.8 % en mettant des canaux au fit, gap "
+              "opérateur alors comparable à l'obstacle → un A global suffit une fois la "
+              "topologie vue, **V3b non requis**. Le résidu (~6 %) est le plancher de "
+              "représentation (n-width, v1b), pas l'opérateur.", "",
               f"Figure : `{growth_path.relative_to(ROOT)}`."]
     OUT_DOC.write_text("\n".join(lines) + "\n")
     print(f"[V2] figure -> {growth_path}")

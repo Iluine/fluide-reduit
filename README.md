@@ -347,13 +347,33 @@ Verdict détaillé : `docs/v2_V1_representation_ceiling.md`.
 Couverture vs capacité : `docs/v2_v1b_coverage_vs_capacity.md`.
 Expérience : `scripts/exp_v1b_channel_coverage.py`.
 
-**Suite (non encore planifié)** : v1b ayant montré que la représentation tient dès que
-le train couvre le vocabulaire (sans explosion de `k`), la vraie question est la
-**dynamique** — **V2** (transfert DMD naïf sur terrain nouveau) : un opérateur DMD
-global prédit-il le rollout quand `b` entre comme terme source ? Si le rollout rate, le
-levier est l'**opérateur** → **V3b** (opérateur conditionné terrain), **pas V3a** (la
-base n'a pas de problème de représentation à corriger). V3 reste non planifié tant que
-V2 n'a pas tourné.
+### V2 + v2b — dynamique (résolu)
+
+Un opérateur DMD **global** (fit sur les terrains d'entraînement) déroulé sur terrain
+nouveau **transfère sur les topologies vues** (in-sample 2.4 %, interp 4.6 %,
+obstacle 8.8 %) mais **cliffe sur le canal** holdout-only (157 %). Le test
+couverture-opérateur (v2b) montre que ce cliff est de la **couverture**, pas de la
+capacité :
+
+| canaux dans le fit DMD | 0 | 1 | 2 | 4 |
+|------------------------|----|----|----|----|
+| rollout canal | 157 % | 36 % | 17 % | **11.8 %** |
+
+Une fois le canal vu, le **gap opérateur** du canal (rollout − plancher = 5.8 %) est
+**comparable à celui de l'obstacle** (6.8 %) — l'opérateur global est topologie-agnostique.
+Le rollout canal résiduel (11.8 %) est **hérité de son plancher de représentation**
+(6 %, le résidu n-width de v1b), pas un déficit d'opérateur. `k` reste 24–32, ρ=1.0.
+
+→ **Pour le but visuel : ni V3a, ni V3b, ni V5.** Un seul A global + base statique
+suffit, dès que le train **couvre le vocabulaire de topologies** (qu'un jeu contrôle).
+La foresight transport était juste sur le *lieu* : le résidu transport est dans la
+**représentation**, pas l'opérateur. Détails : `docs/v2_V2_transfer.md`,
+`docs/v2_v2b_operator_coverage.md` (scripts `run_v2_transfer.py`, `exp_v2b_operator_coverage.py`).
+
+**Frontière restante (caractérisée, pas supposée)** : hors du régime
+submergé / réfraction / vocabulaire couvert & borné en translation — le sec / les îles
+(sillages, séparation → solveur mouillé/sec, **v2.5**) et les régimes à **forte
+translation** (où la n-width linéaire mordrait → encodeur appris). Hors-scope.
 
 ---
 
