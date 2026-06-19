@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt
 from config import GridConfig
 from src.solver_wetdry import simulate_wetdry
 from src.analytic_thacker import front_band_mask
-from src.pod import fit_pod, encode, decode, stack_height, unstack_height
+from src.pod import fit_pod, encode, decode, stack_height, unstack_height, PODBasis
 from src.metrics import relative_l2_error
 
 # Réutilise la métrique front-localisée de W0 (DRY — ne pas réimplémenter)
@@ -99,14 +99,16 @@ def dambreak_nwidth(H: int = 64, W: int = 64,
 
     # k-sweep : erreur de front pour k_try modes tronqués
     k_sweep: dict[int, float] = {}
+    k_sweep_info: dict[int, tuple[int, str]] = {}  # k_try → (k_eff, annotation)
     for k_try in [5, 10, 20, 40]:
         if k_try > k:
             # Moins de modes disponibles : utiliser tous
             k_eff = k
+            annotation = f"(= base complète, k={k})"
         else:
             k_eff = k_try
+            annotation = ""
         # Tronquer la base aux k_eff premiers modes
-        from src.pod import PODBasis
         basis_trunc = PODBasis(
             mean=basis.mean,
             scale=basis.scale,
@@ -115,12 +117,14 @@ def dambreak_nwidth(H: int = 64, W: int = 64,
         )
         recon_t = unstack_height(decode(basis_trunc, encode(basis_trunc, X)), H, W)
         k_sweep[k_try] = band_l2_error(recon_t, h_seq)
+        k_sweep_info[k_try] = (k_eff, annotation)
 
     return {
         "k": k,
         "global_l2": global_l2,
         "front_l2": front_l2,
         "k_sweep": k_sweep,
+        "k_sweep_info": k_sweep_info,
         "h_seq": h_seq,
         "times": times,
         "basis": basis,
@@ -149,6 +153,7 @@ def main() -> None:
     global_l2 = result["global_l2"]
     front_l2 = result["front_l2"]
     k_sweep = result["k_sweep"]
+    k_sweep_info = result["k_sweep_info"]
     h_seq = result["h_seq"]
     times = result["times"]
     recon = result["recon"]
@@ -158,7 +163,8 @@ def main() -> None:
     print(f"[W2] k={k}  global_l2={global_l2:.4f}  FRONT_l2={front_l2:.4f}")
     print(f"[W2] k-sweep (front_l2 par nb modes tronqués) :")
     for k_try, fe in sorted(k_sweep.items()):
-        print(f"     k_try={k_try:3d} → front_l2={fe:.4f}")
+        k_eff, annotation = k_sweep_info[k_try]
+        print(f"     k_try={k_try:3d} → k_eff={k_eff:3d} {annotation} : front_l2={fe:.4f}")
     print(f"[W2] Référence W0 smooth transport : ~7.1% (Thacker planaire_diag, "
           f"front analytique lisse)")
 
@@ -240,7 +246,7 @@ def main() -> None:
 
     # ── Doc ───────────────────────────────────────────────────────────────────
     k_sweep_rows = "\n".join(
-        f"| {kk} | {k_sweep[kk]:.4f} |" for kk in sorted(k_sweep.keys())
+        f"| {kk} {k_sweep_info[kk][1]} | {k_sweep[kk]:.4f} |" for kk in sorted(k_sweep.keys())
     )
     doc_lines = [
         "# W2 — Dam-break n-width intra-échantillon (solveur validé W1)",
