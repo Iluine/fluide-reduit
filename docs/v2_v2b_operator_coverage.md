@@ -39,8 +39,18 @@ Script : `scripts/exp_v2b_operator_coverage.py`.
 > terrains différents) n'est le point fixe d'**aucun** terrain. Un A homogène doit donc
 > compromettre : une partie du gap opérateur — y compris l'in-sample 2.4 % — est cet
 > **angle mort affine** (pas seulement la difficulté de transfert). La décomposition le
-> compte honnêtement comme « erreur opérateur » ; le lever (mode constant / DMD affine)
-> est une amélioration possible, hors-scope ici.
+> compte honnêtement comme « erreur opérateur ».
+>
+> **Remède ANALYTIQUE (pas à apprendre)** : l'état de repos est en forme close
+> (`η₀ − b`), donc le soustraire **par terrain** avant POD/DMD met `z=0` à l'équilibre
+> *de chaque terrain* et annule l'offset **exactement** — l'offset est *donné*, pas
+> estimé. Cette arête est donc plus molle qu'un problème affine générique.
+>
+> **Bénin dans le scope** : les perturbations transitoires autour du repos (gouttes,
+> vagues — l'effet d'eau visuel) restent à moyenne ~nulle et ne déclenchent pas le
+> biais. Il faudrait un **forçage asymétrique soutenu** s'établissant vers un régime
+> permanent terrain-spécifique non nul pour qu'il compte — hors-scope — et même là, la
+> soustraction de `η₀ − b` le règle. Caractérisé, bénin-en-scope, correctif en réserve.
 
 ## Lecture
 
@@ -80,6 +90,9 @@ les topologies. Pour un livrable de jeu, on **contrôle** ce vocabulaire.
 ## Frontière restante
 
 Hors du régime **submergé / réfraction / vocabulaire couvert & borné en translation** :
-le sec / les îles (sillages, séparation → solveur mouillé/sec, v2.5) et les régimes à
-forte translation (où la n-width linéaire mordrait → encodeur appris). Tout cela reste
-hors-scope, et désormais **caractérisé** plutôt que supposé.
+le sec / les îles (sillages, séparation → solveur mouillé/sec, v2.5) ; les régimes à
+**forte translation** (où la n-width linéaire mordrait → encodeur appris) ; et
+l'**équilibre asymétrique** (forçage soutenu vers un régime permanent terrain-spécifique
+non nul, où mordrait le biais affine → remède analytique : soustraire `η₀ − b` par
+terrain avant POD/DMD, l'offset est donné). Tout cela reste hors-scope, et désormais
+**caractérisé — avec son remède connu** — plutôt que supposé.
