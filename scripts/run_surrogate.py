@@ -232,6 +232,22 @@ def main() -> None:
           "RESTAURÉE + mottling réduit (la fuite de modes inter-régimes disparaît) ; reste le "
           "lissage de front INTRINSÈQUE au linéaire (seul candidat éventuel au non-linéaire).")
 
+    # (a) LE TOUT : L2 par-régime sur les 14 scénarios (pas les 3 montrés)
+    all_l2 = []
+    for i, s in enumerate(seqs):
+        T = s["h_seq"].shape[0]
+        hp = _rollout_scenario(basis, ops[_regime(s["name"])]["A"], z_list[i][:, 0],
+                               T - 1, GRID.H, GRID.W)
+        all_l2.append((s["name"], float(relative_l2_error(hp, s["h_seq"]))))
+    vals = [v for _, v in all_l2]
+    med_all, max_all = float(np.median(vals)), float(max(vals))
+    aberrant = [(n, v) for n, v in all_l2 if v > max(0.05, 3.0 * med_all)]
+    print(f"[SURROGATE-OPERATOR] (a) TOUT le vocabulaire ({len(seqs)}) par-régime : "
+          f"L2 médian={med_all:.4f}, max={max_all:.4f}, aberrants(>max(0.05,3×méd))={len(aberrant)}")
+    if aberrant:
+        for n, v in aberrant:
+            print(f"[SURROGATE-OPERATOR]   ABERRANT {n} L2={v:.3f}")
+
     lines += ["## Opérateur : global vs PAR-RÉGIME (base partagée) — jugement VISUEL", "",
               f"Base partagée état complet [h,u,v] (k={k_state}). Deux types d'échec du global "
               "décomposés : (1) **intrinsèque-linéaire** = lissage de front (nature du DMD, "
@@ -251,8 +267,27 @@ def main() -> None:
               "intrinsèque résiduel, s'il est jugé trop mou. Remède orthogonal : base bornée "
               "(k=46) acquise — l'encodeur de base est mort ; ceci est un raffinement LINÉAIRE "
               "ciblé de la dynamique, pas un changement de classe de modèle.", "",
-              "→ **Checkpoint : juger les rendus par-régime — symétrie restaurée ? lissage "
-              "résiduel acceptable ?**"]
+              "## (a) Le tout, pas l'anecdote — L2 par-régime sur TOUT le vocabulaire", "",
+              f"Rollout par-régime des **{len(seqs)}** scénarios (pas seulement les 3 rendus) : "
+              f"**L2 médian = {med_all:.4f}, max = {max_all:.4f}**, "
+              + (f"aucun aberrant (>max(0.05, 3×médian))." if not aberrant
+                 else f"{len(aberrant)} aberrant(s) : " + ", ".join(f"{n}={v:.3f}" for n, v in aberrant))
+              + " -> fidélité homogène, pas « bon sur 3 rendus choisis ».", "",
+              "## (b) Périmètre : scénarios proprement classables (mono-régime)", "",
+              "Le routage par-régime suppose que le jeu connaît le régime au rendu. Le "
+              "vocabulaire bâti est **mono-régime** (chaque scénario = un régime) -> le routeur "
+              "s'applique proprement. Un scénario MIXTE (bore frappant une île, les deux à la "
+              "fois) n'a pas d'opérateur propre : ce serait l'unique cas de dynamique résiduel "
+              "à vérifier — et il resterait une question d'OPÉRATEUR (local/mélangé), PAS "
+              "d'encodeur de base. Gaté si le livrable inclut des mélanges.", "",
+              "## Clôture", "",
+              "Surrogate linéaire mouillé/sec QUI MARCHE : **base partagée bornée (k=46) + "
+              "opérateurs linéaires écrêtés par-régime + routeur de régime**. Deux verdicts "
+              "côté linéaire — étendue *mesurée*, opérateur *vu*. L'encodeur de base est resté "
+              "non bâti, enterré sur preuve à chaque étage (ici : défaut d'opérateur de type "
+              "GLOBALITÉ, corrigé à bas coût, pas de type linéarité). Le lissage de front "
+              "intrinsèque résiduel est faible : levier non-linéaire FUTUR si la barre visuelle "
+              "monte (résolution/fronts plus raides), option connue et bornée, pas une dette."]
 
     OUT_DOC.write_text("\n".join(lines) + "\n")
     print(f"[SURROGATE] note -> {OUT_DOC}")
