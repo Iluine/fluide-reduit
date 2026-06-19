@@ -63,7 +63,7 @@ def validate_thacker() -> dict:
     hu0 = np.zeros_like(h0)
     hv0 = np.zeros_like(h0)
 
-    T_period = thacker_radial_period()  # ≈ 1.41 s (g=9.81, a=1, h0=0.1)
+    T_period = thacker_radial_period()  # ≈ 2.24 s (T=2π/√(8·g·h0), g=9.81, h0=0.1)
     t_end = T_period                    # exactement 1 période
 
     print(f"  Période Thacker = {T_period:.4f} s → simulation jusqu'à t={t_end:.4f} s")
@@ -98,11 +98,17 @@ def validate_thacker() -> dict:
 
     min_h = float(h_seq.min())
 
+    # Bilan de masse (INFO, non-gate)
+    M_0 = float(h_seq[0].sum()) * GRID.dx * GRID.dy
+    M_end = float(h_seq[-1].sum()) * GRID.dx * GRID.dy
+    mass_change_pct = (M_end - M_0) / M_0 * 100.0 if M_0 > 0 else 0.0
+
     print(f"  L2 relative à 8 instants : {[f'{e:.4f}' for e in l2_errors_arr]}")
     print(f"  max L2 = {max_l2:.4f}  (seuil < 0.30)")
     print(f"  [V1] profil L2 vs temps (info, non-gate) : {[f'{e:.4f}' for e in l2_errors_arr]}")
     print(f"  min(h) = {min_h:.2e}  (doit être >= 0)")
     print(f"  Aire mouillée : début={wet_start}, fin={wet_end}")
+    print(f"  [V1] Bilan de masse : M_0={M_0:.4e}, M_fin={M_end:.4e}, ΔM/M_0={mass_change_pct:.2f}%")
 
     # ── Assertions ───────────────────────────────────────────────────────────
     assert max_l2 < 0.30, (
@@ -146,6 +152,7 @@ def validate_thacker() -> dict:
         "wet_start": wet_start,
         "wet_end": wet_end,
         "min_h": min_h,
+        "mass_change_pct": mass_change_pct,
         "h_seq": h_seq,
         "hu_seq": hu_seq,
         "hv_seq": hv_seq,
@@ -207,6 +214,11 @@ def validate_ritter() -> dict:
 
     min_h = float(h_seq.min())
 
+    # Bilan de masse (INFO, non-gate)
+    M_0 = float(h_seq[0].sum()) * GRID.dx * GRID.dy
+    M_end = float(h_seq[-1].sum()) * GRID.dx * GRID.dy
+    mass_change_pct = (M_end - M_0) / M_0 * 100.0 if M_0 > 0 else 0.0
+
     # Vérification cellules parasites au-delà du front
     beyond_front = x_centers > x_B + cell_size
     spurious_beyond = float(h_num[beyond_front].max()) if beyond_front.any() else 0.0
@@ -216,6 +228,7 @@ def validate_ritter() -> dict:
     print(f"  Plateau amont h_moy = {h_plateau:.5f} m (erreur relative {plateau_rel_err:.3f}, seuil 10%)")
     print(f"  Cellule parasite au-delà du front : max(h) = {spurious_beyond:.2e}")
     print(f"  min(h) = {min_h:.2e}")
+    print(f"  [V2] Bilan de masse : M_0={M_0:.4e}, M_fin={M_end:.4e}, ΔM/M_0={mass_change_pct:.2f}%")
 
     # ── Assertions ───────────────────────────────────────────────────────────
     assert front_error_cells <= 3.0, (
@@ -254,6 +267,7 @@ def validate_ritter() -> dict:
         "h_plateau": h_plateau,
         "plateau_rel_err": plateau_rel_err,
         "min_h": min_h,
+        "mass_change_pct": mass_change_pct,
         "h_seq": h_seq,
         "hu_seq": hu_seq,
         "hv_seq": hv_seq,
@@ -359,10 +373,57 @@ def validate_c_property() -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# SCÉNARIO DRYING (bilan de masse)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def validate_drying_scenario() -> dict:
+    """Drying scenario : goutte gaussienne sur lit sec, capture la perte de masse liée au flooring."""
+    print("[Drying] initialisation…")
+
+    # Goutte gaussienne avec contour sec : utiliser indices de grille pour narrow gaussian
+    ii, jj = np.meshgrid(np.arange(GRID.W), np.arange(GRID.H))
+    r2 = (ii - 32)**2 + (jj - 32)**2
+    h0 = np.maximum(0.5 * np.exp(-(r2 / 40.0)) - 0.05, 0.0)
+    hu0 = np.zeros_like(h0)
+    hv0 = np.zeros_like(h0)
+    b = np.zeros((GRID.H, GRID.W))
+
+    print(f"  Goutte gaussienne : h_max={h0.max():.4f}, cellules mouillées={int(np.sum(h0 > DRY_EPS))}")
+
+    times, h_seq, hu_seq, hv_seq = simulate_wetdry(
+        h0, hu0, hv0, b, GRID, cfl=0.4, t_end=1.0, dry_eps=DRY_EPS
+    )
+    print(f"  Simulation OK : {len(times)} pas")
+
+    # Bilan de masse
+    M_0 = float(h_seq[0].sum()) * GRID.dx * GRID.dy
+    M_end = float(h_seq[-1].sum()) * GRID.dx * GRID.dy
+    mass_change_pct = (M_end - M_0) / M_0 * 100.0 if M_0 > 0 else 0.0
+
+    min_h = float(h_seq.min())
+
+    print(f"  [Drying] Bilan de masse : M_0={M_0:.4e}, M_fin={M_end:.4e}, ΔM/M_0={mass_change_pct:.2f}%")
+    print(f"  [Drying] min(h) = {min_h:.2e}")
+
+    # Assertions : INFO uniquement, pas de gate sur la masse
+    # Seule vérification : positivité et finitude
+    assert min_h >= 0.0, f"ÉCHEC Drying : min(h) = {min_h:.2e} < 0"
+    assert np.all(np.isfinite(h_seq)), "ÉCHEC Drying : valeurs non-finies dans h_seq"
+
+    print("  [Drying] PASS (info-only)")
+
+    return {
+        "mass_change_pct": mass_change_pct,
+        "min_h": min_h,
+        "h_seq": h_seq,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # RAPPORT
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _write_report(r_thacker, r_ritter, r_cprop):
+def _write_report(r_thacker, r_ritter, r_cprop, r_drying):
     OUT_DOC.parent.mkdir(parents=True, exist_ok=True)
     lines = [
         "# W1 — Validations analytiques du solveur mouillé/sec",
@@ -407,6 +468,14 @@ def _write_report(r_thacker, r_ritter, r_cprop):
         f"- min(h) C-prop pente = {r_cprop['min_h_slope']:.2e}",
         "- Statut : **PASS**",
         "",
+        "## Bilan de masse (info, non-gate)",
+        "",
+        f"- **Thacker** : ΔM/M₀ = {r_thacker['mass_change_pct']:.2f}%",
+        f"- **Ritter** : ΔM/M₀ = {r_ritter['mass_change_pct']:.2f}%",
+        f"- **Drying (goutte gaussienne)** : ΔM/M₀ = {r_drying['mass_change_pct']:.2f}%",
+        "",
+        "Le flux HLL est conservatif (cf. Thacker/Ritter ~0%). La perte au DRAINAGE vient du plancher sous-`dry_eps` (tradeoff positivité/mouillé-sec, attendu) ; la projection de masse positivity-preserving est déférée à W3. La masse ne suffit donc pas comme critère — d'où les 4 validations analytiques.",
+        "",
         "## Verdict",
         "",
         "Les 4 validations analytiques passent. **L'oracle W1 est accepté.**",
@@ -439,6 +508,9 @@ def main():
     # ── V3 : C-property ──────────────────────────────────────────────────────
     r_cprop = validate_c_property()
 
+    # ── Drying scenario (bilan de masse) ─────────────────────────────────────
+    r_drying = validate_drying_scenario()
+
     # ── V4 : Positivité globale (résumé) ─────────────────────────────────────
     print("[V4-Positivité] vérification globale min(h) >= 0…")
     global_min_h = min(
@@ -470,7 +542,7 @@ def main():
     print("=" * 60)
 
     # ── Écriture du doc ───────────────────────────────────────────────────────
-    _write_report(r_thacker, r_ritter, r_cprop)
+    _write_report(r_thacker, r_ritter, r_cprop, r_drying)
 
 
 if __name__ == "__main__":
