@@ -40,3 +40,28 @@ def test_o2_sharper_than_o1_on_dam_break():
         return int(np.sum((row > 0.15) & (row < 0.9)))      # largeur de transition du choc
 
     assert front_width(simulate_wetdry_o2) <= front_width(simulate_wetdry)  # plus net (ou egal)
+
+
+def test_mc_limiter_preserves_invariants_and_is_sharper():
+    # Le limiteur MC doit AUSSI tenir C-property + positivite, et etre >= net que minmod.
+    yy, xx = np.mgrid[0:48, 0:48].astype(float)
+    b = 0.6 * np.exp(-(((xx - 24) ** 2 + (yy - 24) ** 2) / 30.0))
+    h0 = np.maximum(0.4 - b, 0.0)
+    z = np.zeros_like(h0)
+    _, hs, hus, hvs = simulate_wetdry_o2(h0, z.copy(), z.copy(), b, GRID, t_end=2.0, limiter="mc")
+    speed = np.sqrt((hus / np.maximum(hs, 1e-6)) ** 2 + (hvs / np.maximum(hs, 1e-6)) ** 2)
+    assert float(speed.max()) < 1e-6 and float(hs.min()) >= 0.0   # WB + positivite (MC)
+
+    xs = (np.arange(48) + 0.5) * GRID.dx
+    h0d = np.where(xs[None, :] <= 2.0, 1.0, 0.1) * np.ones((48, 48))
+    zd = np.zeros((48, 48))
+
+    def width(lim):
+        _, h, _, _ = simulate_wetdry_o2(h0d.copy(), zd.copy(), zd.copy(), zd.copy(),
+                                        GRID, t_end=0.3, limiter=lim)
+        r = h[-1, 24, :]
+        return int(np.sum((r > 0.15) & (r < 0.9)))
+
+    assert width("mc") <= width("minmod")           # MC au moins aussi net que minmod
+    assert float(simulate_wetdry_o2(h0d.copy(), zd.copy(), zd.copy(), zd.copy(),
+                                    GRID, t_end=0.3, limiter="mc")[1].min()) >= 0.0  # positivite bore

@@ -212,46 +212,61 @@ def _minmod(a: np.ndarray, b: np.ndarray) -> np.ndarray:
                     np.sign(a) * np.minimum(np.abs(a), np.abs(b)))
 
 
-def _slopes_x(arr: np.ndarray) -> np.ndarray:
-    """Pente x limitée (minmod) par cellule sur un tableau padé (H+2,W+2).
+def _mc(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Limiteur MC (monotonized central) : sign·min(2|a|, 2|b|, |a+b|/2), 0 si signes
+    opposés. TVD aussi, mais PLUS NET que minmod (pente centrale écrêtée à 2× le plus
+    petit côté) → front plus raide (~1 cellule)."""
+    return np.where(a * b <= 0.0, 0.0,
+                    np.sign(a) * np.minimum(np.minimum(2.0 * np.abs(a), 2.0 * np.abs(b)),
+                                            0.5 * np.abs(a + b)))
+
+
+_LIMITERS = {"minmod": _minmod, "mc": _mc}
+
+
+def _slopes_x(arr: np.ndarray, lim) -> np.ndarray:
+    """Pente x limitée par cellule sur un tableau padé (H+2,W+2), via le limiteur ``lim``.
     Colonnes fantômes (0, W+1) : pente 0 (reconstruction 1er ordre au mur)."""
     s = np.zeros_like(arr)
     bw = arr[:, 1:-1] - arr[:, :-2]   # différence arrière
     fw = arr[:, 2:] - arr[:, 1:-1]    # différence avant
-    s[:, 1:-1] = _minmod(bw, fw)
+    s[:, 1:-1] = lim(bw, fw)
     return s
 
 
-def _slopes_y(arr: np.ndarray) -> np.ndarray:
-    """Pente y limitée (minmod) par cellule sur un tableau padé (H+2,W+2)."""
+def _slopes_y(arr: np.ndarray, lim) -> np.ndarray:
+    """Pente y limitée par cellule sur un tableau padé (H+2,W+2), via ``lim``."""
     s = np.zeros_like(arr)
     bw = arr[1:-1, :] - arr[:-2, :]
     fw = arr[2:, :] - arr[1:-1, :]
-    s[1:-1, :] = _minmod(bw, fw)
+    s[1:-1, :] = lim(bw, fw)
     return s
 
 
 def _rhs_o2(h: np.ndarray, hu: np.ndarray, hv: np.ndarray, b: np.ndarray,
-            grid: GridConfig, dry_eps: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+            grid: GridConfig, dry_eps: float, limiter: str = "minmod"
+            ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Opérateur spatial L(U) au 2e ordre (MUSCL surface-gradient + hydrostatique).
 
-    Reconstruit la SURFACE LIBRE η = h + b (PAS h) par pentes minmod (surface gradient
-    method, Zhou et al. 2001) — au repos η=const → pente nulle → se réduit EXACTEMENT
-    au 1er ordre `_rhs` → C-property héritée. Le lit b N'EST PAS reconstruit (z* = max
-    des lits cellules, comme Audusse), ce qui garantit cette réduction. Réconciliation
-    η/positivité : si une face d'une cellule donne h reconstruit < 0, on annule la pente
-    de cette cellule (retour 1er ordre) → toutes les faces ont h ≥ 0. Puis reconstruction
-    hydrostatique (h* = max(0, η_face − z*)) + HLL + correction de pression, identiques
-    au 1er ordre mais sur les états reconstruits. Retourne (Lh, Lhu, Lhv) sur (H, W)."""
+    Reconstruit la SURFACE LIBRE η = h + b (PAS h) par pentes limitées (surface gradient
+    method, Zhou et al. 2001 ; limiteur ``minmod`` par défaut, ``mc`` plus net) — au repos
+    η=const → pente nulle → se réduit EXACTEMENT au 1er ordre `_rhs` → C-property héritée.
+    Le lit b N'EST PAS reconstruit (z* = max des lits cellules, comme Audusse), ce qui
+    garantit cette réduction. Réconciliation η/positivité : si une face d'une cellule donne
+    h reconstruit < 0, on annule la pente de cette cellule (retour 1er ordre) → toutes les
+    faces ont h ≥ 0. Puis reconstruction hydrostatique (h* = max(0, η_face − z*)) + HLL +
+    correction de pression, identiques au 1er ordre mais sur les états reconstruits.
+    Retourne (Lh, Lhu, Lhv) sur (H, W)."""
     g = GRAVITY
     dx, dy = grid.dx, grid.dy
+    lim = _LIMITERS[limiter]
     hp, hup, hvp, bp = _pad_reflective(h, hu, hv, b)
     etap = hp + bp
     up = desingularize_velocity(hp, hup, dry_eps)
     vp = desingularize_velocity(hp, hvp, dry_eps)
 
-    # ----- Pentes minmod + réconciliation positivité (par cellule, axe x) -----
-    seta_x, su_x, sv_x = _slopes_x(etap), _slopes_x(up), _slopes_x(vp)
+    # ----- Pentes limitées + réconciliation positivité (par cellule, axe x) -----
+    seta_x, su_x, sv_x = _slopes_x(etap, lim), _slopes_x(up, lim), _slopes_x(vp, lim)
     hLf_x = (etap - 0.5 * seta_x) - bp          # h reconstruit, face gauche de chaque cellule
     hRf_x = (etap + 0.5 * seta_x) - bp          # face droite
     bad_x = (hLf_x < 0.0) | (hRf_x < 0.0)       # surface reconstruite sous le lit
@@ -279,7 +294,7 @@ def _rhs_o2(h: np.ndarray, hu: np.ndarray, hv: np.ndarray, b: np.ndarray,
     Fhun_x_right = Fhun_x + Sx_R
 
     # ----- Pentes + réconciliation (axe y) -----
-    seta_y, su_y, sv_y = _slopes_y(etap), _slopes_y(up), _slopes_y(vp)
+    seta_y, su_y, sv_y = _slopes_y(etap, lim), _slopes_y(up, lim), _slopes_y(vp, lim)
     hBf_y = (etap - 0.5 * seta_y) - bp
     hTf_y = (etap + 0.5 * seta_y) - bp
     bad_y = (hBf_y < 0.0) | (hTf_y < 0.0)
@@ -330,11 +345,12 @@ def _rhs_o2(h: np.ndarray, hu: np.ndarray, hv: np.ndarray, b: np.ndarray,
 
 def simulate_wetdry_o2(h0: np.ndarray, hu0: np.ndarray, hv0: np.ndarray, b: np.ndarray,
                        grid: GridConfig, cfl: float = 0.4, t_end: float = 2.0,
-                       dry_eps: float = 1e-4
+                       dry_eps: float = 1e-4, limiter: str = "minmod"
                        ) -> tuple[list[float], np.ndarray, np.ndarray, np.ndarray]:
-    """Version 2e ordre (MUSCL surface-gradient) de simulate_wetdry. Même signature,
-    même boucle SSP-RK2 / dt CFL / plancher sec, mais opérateur spatial `_rhs_o2`.
-    Le 1er ordre `simulate_wetdry` reste inchangé (chemin séparé)."""
+    """Version 2e ordre (MUSCL surface-gradient) de simulate_wetdry. Même boucle SSP-RK2 /
+    dt CFL / plancher sec, mais opérateur spatial `_rhs_o2`. ``limiter`` : ``minmod``
+    (défaut, le plus sûr) ou ``mc`` (plus net, ~1 cellule). Le 1er ordre `simulate_wetdry`
+    reste inchangé (chemin séparé)."""
     cfl = min(cfl, 0.4)
     h, hu, hv = (np.asarray(h0, np.float64).copy(),
                  np.asarray(hu0, np.float64).copy(),
@@ -352,12 +368,12 @@ def simulate_wetdry_o2(h0: np.ndarray, hu0: np.ndarray, hv0: np.ndarray, b: np.n
         dt = _cfl_dt(h, hu, hv, grid, cfl, dry_eps)
         if t + dt > t_end:
             dt = t_end - t
-        L1h, L1hu, L1hv = _rhs_o2(h, hu, hv, b, grid, dry_eps)
+        L1h, L1hu, L1hv = _rhs_o2(h, hu, hv, b, grid, dry_eps, limiter)
         h1 = h + dt * L1h
         hu1 = hu + dt * L1hu
         hv1 = hv + dt * L1hv
         h1, hu1, hv1 = _floor_dry(h1, hu1, hv1, dry_eps)
-        L2h, L2hu, L2hv = _rhs_o2(h1, hu1, hv1, b, grid, dry_eps)
+        L2h, L2hu, L2hv = _rhs_o2(h1, hu1, hv1, b, grid, dry_eps, limiter)
         hn = 0.5 * h + 0.5 * (h1 + dt * L2h)
         hun = 0.5 * hu + 0.5 * (hu1 + dt * L2hu)
         hvn = 0.5 * hv + 0.5 * (hv1 + dt * L2hv)
