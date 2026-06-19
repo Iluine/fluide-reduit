@@ -1,7 +1,8 @@
 import numpy as np
 
 from src.pod import (stack_snapshots, unstack, fit_pod, encode, decode,
-                     cumulative_energy)
+                     cumulative_energy, _channel_scale, stack_height,
+                     unstack_height)
 
 
 def _toy_field(T=20, H=8, W=8, seed=0):
@@ -50,12 +51,6 @@ def test_reconstruction_error_decreases_with_k():
         z = encode(basis, X)
         errs.append(np.linalg.norm(decode(basis, z) - X) / np.linalg.norm(X))
     assert errs[0] >= errs[1] >= errs[2] - 1e-12
-
-
-import numpy as np
-
-from src.pod import (fit_pod, encode, decode, _channel_scale,
-                     stack_height, unstack_height)
 
 
 def test_channel_scale_single_channel_is_global_std():
