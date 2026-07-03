@@ -1,0 +1,24 @@
+{
+  "seed": 12345,
+  "n_episodes": 10,
+  "target_taux": [
+    0.18,
+    0.22
+  ],
+  "target_resfrac": [
+    0.6,
+    0.66
+  ],
+  "max_cycles": 4,
+  "cycles": [
+    {
+      "cycle": 1,
+      "k_d": 0.0019109529749704406,
+      "k_e": 0.005232991146814947,
+      "taux": 0.18875904854649675,
+      "resfrac": 0.6425366558324981,
+      "cond_taux": true,
+      "cond_resfrac": true
+    }
+  ]
+}

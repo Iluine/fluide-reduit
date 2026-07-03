@@ -1,10 +1,12 @@
 import numpy as np
 import pytest
 
+from dataclasses import replace
+
 from config import GridConfig
-from src.sediment import (default_terrain, run_episode, run_history, SedimentParams,
-                          KD_CALIBRE, _relax_episode, _integrate_exner, _exner_step,
-                          _DRY_EPS)
+from src.sediment import (default_terrain, run_episode, run_history, resfrac_history,
+                          SedimentParams, KD_CALIBRE, KD_CALIBRE_V2, KE_CALIBRE_V2,
+                          _relax_episode, _integrate_exner, _exner_step, _DRY_EPS)
 
 GRID = GridConfig()
 B0 = default_terrain(GRID)
@@ -33,9 +35,16 @@ def test_default_terrain_shape_and_relief():
 
 
 def test_kd_calibre_is_frozen_and_positive():
+    # V1 (a priori k_e=k_d/5, invalidé par le gate de re-validation -- corr(direct,
+    # inversé)=0.9929 contre seuil <=0.7, cf. PREREGISTRATION.md pocCascade2phys
+    # 2026-07-04) : conservée comme trace historique et comme point de départ de
+    # `cocalibrate_kd_ke`, mais N'EST PLUS le défaut de `SedimentParams`.
     assert KD_CALIBRE > 0.0
-    assert SedimentParams().k_d == KD_CALIBRE
-    assert SedimentParams().k_e == pytest.approx(KD_CALIBRE / 5.0)
+    # V2 (co-calibrée aux DEUX signatures gravées taux+resfrac) : défauts actuels.
+    assert KD_CALIBRE_V2 > 0.0
+    assert KE_CALIBRE_V2 > 0.0
+    assert SedimentParams().k_d == KD_CALIBRE_V2
+    assert SedimentParams().k_e == KE_CALIBRE_V2
 
 
 # Un seul épisode complet (N_settle=600, params par défaut) partagé entre les tests
@@ -149,3 +158,33 @@ def test_path_dependence_reversed_order_differs():
     s_fwd = _run(centers)
     s_rev = _run(list(reversed(centers)))
     assert not np.array_equal(s_fwd, s_rev)
+
+
+def test_resfrac_history_zero_when_erosion_disabled():
+    """k_e=0 -> aucun terme d'érosion n'est jamais accumulé -> resfrac exactement 0
+    (numérateur nul), quelle que soit l'histoire -- sanity check du signe/de
+    l'agrégation dans `resfrac_history`."""
+    params_ke0 = replace(_SMALL_PARAMS, k_e=0.0)
+    rf = resfrac_history(seed=7, n_episodes=3, b0=B0, params=params_ke0)
+    assert rf == 0.0
+
+
+def test_resfrac_history_positive_and_deterministic():
+    """Avec k_e nominal (> 0), une histoire qui mouille assez de cellules produit
+    de l'érosion active -> resfrac > 0 ; bit-à-bit reproductible (même mécanique
+    déterministe que `run_history`)."""
+    rf1 = resfrac_history(seed=7, n_episodes=3, b0=B0, params=_SMALL_PARAMS)
+    rf2 = resfrac_history(seed=7, n_episodes=3, b0=B0, params=_SMALL_PARAMS)
+    assert rf1 == rf2
+    assert rf1 > 0.0
+
+
+def test_resfrac_history_increases_with_ke():
+    """Plus d'érosion relative (k_e plus grand, k_d fixé) -> plus de retravail du
+    dépôt -> resfrac plus élevé (hypothèse de monotonie utilisée par la bissection
+    k_e de `cocalibrate_kd_ke`)."""
+    params_lo = replace(_SMALL_PARAMS, k_e=_SMALL_PARAMS.k_e * 0.1)
+    params_hi = replace(_SMALL_PARAMS, k_e=_SMALL_PARAMS.k_e * 10.0)
+    rf_lo = resfrac_history(seed=7, n_episodes=3, b0=B0, params=params_lo)
+    rf_hi = resfrac_history(seed=7, n_episodes=3, b0=B0, params=params_hi)
+    assert rf_hi > rf_lo

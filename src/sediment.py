@@ -48,7 +48,9 @@ documentée, et non 1e-8.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -83,7 +85,7 @@ _B0_FIGE = default_terrain(_GRID)
 _RELIEF: float = float(_B0_FIGE.max() - _B0_FIGE.min())  # relief du b0 FIGÉ
 _DRY_EPS: float = 1e-4     # dry_eps par défaut de simulate_wetdry_o2 (non redéfini ici)
 
-# Calibration k_d (cf. RÉSOLUTION D'AMBIGUÏTÉ / calibrate_kd ci-dessous). Reproduire :
+# Calibration k_d V1 (cf. RÉSOLUTION D'AMBIGUÏTÉ / calibrate_kd ci-dessous). Reproduire :
 #   .venv/bin/python -c "
 #   from config import GridConfig
 #   from src.sediment import default_terrain, calibrate_kd
@@ -98,7 +100,39 @@ _DRY_EPS: float = 1e-4     # dry_eps par défaut de simulate_wetdry_o2 (non red�
 # [0.18, 0.22], 10 épisodes) sur le code corrigé -> valeur bit-à-bit IDENTIQUE
 # (le correctif ne touche que la bande 1e-4 < h <= 1e-3 ; le chemin de bissection
 # est inchangé et retourne le même point médian dyadique sur log10(k_d)).
+# STATUT V1 : l'a priori associé k_e = k_d/5 a été INVALIDÉ par le gate de
+# re-validation v1 (FAIL (a) : corr(direct, inversé) = 0.9929 contre seuil <= 0.7 ;
+# diagnostic outputs/arcA/diag_pathdep.json : resfrac = 0.174 contre signature
+# gravée 0.60-0.66 -- une seule des deux signatures d'origine était calibrée).
+# KD_CALIBRE reste gelé comme trace historique et comme point de départ de la
+# co-calibration V2 ci-dessous ; il n'est PLUS le défaut de SedimentParams.
 KD_CALIBRE: float = 0.0019109529749704406
+# (V1 impliquait k_e = KD_CALIBRE / 5.0 = 3.8219059499408815e-04 -- a priori du
+# contrôleur, jamais une donnée d'origine.)
+
+# Co-calibration V2 (k_d, k_e) -- ITÉRATION DE CONCEPTION NOMMÉE, pré-enregistrée
+# au journal pocCascade2phys (PREREGISTRATION.md, entrée 2026-07-04) AVANT
+# implémentation : remplace l'a priori k_e = k_d/5 par une co-calibration aux DEUX
+# signatures gravées du substrat d'origine -- taux (max(s)/relief ∈ [0.18, 0.22])
+# ET resfrac (masse totale érodée / masse totale déposée sur l'histoire,
+# ∈ [0.60, 0.66]). Bissections alternées (cf. cocalibrate_kd_ke) : k_d -> taux à
+# k_e fixé puis k_e -> resfrac à k_d fixé, vérification CONJOINTE finale ;
+# seed=12345, 10 épisodes, max 4 cycles (mêmes protocole/seed que V1). Reproduire :
+#   .venv/bin/python -c "
+#   from config import GridConfig
+#   from src.sediment import default_terrain, cocalibrate_kd_ke
+#   b0 = default_terrain(GridConfig())
+#   print(cocalibrate_kd_ke(b0))"
+# Exécutée UNE fois (2026-07-04, ~19 min, trace : outputs/arcA/cocalib_v2_checkpoint.json
+# + cocalib_v2_result.json) : convergence au 1er cycle, vérification conjointe
+# tenue -- taux = 0.18875904854649675 ∈ [0.18, 0.22], resfrac = 0.6425366558324981
+# ∈ [0.60, 0.66]. KD_CALIBRE_V2 sort bit-à-bit IDENTIQUE à KD_CALIBRE (la bissection
+# k_d, relancée à k_e = KD_CALIBRE/5, suit le même chemin dyadique sur log10(k_d) :
+# l'érosion au k_e de départ modifie trop peu max(s) pour changer la suite des
+# comparaisons). Constantes co-calibrées aux deux signatures gravées taux+resfrac,
+# GELÉES AVANT la re-validation v2 : plus aucune retouche, quel que soit le verdict.
+KD_CALIBRE_V2: float = 0.0019109529749704406
+KE_CALIBRE_V2: float = 0.005232991146814947
 
 
 @dataclass(frozen=True)
@@ -108,8 +142,8 @@ class SedimentParams:
     `h_p` est une valeur numérique figée (= 0.6·relief(b0) au point d'opération),
     PAS une fraction recalculée à la volée : le terrain b0 étant lui-même figé,
     c'est un unique nombre, gelé ici comme les autres champs de cette dataclass."""
-    k_d: float = KD_CALIBRE
-    k_e: float = KD_CALIBRE / 5.0     # FIGÉ a priori : k_e = k_d/5
+    k_d: float = KD_CALIBRE_V2        # V2 co-calibrée (V1 : KD_CALIBRE, même valeur)
+    k_e: float = KE_CALIBRE_V2        # V2 co-calibrée (V1 : KD_CALIBRE/5, a priori invalidé)
     theta_c: float = 0.5              # FIGÉ a priori
     sigma_pulse: float = 5.0          # cellules
     h_p: float = 0.6 * _RELIEF        # hauteur crête du pulse = 0.6·relief(b0)
@@ -163,7 +197,8 @@ def _relax_episode(b_eff: np.ndarray, center_frac: tuple[float, float],
 
 
 def _exner_step(s: np.ndarray, h: np.ndarray, hu: np.ndarray, hv: np.ndarray,
-                dt: float, params: SedimentParams) -> np.ndarray:
+                dt: float, params: SedimentParams, return_terms: bool = False
+                ) -> np.ndarray | tuple[np.ndarray, float, float]:
     """Un pas d'Euler explicite de la loi de dépôt/érosion type Exner sur le
     snapshot (h, hu, hv) : θ=u²+v² sur les cellules mouillées au sens Exner
     (h > 10·dry_eps — seuil plus conservateur que le dry_eps du solveur, pour éviter
@@ -171,7 +206,14 @@ def _exner_step(s: np.ndarray, h: np.ndarray, hu: np.ndarray, hv: np.ndarray,
     ds/dt = 1[wet]·(k_d·h·1[θ<θc]·(1−θ/θc) − k_e·s·1[θ>θc]·(θ/θc−1)) ; s ≥ 0 clampé.
     Le dépôt ET l'érosion sont restreints aux cellules mouillées (`wet`) : une
     cellule 0 < h ≤ 10·dry_eps est sèche au sens Exner et ne reçoit ni dépôt ni
-    érosion, même si θ=0 y satisferait trivialement θ<θc (correctif post-revue)."""
+    érosion, même si θ=0 y satisferait trivialement θ<θc (correctif post-revue).
+
+    Si `return_terms` (défaut False, comportement inchangé) : retourne en plus
+    (masse_dépôt, masse_érosion) = (Σdépôt·dt, Σérosion·dt) sur ce pas, les deux
+    termes bruts AVANT le clamp `s ≥ 0` — utilisé par `resfrac_history` pour
+    intégrer resfrac = Σ|érosion|/Σ|dépôt| sur une histoire complète (les deux
+    termes sont déjà ≥ 0 par construction du masque, donc pas de valeur absolue
+    nécessaire ici)."""
     wet = h > 10.0 * _DRY_EPS
     u = np.zeros_like(h)
     v = np.zeros_like(h)
@@ -181,22 +223,41 @@ def _exner_step(s: np.ndarray, h: np.ndarray, hu: np.ndarray, hv: np.ndarray,
     depot = wet * params.k_d * h * (theta < params.theta_c) * (1.0 - theta / params.theta_c)
     erosion = wet * params.k_e * s * (theta > params.theta_c) * (theta / params.theta_c - 1.0)
     s_new = s + dt * (depot - erosion)
-    return np.maximum(s_new, 0.0)
+    s_new = np.maximum(s_new, 0.0)
+    if return_terms:
+        return s_new, float(np.sum(depot) * dt), float(np.sum(erosion) * dt)
+    return s_new
 
 
 def _integrate_exner(s0: np.ndarray, times: np.ndarray, hs: np.ndarray,
                      hus: np.ndarray, hvs: np.ndarray,
-                     params: SedimentParams) -> np.ndarray:
+                     params: SedimentParams, return_terms: bool = False
+                     ) -> np.ndarray | tuple[np.ndarray, float, float]:
     """Intègre la loi Exner séquentiellement sur les snapshots sous-échantillonnés
     (tous les `save_every`), dt = temps écoulé réel depuis le dernier snapshot
     utilisé (identique à « dt du snapshot × save_every » quand le dt CFL est
-    localement ~constant, exact sinon — cf. RÉSOLUTION D'AMBIGUÏTÉ)."""
+    localement ~constant, exact sinon — cf. RÉSOLUTION D'AMBIGUÏTÉ).
+
+    Si `return_terms` (défaut False, comportement inchangé pour tous les appelants
+    existants) : retourne en plus (masse_dépôt_épisode, masse_érosion_épisode) =
+    les deux termes de `_exner_step` sommés sur tous les snapshots de CET épisode
+    (utilisé par `resfrac_history`)."""
     s = s0.copy()
     n = len(times)
+    if not return_terms:
+        for i in range(params.save_every, n, params.save_every):
+            dt = float(times[i] - times[i - params.save_every])
+            s = _exner_step(s, hs[i], hus[i], hvs[i], dt, params)
+        return s
+    depot_ep = 0.0
+    erosion_ep = 0.0
     for i in range(params.save_every, n, params.save_every):
         dt = float(times[i] - times[i - params.save_every])
-        s = _exner_step(s, hs[i], hus[i], hvs[i], dt, params)
-    return s
+        s, depot_mass, erosion_mass = _exner_step(s, hs[i], hus[i], hvs[i], dt, params,
+                                                   return_terms=True)
+        depot_ep += depot_mass
+        erosion_ep += erosion_mass
+    return s, depot_ep, erosion_ep
 
 
 def run_episode(s: np.ndarray, b0: np.ndarray, center_frac: tuple[float, float],
@@ -228,6 +289,39 @@ def run_history(seed: int, n_episodes: int, b0: np.ndarray,
         if ep in checkpoints:
             out[ep] = s.copy()
     return out
+
+
+def resfrac_history(seed: int, n_episodes: int, b0: np.ndarray,
+                    params: SedimentParams = SedimentParams()) -> float:
+    """Rejoue une histoire de `n_episodes` épisodes (même tirage de centres que
+    `run_history` : `default_rng(seed)` uniforme dans [0.15, 0.85]²) et retourne
+    resfrac = Σ_épisodes Σ_snapshots érosion·dt / Σ_épisodes Σ_snapshots dépôt·dt
+    -- les deux termes bruts de `_exner_step` (cf. son docstring, `return_terms`),
+    agrégés sur TOUTE l'histoire. C'est la seconde signature gravée au journal
+    d'origine (pocCascade2phys, PREREGISTRATION.md 2026-07-04 : « masse totale
+    érodée / masse totale déposée sur l'histoire », resfrac ∈ [0.60, 0.66] au
+    substrat d'origine) : mesure le taux de RETRAVAIL du dépôt, orthogonale à
+    max(s)/relief (le « taux » calibré par `calibrate_kd`). Réutilise
+    intégralement la mécanique de `run_episode`/`_relax_episode`/`_integrate_exner`
+    (aucune nouvelle logique physique) -- seule l'agrégation des deux termes déjà
+    calculés par `_exner_step` est nouvelle ici."""
+    rng = np.random.default_rng(seed)
+    s = np.zeros_like(b0, dtype=np.float64)
+    total_depot = 0.0
+    total_erosion = 0.0
+    for _ in range(n_episodes):
+        center = (float(rng.uniform(0.15, 0.85)), float(rng.uniform(0.15, 0.85)))
+        b_eff = b0 + s
+        times, hs, hus, hvs = _relax_episode(b_eff, center, params)
+        s, depot_ep, erosion_ep = _integrate_exner(s, times, hs, hus, hvs, params,
+                                                    return_terms=True)
+        total_depot += depot_ep
+        total_erosion += erosion_ep
+    if total_depot == 0.0:
+        raise RuntimeError(
+            "resfrac_history : masse totale déposée nulle sur l'histoire -- resfrac "
+            "mal défini (0/0). Vérifier k_d/params.")
+    return total_erosion / total_depot
 
 
 def calibrate_kd(b0: np.ndarray, target: float = 0.2, seed: int = 12345,
@@ -270,6 +364,155 @@ def calibrate_kd(b0: np.ndarray, target: float = 0.2, seed: int = 12345,
         f"calibrate_kd n'a pas convergé en {max_iters} itérations : dernier "
         f"k_d={k_d} (log10={mid}), ratio={ratio}, cible={target}±{band}. "
         "BLOCKED : ne pas forcer la constante.")
+
+
+def cocalibrate_kd_ke(b0: np.ndarray, seed: int = 12345, n_episodes: int = 10,
+                      target_taux: tuple[float, float] = (0.18, 0.22),
+                      target_resfrac: tuple[float, float] = (0.60, 0.66),
+                      max_cycles: int = 4,
+                      lo_log_kd: float = -6.0, hi_log_kd: float = 1.0,
+                      lo_log_ke: float = -6.0, hi_log_ke: float = 1.0,
+                      max_iters: int = 10,
+                      checkpoint_path: Path | None = None) -> tuple[float, float]:
+    """Co-calibration (k_d, k_e) aux DEUX signatures gravées du substrat d'origine
+    (PREREGISTRATION.md pocCascade2phys, 2026-07-04) -- ITÉRATION DE CONCEPTION
+    NOMMÉE, seul changement autorisé face au FAIL (a) du gate de re-validation :
+    remplace l'a priori `k_e = k_d/5` par une co-calibration. θ_c, la structure
+    d'épisode, le terrain et tout le reste restent ceux de `SedimentParams`/
+    `default_terrain` -- non touchés ici.
+
+    Bissections ALTERNÉES, même protocole que `calibrate_kd` (seed=12345 jamais
+    réutilisée pour les mesures ultérieures, n_episodes=10, bissection log10) :
+      1. k_d -> max(s)/relief ∈ `target_taux`, à k_e FIXÉ (bissection log10(k_d) ∈
+         [lo_log_kd, hi_log_kd], réplique exacte de la logique de `calibrate_kd`,
+         cible = milieu de `target_taux`, bande = demi-largeur) ;
+      2. k_e -> resfrac ∈ `target_resfrac`, à k_d FIXÉ (bissection log10(k_e) ∈
+         [lo_log_ke, hi_log_ke], même mécanique -- suppose resfrac croissant en
+         k_e : plus d'érosion relative -> plus de retravail du dépôt) ;
+      3. vérification CONJOINTE des deux cibles au point (k_d, k_e) courant (le
+         taux est ré-évalué à ce point, car il dépend aussi de k_e) -- si les DEUX
+         tiennent simultanément, succès immédiat, retourne (k_d, k_e) ;
+      4. sinon cycle suivant (retour à 1, k_d/k_e mis à jour comme nouveau point de
+         départ), jusqu'à `max_cycles`.
+    Point de départ du cycle 1 : (k_d, k_e) = (KD_CALIBRE, KD_CALIBRE/5) -- l'a
+    priori V1, point neutre déjà connu comme satisfaisant `target_taux` à ce
+    ratio (mais pas `target_resfrac`), immédiatement recalibré par l'étape 1.
+
+    `checkpoint_path` (optionnel, défaut None -- comportement inchangé sans lui) :
+    si fourni, persiste l'état (k_d, k_e, taux, resfrac par cycle) après CHAQUE
+    cycle sous ce chemin JSON, et REPREND depuis le dernier cycle enregistré si le
+    fichier existe déjà et correspond aux mêmes seed/n_episodes/cibles (résilience
+    pour découper l'exécution en plusieurs appels, cf. plan de calcul -- chaque
+    bissection individuelle peut dépasser 600 s en un seul run_history).
+
+    Lève RuntimeError (BLOCKED) avec les valeurs mesurées si une bissection
+    individuelle ne bracket pas sa cible, ou si les deux cibles ne sont JAMAIS
+    tenues simultanément après `max_cycles` cycles -- ne force RIEN, cf. contrat
+    épistémique du projet."""
+    relief = float(b0.max() - b0.min())
+    taux_lo, taux_hi = target_taux
+    taux_mid, taux_band = 0.5 * (taux_lo + taux_hi), 0.5 * (taux_hi - taux_lo)
+    resfrac_lo, resfrac_hi = target_resfrac
+    resfrac_mid, resfrac_band = 0.5 * (resfrac_lo + resfrac_hi), 0.5 * (resfrac_hi - resfrac_lo)
+
+    def _taux(k_d: float, k_e: float) -> float:
+        params = SedimentParams(k_d=k_d, k_e=k_e)
+        hist = run_history(seed, n_episodes, b0, params, checkpoints={n_episodes})
+        return float(hist[n_episodes].max()) / relief
+
+    def _resfrac(k_d: float, k_e: float) -> float:
+        params = SedimentParams(k_d=k_d, k_e=k_e)
+        return resfrac_history(seed, n_episodes, b0, params)
+
+    def _bisect_kd(k_e_fixed: float) -> tuple[float, float]:
+        lo, hi = lo_log_kd, hi_log_kd
+        ratio_lo, ratio_hi = _taux(10.0 ** lo, k_e_fixed), _taux(10.0 ** hi, k_e_fixed)
+        if not (ratio_lo <= taux_mid <= ratio_hi):
+            raise RuntimeError(
+                f"cocalibrate_kd_ke : bissection k_d -- cible taux={taux_mid} "
+                f"(bande {target_taux}) non bracketée par log10(k_d) ∈ "
+                f"[{lo_log_kd}, {hi_log_kd}] à k_e={k_e_fixed} -> taux "
+                f"[{ratio_lo}, {ratio_hi}]. BLOCKED : ne pas forcer.")
+        for _ in range(max_iters):
+            mid = 0.5 * (lo + hi)
+            k_d = 10.0 ** mid
+            ratio = _taux(k_d, k_e_fixed)
+            if abs(ratio - taux_mid) <= taux_band:
+                return k_d, ratio
+            if ratio < taux_mid:
+                lo = mid
+            else:
+                hi = mid
+        raise RuntimeError(
+            f"cocalibrate_kd_ke : bissection k_d n'a pas convergé en {max_iters} "
+            f"itérations (k_e={k_e_fixed}) -- dernier k_d={k_d}, taux={ratio}, "
+            f"cible={taux_mid}±{taux_band}. BLOCKED : ne pas forcer.")
+
+    def _bisect_ke(k_d_fixed: float) -> tuple[float, float]:
+        lo, hi = lo_log_ke, hi_log_ke
+        rf_lo, rf_hi = _resfrac(k_d_fixed, 10.0 ** lo), _resfrac(k_d_fixed, 10.0 ** hi)
+        if not (rf_lo <= resfrac_mid <= rf_hi):
+            raise RuntimeError(
+                f"cocalibrate_kd_ke : bissection k_e -- cible resfrac={resfrac_mid} "
+                f"(bande {target_resfrac}) non bracketée par log10(k_e) ∈ "
+                f"[{lo_log_ke}, {hi_log_ke}] à k_d={k_d_fixed} -> resfrac "
+                f"[{rf_lo}, {rf_hi}]. BLOCKED : ne pas forcer.")
+        for _ in range(max_iters):
+            mid = 0.5 * (lo + hi)
+            k_e = 10.0 ** mid
+            rf = _resfrac(k_d_fixed, k_e)
+            if abs(rf - resfrac_mid) <= resfrac_band:
+                return k_e, rf
+            if rf < resfrac_mid:
+                lo = mid
+            else:
+                hi = mid
+        raise RuntimeError(
+            f"cocalibrate_kd_ke : bissection k_e n'a pas convergé en {max_iters} "
+            f"itérations (k_d={k_d_fixed}) -- dernier k_e={k_e}, resfrac={rf}, "
+            f"cible={resfrac_mid}±{resfrac_band}. BLOCKED : ne pas forcer.")
+
+    cycles_done: list[dict] = []
+    k_d, k_e = KD_CALIBRE, KD_CALIBRE / 5.0
+    start_cycle = 1
+    if checkpoint_path is not None and checkpoint_path.exists():
+        ck = json.loads(checkpoint_path.read_text())
+        same_setup = (ck.get("seed") == seed and ck.get("n_episodes") == n_episodes
+                     and list(ck.get("target_taux", [])) == list(target_taux)
+                     and list(ck.get("target_resfrac", [])) == list(target_resfrac))
+        if same_setup and ck.get("cycles"):
+            cycles_done = ck["cycles"]
+            last = cycles_done[-1]
+            k_d, k_e = last["k_d"], last["k_e"]
+            start_cycle = last["cycle"] + 1
+            if last["cond_taux"] and last["cond_resfrac"]:
+                return k_d, k_e
+
+    def _save_checkpoint() -> None:
+        if checkpoint_path is not None:
+            checkpoint_path.write_text(json.dumps(dict(
+                seed=seed, n_episodes=n_episodes, target_taux=list(target_taux),
+                target_resfrac=list(target_resfrac), max_cycles=max_cycles,
+                cycles=cycles_done), indent=2, ensure_ascii=False))
+
+    for cycle in range(start_cycle, max_cycles + 1):
+        k_d, _taux_after_kd = _bisect_kd(k_e)
+        k_e, resfrac_joint = _bisect_ke(k_d)
+        taux_joint = _taux(k_d, k_e)
+        cond_taux = taux_lo <= taux_joint <= taux_hi
+        cond_resfrac = resfrac_lo <= resfrac_joint <= resfrac_hi
+        cycles_done.append(dict(cycle=cycle, k_d=k_d, k_e=k_e, taux=taux_joint,
+                                resfrac=resfrac_joint, cond_taux=cond_taux,
+                                cond_resfrac=cond_resfrac))
+        _save_checkpoint()
+        if cond_taux and cond_resfrac:
+            return k_d, k_e
+
+    raise RuntimeError(
+        f"cocalibrate_kd_ke : cibles conjointes taux∈{target_taux} / "
+        f"resfrac∈{target_resfrac} non tenues simultanément après {max_cycles} "
+        f"cycles -- historique des cycles : {cycles_done}. BLOCKED : ne pas "
+        "forcer, remonter au contrôleur.")
 
 
 if __name__ == "__main__":
