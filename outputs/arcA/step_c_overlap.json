@@ -1,0 +1,32 @@
+{
+  "geometry": "overlap",
+  "n_episodes": 10,
+  "k_list": [
+    1,
+    4,
+    7,
+    10
+  ],
+  "x_range": [
+    0.15,
+    0.85
+  ],
+  "y_range": [
+    0.4,
+    0.6
+  ],
+  "f_by_k": {
+    "1": 0.33837890625,
+    "4": 0.214111328125,
+    "7": 0.187255859375,
+    "10": 0.0
+  },
+  "noncroissante_tol": 0.002,
+  "cond_noncroissante": true,
+  "f_last_k": 10,
+  "f_last": 0.0,
+  "threshold_f_last": 0.05,
+  "cond_f_last_lt_seuil": true,
+  "verdict": "PASS",
+  "elapsed_seconds": 222.0876886844635
+}

@@ -1,0 +1,32 @@
+{
+  "geometry": "separee",
+  "n_episodes": 10,
+  "k_list": [
+    1,
+    4,
+    7,
+    10
+  ],
+  "x_range": [
+    0.15,
+    0.85
+  ],
+  "y_range": [
+    0.15,
+    0.85
+  ],
+  "f_by_k": {
+    "1": 0.327392578125,
+    "4": 0.363037109375,
+    "7": 0.111572265625,
+    "10": 0.0
+  },
+  "noncroissante_tol": 0.002,
+  "cond_noncroissante": false,
+  "f_last_k": 10,
+  "f_last": 0.0,
+  "threshold_f_last": 0.05,
+  "cond_f_last_lt_seuil": true,
+  "verdict": "FAIL",
+  "elapsed_seconds": 200.1738452911377
+}

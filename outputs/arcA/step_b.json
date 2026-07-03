@@ -1,0 +1,23 @@
+{
+  "n_episodes": 10,
+  "s_half_op_fraction": 0.05,
+  "s_half_op": 0.030219219955821115,
+  "scale_rescale": 0.6003587652383409,
+  "sum_s_ordre": 15.47947856018881,
+  "sum_s_sim_raw": 25.783713766623357,
+  "f_relief": 0.001953125,
+  "f_albedo_by_shalf_fraction": {
+    "0.005": 0.813232421875,
+    "0.010": 0.8486328125,
+    "0.050": 0.830810546875,
+    "0.100": 0.82666015625,
+    "0.200": 0.824462890625
+  },
+  "f_albedo_op": 0.830810546875,
+  "threshold_f_albedo_op": 0.02,
+  "cond_op_ge_2pct": true,
+  "cond_albedo_dominates_relief_all_shalf": true,
+  "reference_origine": "3.5-10% >> 1.2%",
+  "verdict": "PASS",
+  "elapsed_seconds": 2.2524454593658447
+}
