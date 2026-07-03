@@ -43,9 +43,9 @@
       0.8422721033773194
     ]
   ],
-  "corr": 0.9928766659230924,
+  "corr": 0.9445524777450136,
   "threshold": 0.7,
   "reference_origine": 0.39,
   "verdict": "FAIL",
-  "elapsed_seconds": 57.60246801376343
+  "elapsed_seconds": 59.831899642944336
 }

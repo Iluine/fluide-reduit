@@ -292,8 +292,9 @@ def phase_report() -> dict:
                      + c_overlap.get("elapsed_seconds", 0.0) + c_separee.get("elapsed_seconds", 0.0))
 
     report = dict(
+        version="v2-cocalibration",
         meta=dict(grid=dict(H=GRID.H, W=GRID.W, dx=GRID.dx, dy=GRID.dy), relief=RELIEF,
-                  kd_calibre=PARAMS.k_d, s_half_op=S_HALF_OP,
+                  kd_calibre=PARAMS.k_d, ke_calibre=PARAMS.k_e, s_half_op=S_HALF_OP,
                   total_elapsed_seconds=total_elapsed),
         a_path_dependence=a,
         b_survie_albedo=b,

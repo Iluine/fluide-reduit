@@ -129,3 +129,118 @@ Le GATE de re-validation **échoue** : le substrat sédiment reconstruit
 largement (b) survie albedo. **Conformément au contrat, aucune tâche
 suivante du plan Arc A n'est lancée et aucun paramètre n'est retouché.** Le
 verdict est rapporté tel quel au contrôleur pour décision.
+
+---
+
+# Itération v2 : co-calibration (k_d, k_e) aux deux signatures gravées
+
+Itération de conception NOMMÉE, pré-enregistrée au journal pocCascade2phys
+(`PREREGISTRATION.md`, entrée 2026-07-04) AVANT implémentation, suite à
+l'arbitrage du contrôleur (option 1 : diagnostic cheap puis UNE itération,
+re-validée aux MÊMES seuils). Changement unique autorisé : remplacer l'a
+priori `k_e = k_d/5` (jamais une donnée d'origine) par une co-calibration
+aux DEUX signatures gravées du substrat d'origine — taux (max(s)/relief ∈
+[0.18, 0.22]) ET resfrac (masse totale érodée / masse totale déposée sur
+l'histoire, ∈ [0.60, 0.66] ; mesurée à 0.174 sur le substrat v1, ~4× sous
+la plage gravée, cf. `outputs/arcA/diag_pathdep.json`). θ_c = 0.5, structure
+d'épisode, terrain : INCHANGÉS. **Aucun seuil du gate déplacé.**
+
+## Co-calibration — protocole et valeurs gelées
+
+`src/sediment.py::cocalibrate_kd_ke` : bissections log10 ALTERNÉES (k_d →
+taux à k_e fixé ; k_e → resfrac à k_d fixé, plage log10(k_e) ∈ [-6, 1]),
+vérification CONJOINTE des deux cibles à chaque fin de cycle, max 4 cycles,
+seed 12345 / 10 épisodes (protocole identique à la calibration V1). resfrac
+est mesuré par `resfrac_history` (les deux termes de `_exner_step` agrégés
+sur tous les snapshots et épisodes, via un paramètre `return_terms` optionnel
+qui ne change pas le comportement par défaut).
+
+Exécutée UNE fois (2026-07-04, 1126.7 s ≈ 19 min, trace :
+`outputs/arcA/cocalib_v2_checkpoint.json` + `cocalib_v2_result.json`) :
+**convergence au 1er cycle**, vérification conjointe tenue.
+
+| constante | valeur gelée | note |
+|---|---|---|
+| `KD_CALIBRE_V2` | 0.0019109529749704406 | bit-à-bit identique à V1 (même chemin de bissection dyadique) |
+| `KE_CALIBRE_V2` | 0.005232991146814947 | ≈ 13.7× le k_e V1 (3.822e-4) ; k_e/k_d ≈ 2.74 (V1 : 0.2) |
+
+Signatures vérifiées aux constantes gelées (défauts `SedimentParams`,
+seed 12345, 10 épisodes) — les DEUX cibles tenues simultanément :
+
+| signature | mesuré | cible gravée |
+|---|---|---|
+| max(s)/relief | **0.18875904854649675** | [0.18, 0.22] ✓ |
+| resfrac | **0.6425366558324981** | [0.60, 0.66] ✓ |
+
+Constantes GELÉES AVANT la re-validation v2 (commit dédié) ; les V1 restent
+en trace commentée. Suite de tests complète après gel : **105 passed**
+(102 + 3 nouveaux tests `resfrac_history`).
+
+## VERDICT du gate v2 (mêmes seuils, même script, `"version": "v2-cocalibration"`)
+
+### VERDICT GLOBAL : **FAIL** (2/3 — mêmes critères manqués que v1)
+
+### (a) Path-dependence — **FAIL**
+
+| mesuré v2 | v1 | seuil | référence origine | verdict |
+|---|---|---|---|---|
+| corr(s_A, s_B) = **0.9446** | 0.9929 | ≤ 0.7 | 0.39 | **FAIL** |
+
+La prédiction directionnelle pré-enregistrée (« le retravail fort re-pondère
+le dépôt vers les pulses récents → corr doit BAISSER nettement ») est
+partiellement confirmée dans le SENS (0.9929 → 0.9446, soit −0.048) mais
+très loin de l'amplitude requise : le substrat reste quasi commutatif à
+l'ordre des pulses, même avec resfrac dans la plage gravée (0.64). Le taux
+de retravail n'était donc PAS le mécanisme dominant de la path-dependence
+d'origine — la signature resfrac est nécessaire mais pas suffisante.
+
+### (b) Survie albedo — **PASS**
+
+| mesuré v2 | v1 | seuil | verdict |
+|---|---|---|---|
+| f_albedo(point d'op, JND=5%) = **0.8511** | 0.8308 | ≥ 0.02 | OK |
+| f_relief = **0.0020** | 0.00195 | — (plancher) | — |
+
+Balayage S_HALF (×relief) : 0.005 → 0.8777 ; 0.010 → 0.8650 ; 0.050 →
+0.8511 ; 0.100 → 0.8491 ; 0.200 → 0.8479 — tous > f_relief. **PASS**.
+
+### (c) Closure f(k) — **FAIL** (overlap PASS, séparée FAIL)
+
+Overlap (bande y ∈ [0.4, 0.6]) — PASS :
+
+| k | f(k) v2 | f(k) v1 |
+|---|---|---|
+| 1 | 0.4412 | 0.3384 |
+| 4 | 0.3115 | 0.2141 |
+| 7 | 0.2810 | 0.1873 |
+| 10 | 0.0000 | 0.0000 |
+
+Non-croissante (tol +0.002) = True ; f(10) = 0 < 0.05. → **PASS**.
+
+Séparée (boîte pleine [0.15, 0.85]²) — FAIL :
+
+| k | f(k) v2 | f(k) v1 |
+|---|---|---|
+| 1 | 0.6018 | 0.3274 |
+| 4 | 0.3040 | 0.3630 |
+| 7 | **0.3516** | 0.1116 |
+| 10 | 0.0000 | 0.0000 |
+
+Rupture de monotonie : f(7)=0.3516 > f(4)+0.002=0.3060 (v1 : rebond au k=4).
+f(10) = 0 < 0.05 respecté, mais la condition conjointe échoue. → **FAIL**.
+
+Temps de calcul cumulé du gate v2 (a+b+c) : 491.0 s. Sorties : nouveaux
+`outputs/arcA/{revalidation,step_a,step_b,step_c_overlap,step_c_separee}.json`
+(+ npz) écrasant les v1 (préservés dans l'historique git, commit 554c2a9) ;
+champ `"version": "v2-cocalibration"` dans `revalidation.json`.
+
+## Conclusion v2
+
+L'itération autorisée est CONSOMMÉE et le gate **échoue à nouveau** sur les
+mêmes deux critères (a) et (c)/séparée — avec une amélioration marginale de
+(a) (0.9929 → 0.9446) qui confirme le sens de la prédiction directionnelle
+mais pas son amplitude. Conformément au pré-enregistrement (« Un critère
+manqué → STOP définitif de la voie "reconstruction" ») : **STOP définitif,
+remonté au contrôleur — le fork suivant appartient à Romain.** Aucun seuil
+ni paramètre n'a été retouché ; aucune tâche suivante du plan Arc A n'est
+lancée.
