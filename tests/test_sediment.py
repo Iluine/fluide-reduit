@@ -3,7 +3,8 @@ import pytest
 
 from config import GridConfig
 from src.sediment import (default_terrain, run_episode, run_history, SedimentParams,
-                          KD_CALIBRE, _relax_episode, _integrate_exner, _DRY_EPS)
+                          KD_CALIBRE, _relax_episode, _integrate_exner, _exner_step,
+                          _DRY_EPS)
 
 GRID = GridConfig()
 B0 = default_terrain(GRID)
@@ -68,6 +69,21 @@ def test_s_nonnegative_after_episode(full_episode_trajectory):
     times, hs, hus, hvs, params, s0 = full_episode_trajectory
     s_new = _integrate_exner(s0, times, hs, hus, hvs, params)
     assert np.all(s_new >= 0.0)
+
+
+def test_no_depot_on_cell_below_wet_threshold():
+    """Correctif post-revue : une cellule avec 0 < h <= 10*dry_eps est "mouillée" au
+    sens du solveur (h > dry_eps) mais PAS au sens Exner (`wet` dans `_exner_step`) --
+    elle ne doit recevoir AUCUN dépôt ni AUCUNE érosion, même si theta=0 y satisfait
+    trivialement theta < theta_c. Avant le correctif, `depot = k_d*h*...` n'était PAS
+    multiplié par le masque `wet` et restait donc non nul sur ces cellules."""
+    shape = (3, 3)
+    h = np.full(shape, 5.0 * _DRY_EPS)  # 0 < h <= 10*_DRY_EPS -> PAS wet au sens Exner
+    hu = np.zeros(shape)
+    hv = np.zeros(shape)
+    s0 = np.zeros(shape)
+    s_new = _exner_step(s0, h, hu, hv, dt=1.0, params=SedimentParams())
+    assert np.all(s_new == 0.0)
 
 
 def test_s_unchanged_on_never_wetted_cells(full_episode_trajectory):

@@ -186,3 +186,65 @@ longs (>2 min) doivent passer par le paramètre `run_in_background` du tool Bash
 4. `KD_CALIBRE` a été calculé et gelé UNE fois puis vérifié une seconde fois par
    reproductibilité (pas une deuxième calibration indépendante avec une graine
    différente) — conforme à « exécutée une fois ».
+
+## Correctif post-revue
+
+Corrections appliquées suite à la revue de tâche (AVANT le gate suivant ; rien
+d'autre n'a été modifié) :
+
+1. **Dépôt/érosion restreints aux cellules mouillées** (`src/sediment.py`,
+   `_exner_step`) : le terme `depot = k_d·h·1[θ<θc]·(1−θ/θc)` s'appliquait à TOUTE
+   cellule — sur une cellule 0 < h ≤ 10·dry_eps (sèche au sens Exner mais h non
+   nul), θ vaut 0 par initialisation et le dépôt valait k_d·h ≠ 0. La loi figée
+   dit « θ = u²+v² sur cellules mouillées » : le dépôt ET l'érosion sont
+   maintenant multipliés par le masque `wet = h > 10·dry_eps`. Test ajouté :
+   `test_no_depot_on_cell_below_wet_threshold` (cellule à h = 5·dry_eps, dt=1 →
+   s reste exactement 0). `tests/test_sediment.py` passe donc de 11 à 12 tests.
+
+2. **Re-calibration unique consécutive** : `calibrate_kd` relancée UNE fois sur le
+   code corrigé, mêmes défauts que l'originale (seed 12345, cible max(s)/relief ∈
+   [0.18, 0.22], 10 épisodes, bissection sur log10(k_d) ∈ [-6, 1]) :
+   - **Ancienne valeur** : `KD_CALIBRE = 0.0019109529749704406`.
+   - **Nouvelle valeur** : `KD_CALIBRE = 0.0019109529749704406` — **bit-à-bit
+     identique**. Convergée (pas de BLOCKED). Explication : la bissection ne peut
+     retourner qu'un point médian dyadique de log10(k_d) ; le correctif ne touche
+     que la fine bande 1e-4 < h ≤ 1e-3 (dépôt parasite marginal), le ratio n'a
+     bougé que marginalement et le chemin de bissection (suite des comparaisons
+     ratio vs cible) est resté identique → même point médian retourné.
+   - **max(s)/relief atteint au k_d re-gelé, mesuré sur le code corrigé** (seed
+     12345, 10 épisodes) : max(s) = 0.124281, relief = 0.604384, ratio =
+     **0.20563** ∈ [0.18, 0.22].
+   - La constante est RE-GELÉE (commentaire mis à jour dans `src/sediment.py`),
+     avant toute re-validation.
+
+3. **Code mort supprimé** (`calibrate_kd`) : `mid = 0.5*(lo+hi)`, `k_d = 10.0**mid`
+   et `ratio = ratio_lo` avant la boucle de bissection étaient immédiatement
+   réécrits à la première itération — supprimés (aucun effet sur le calcul).
+
+4. **Attribution du mécanisme de fuite de masse au mur corrigée** (docstring de
+   `src/sediment.py` ; la section « Constat majeur » ci-dessus est conservée telle
+   quelle comme trace historique, la présente section fait foi sur le mécanisme) :
+   l'attribution initiale « gradient de surface non nul au mur » est FAUSSE — la
+   pente de surface η = h + b reste exactement nulle au mur, car `_pad_reflective`
+   fait un padding Neumann/« edge » sur h ET b (la cellule fantôme est une copie
+   exacte de la voisine réelle → différence arrière nulle → pente minmod de η
+   clippée à 0). Le vrai mécanisme : le moment normal est padé de façon
+   ANTISYMÉTRIQUE (`hup[:, 0] = -hup[:, 1]`), ce qui casse la symétrie de la pente
+   de VITESSE reconstruite — la pente MUSCL de u à la cellule réelle adjacente au
+   mur n'est pas nulle alors que celle du fantôme est gelée à 0 (1er ordre au mur
+   par construction). Cette asymétrie des états gauche/droit de l'interface-mur
+   rend le flux de masse HLL non nul au mur. Les MESURES (Fh_x ~ 1e-3 par
+   interface, dérive 3–13 %) restent valides ; seule l'explication causale change.
+
+### Vérification (post-correctif)
+
+```bash
+.venv/bin/python -m pytest -q
+```
+
+```
+102 passed in 77.12s (0:01:17)
+```
+
+(79 tests existants + 12 `tests/test_sediment.py` + 11 `tests/test_albedo.py`,
+tous verts.)

@@ -22,20 +22,29 @@ acceptés. Le reliquat (pas au-delà de N_settle, calculé mais inutilisé) est 
 c'est le prix de piloter un solveur t_end-only par un budget de pas sans y toucher.
 
 Constat empirique important (propriété du solveur figé, PAS un bug de ce module —
-cf. task-1-report.md pour la mesure complète et le diagnostic) : le schéma bien
-équilibré `_rhs_o2` (reconstruction MUSCL de la surface libre) n'est conservatif en
-masse QUE tant qu'aucun front mouillé/sec n'atteint un mur réfléchissant avec un
-gradient de surface non nul. Au mur, la pente MUSCL côté fantôme est gelée à 0 par
-construction (1er ordre au mur) alors que la cellule réelle adjacente garde sa
-pente propre : l'antisymétrie exacte du flux miroir (qui garantit Fh_mur=0 pour un
-schéma 1er ordre / sur repos) est cassée dès que cette pente réelle est non nulle,
-laissant un flux de masse résiduel au mur (mesuré : Fh_x ~ 1e-3 par interface une
-fois l'onde arrivée au mur, contre 0 exactement avant contact). Sur une relaxation
-complète de N_settle=600 pas, la dérive de masse mesurée (avant assèchement) va de
-~3 % à ~13 % selon le centre du pulse — trois ordres de grandeur au-dessus de la
-tolérance 1e-8 visée a priori. `run_episode` ne peut pas corriger cela sans éditer
-`solver_wetdry.py` (interdit par le contrat) ; le test de conservation de masse de
-ce module utilise donc une tolérance mesurée, documentée, et non 1e-8.
+cf. task-1-report.md pour la mesure complète et le diagnostic, section « Correctif
+post-revue » pour l'attribution corrigée du mécanisme) : le schéma bien équilibré
+`_rhs_o2` (reconstruction MUSCL de la surface libre) n'est conservatif en masse QUE
+tant qu'aucun front mouillé/sec n'atteint un mur réfléchissant. Au mur, la pente de
+SURFACE (η=h+b) reste exactement nulle (padding Neumann/« edge » sur h ET b dans
+`_pad_reflective` : la cellule fantôme est une copie exacte de la cellule réelle
+adjacente, donc la différence arrière minmod est 0 et la pente η y est clippée à 0,
+pas de gradient de surface non nul en jeu). La fuite vient d'ailleurs : le moment
+normal `hu` est padé de façon ANTISYMÉTRIQUE au mur (`hup[:, 0] = -hup[:, 1]`, pour
+imposer une vitesse normale nulle réfléchie) — contrairement à η, ce padding NE
+donne PAS une différence arrière nulle pour la vitesse reconstruite ; la pente MUSCL
+de vitesse à la cellule adjacente au mur n'est donc PAS clippée à 0 par minmod,
+alors que celle du fantôme l'est (1er ordre au mur par construction). Cette
+asymétrie de pente entre état gauche (fantôme) et état droit (cellule réelle) de
+l'interface-mur casse la symétrie miroir du flux HLL (qui garantit Fh_mur=0 pour un
+schéma 1er ordre / sur repos), laissant un flux de masse résiduel au mur (mesuré :
+Fh_x ~ 1e-3 par interface une fois l'onde arrivée au mur, contre 0 exactement avant
+contact). Sur une relaxation complète de N_settle=600 pas, la dérive de masse
+mesurée (avant assèchement) va de ~3 % à ~13 % selon le centre du pulse — trois
+ordres de grandeur au-dessus de la tolérance 1e-8 visée a priori. `run_episode` ne
+peut pas corriger cela sans éditer `solver_wetdry.py` (interdit par le contrat) ; le
+test de conservation de masse de ce module utilise donc une tolérance mesurée,
+documentée, et non 1e-8.
 """
 from __future__ import annotations
 
@@ -83,6 +92,12 @@ _DRY_EPS: float = 1e-4     # dry_eps par défaut de simulate_wetdry_o2 (non red�
 # Bissection sur log10(k_d) dans [-6, 1], cible max(s)/relief dans [0.18, 0.22],
 # seed de calibration=12345, 10 épisodes, 10 itérations max. GELÉ après calibration :
 # plus aucune retouche.
+# RE-GELÉ après le correctif « cellules mouillées » (revue Task 1 : dépôt/érosion
+# restreints au masque wet dans _exner_step) et AVANT toute re-validation :
+# calibrate_kd relancée UNE fois avec les mêmes défauts (seed 12345, cible
+# [0.18, 0.22], 10 épisodes) sur le code corrigé -> valeur bit-à-bit IDENTIQUE
+# (le correctif ne touche que la bande 1e-4 < h <= 1e-3 ; le chemin de bissection
+# est inchangé et retourne le même point médian dyadique sur log10(k_d)).
 KD_CALIBRE: float = 0.0019109529749704406
 
 
@@ -153,15 +168,18 @@ def _exner_step(s: np.ndarray, h: np.ndarray, hu: np.ndarray, hv: np.ndarray,
     snapshot (h, hu, hv) : θ=u²+v² sur les cellules mouillées au sens Exner
     (h > 10·dry_eps — seuil plus conservateur que le dry_eps du solveur, pour éviter
     les vitesses bruitées d'une désingularisation près du seuil sec du solveur) ;
-    ds/dt = k_d·h·1[θ<θc]·(1−θ/θc) − k_e·s·1[θ>θc]·(θ/θc−1) ; s ≥ 0 clampé."""
+    ds/dt = 1[wet]·(k_d·h·1[θ<θc]·(1−θ/θc) − k_e·s·1[θ>θc]·(θ/θc−1)) ; s ≥ 0 clampé.
+    Le dépôt ET l'érosion sont restreints aux cellules mouillées (`wet`) : une
+    cellule 0 < h ≤ 10·dry_eps est sèche au sens Exner et ne reçoit ni dépôt ni
+    érosion, même si θ=0 y satisferait trivialement θ<θc (correctif post-revue)."""
     wet = h > 10.0 * _DRY_EPS
     u = np.zeros_like(h)
     v = np.zeros_like(h)
     u[wet] = hu[wet] / h[wet]
     v[wet] = hv[wet] / h[wet]
     theta = u ** 2 + v ** 2
-    depot = params.k_d * h * (theta < params.theta_c) * (1.0 - theta / params.theta_c)
-    erosion = params.k_e * s * (theta > params.theta_c) * (theta / params.theta_c - 1.0)
+    depot = wet * params.k_d * h * (theta < params.theta_c) * (1.0 - theta / params.theta_c)
+    erosion = wet * params.k_e * s * (theta > params.theta_c) * (theta / params.theta_c - 1.0)
     s_new = s + dt * (depot - erosion)
     return np.maximum(s_new, 0.0)
 
@@ -238,9 +256,6 @@ def calibrate_kd(b0: np.ndarray, target: float = 0.2, seed: int = 12345,
             "BLOCKED : ne pas forcer, élargir la plage nécessiterait une décision "
             "du contrôleur.")
 
-    mid = 0.5 * (lo + hi)
-    k_d = 10.0 ** mid
-    ratio = ratio_lo
     for _ in range(max_iters):
         mid = 0.5 * (lo + hi)
         k_d = 10.0 ** mid
