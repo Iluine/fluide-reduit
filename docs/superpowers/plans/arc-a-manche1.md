@@ -163,3 +163,22 @@ Pour chaque (L ∈ {10,20,40,80}, seed ∈ {101..105}, ℓ ∈ {1,2,3}) :
   `arcA_jnd_sensitivity.png`, GIF `arcA_worst_case.gif` (albedo vrai vs régénéré, pire cellule
   M-A2). Impression du verdict citant la cellule §A0 sélectionnée. **Aucune interprétation
   au-delà de §A5** — l'entrée de journal est écrite par le contrôleur, pas par ce script.
+
+---
+
+## AMENDEMENTS — Relance sur v2 (2026-07-04, gravés au contrat `8e02dd6` AVANT lancement)
+
+Historique : gate Task 2 FAIL (×2, reconstruction close) → M-0 lecture_2 → M-0bis T_testable →
+arbitrage Romain : relance des Tasks 3/5/6 SUR v2. Task 4 (`src/summary.py`) : FAITE et revue
+sous M-0bis (commits 32e9004..cc61056). Le reste du plan est INCHANGÉ, plus les amendements :
+
+- **(i) Substrat = v2 gelé** (`SedimentParams()` par défaut). Assumé : pas l'original (gate
+  d'identité FAIL) ; claims lus sur CE substrat (§A5). Testabilité établie par M-0bis.
+- **(ii) Contrôles d'instrument synthétiques (remplacent §A11)**, pipeline complet aux cellules
+  L ∈ {10, 80} × seeds {101..105}, JND {2..5} % :
+  - contrôle-fermable : `s_ferm = regenerate(summarize(s_L, 3))` — attendu k\* = 81 partout ;
+  - contrôle-infermable : `s_shuf` = permutation des 4096 cellules de s_L par
+    `default_rng(9001 + 1000·L + seed)` — attendu k\* = ∞ partout.
+  - Toute cellule de contrôle qui viole son attendu → STOP, remonter (gate d'instrument type G0).
+  - Les contrôles ne participent PAS au verdict §A3 ; ils conditionnent le droit de le lire.
+- Exécution : Task 3 (histoires) → Task 5 (mesures, étendue aux contrôles) → Task 6 (verdict).
