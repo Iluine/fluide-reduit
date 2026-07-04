@@ -80,3 +80,7 @@ Famille 2 (harnais + RUN) : complete (commits 2ee1120/0a81832/a86b929, revue App
   sous scellé) : premières fermetures SOUS CAP de la manche (400 et 256 à JND 4-5 %, tous L).
   Remonté à Romain (portée de l'attendu shuf). Minors : duplication verdict_qt justifiée ;
   titre figure ; npz témoin gitignoré.
+Re-lecture gate (amendement fa54d20) : commits 49189d1+11091a0, re-revue Approved — gate CONFORME
+  0/80 ; k*/pentes bit-identiques à l'audit (déverrouillage = règle de lecture seule) ; 301 tests.
+  VERDICT LISIBLE : 2%=INDÉT, 3%=INDÉT, 4%=PASS, 5%=PASS ; global INDÉTERMINÉ → surface → Arc C.
+  6/16 cellules étoilées non-discriminantes. Minor : rupture de schéma surface_kstar_v2 (documentée).
