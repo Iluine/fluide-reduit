@@ -92,3 +92,13 @@ Task 0 (partiel) : addendum §C0-§C5 gravé (pocCascade2phys c494d50, commit d�
   BOUSSINESQ Ra=1e7 ABSENT de la machine (grep src/scripts/docs vide — code jamais porté ici,
   journal seul ; cf. mémoire substrat-sediment-introuvable). POINT D'ARRÊT remonté à Romain :
   validation C-0 + conditions d'affichage + arbitrage axe temporel sans générateur.
+
+Task 0 (LEVÉ) : §C7 gravé (pocCascade2phys f39b402) — refonte géométrie cible-jeu VALIDÉE Romain :
+  pin ancré c/deg + harnais auto-calibré (borne inter-écrans a fortiori) ; deux régimes bornés,
+  plancher pixel-peep MESURÉ ; plafond texture calculé (colmatage monotonie) ; fork zoom ouvert
+  avec prix (zoom pixel ⇒ plancher ⇒ manche 1 NON-DÉMONTRÉ à ce JND). C-0 validé, temporel (b)+(c)
+  confirmé (spatial d'abord, backup Arc V cherché, fork a/a′/d dû avant Task 4 si (c) échoue).
+Task 1 : DONE (commits 4f5c1c6, d98642f) — src/arcC_stimuli.py + scripts/build_arcC_stimuli.py +
+  outputs/arcC/stimuli_catalogue.npz + tests. 327/327 verts. R1 recoupe ma1_v2 à l'EXACT 0.0 sur
+  7 budgets. Catalogue bracket JND [~1-6%] : budget 256 (Δχ(1)∈[2.78,7.85]%), 400 (∈[1.77,4.18]%).
+  140 courbes toutes monotones (observé, non imposé). EN REVUE (relecteur dispatché).
