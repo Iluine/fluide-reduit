@@ -1,0 +1,957 @@
+{
+  "meta": {
+    "source_measures": "outputs/arcA/measures_qt.npz",
+    "L": [
+      10,
+      20,
+      40,
+      80
+    ],
+    "L_par_bras": {
+      "v2": [
+        10,
+        20,
+        40,
+        80
+      ],
+      "ferm": [
+        10,
+        80
+      ],
+      "shuf": [
+        10,
+        80
+      ]
+    },
+    "seeds": [
+      101,
+      102,
+      103,
+      104,
+      105
+    ],
+    "budgets": [
+      32,
+      64,
+      128,
+      256,
+      400,
+      1024,
+      2048
+    ],
+    "jnd": [
+      0.02,
+      0.03,
+      0.04,
+      0.05
+    ],
+    "cap_floats_10pct": 409.6,
+    "budget_ferm": 32,
+    "attendu_ferm_qt": 32.0,
+    "attendu_shuf_qt": "inf",
+    "L_slope": [
+      40,
+      80
+    ],
+    "n_bootstrap": 10000,
+    "seed_bootstrap": 20260704,
+    "convention_serialisation": "float infini -> chaîne 'inf'/'-inf' ; NaN -> 'nan'",
+    "elapsed_seconds": 1.8580701351165771
+  },
+  "k_star": {
+    "v2": {
+      "10": {
+        "0.02": {
+          "par_seed": {
+            "101": 1024.0,
+            "102": 1024.0,
+            "103": 2048.0,
+            "104": 1024.0,
+            "105": 1024.0
+          },
+          "mediane": 1024.0,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              1024.0,
+              2048.0,
+              1024.0,
+              1024.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [],
+            "k_final": 1024.0
+          }
+        },
+        "0.03": {
+          "par_seed": {
+            "101": 400.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 1024.0,
+            "105": 1024.0
+          },
+          "mediane": 400.0,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              400.0,
+              400.0,
+              1024.0,
+              1024.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "0.04": {
+          "par_seed": {
+            "101": 400.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 400.0,
+            "105": 400.0
+          },
+          "mediane": 400.0,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              400.0,
+              400.0,
+              400.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "0.05": {
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 400.0
+          },
+          "mediane": 256.0,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              400.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        }
+      },
+      "20": {
+        "0.02": {
+          "par_seed": {
+            "101": 1024.0,
+            "102": 1024.0,
+            "103": 1024.0,
+            "104": 400.0,
+            "105": 2048.0
+          },
+          "mediane": 1024.0,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              1024.0,
+              1024.0,
+              400.0,
+              2048.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [],
+            "k_final": 1024.0
+          }
+        },
+        "0.03": {
+          "par_seed": {
+            "101": 1024.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 400.0,
+            "105": 1024.0
+          },
+          "mediane": 400.0,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              400.0,
+              400.0,
+              400.0,
+              1024.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "0.04": {
+          "par_seed": {
+            "101": 400.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 256.0,
+            "105": 1024.0
+          },
+          "mediane": 400.0,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              400.0,
+              400.0,
+              256.0,
+              1024.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "0.05": {
+          "par_seed": {
+            "101": 256.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 256.0,
+            "105": 400.0
+          },
+          "mediane": 400.0,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              400.0,
+              400.0,
+              256.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        }
+      },
+      "40": {
+        "0.02": {
+          "par_seed": {
+            "101": 1024.0,
+            "102": 1024.0,
+            "103": 1024.0,
+            "104": 2048.0,
+            "105": 1024.0
+          },
+          "mediane": 1024.0,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              1024.0,
+              1024.0,
+              2048.0,
+              1024.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [],
+            "k_final": 1024.0
+          }
+        },
+        "0.03": {
+          "par_seed": {
+            "101": 400.0,
+            "102": 1024.0,
+            "103": 1024.0,
+            "104": 2048.0,
+            "105": 400.0
+          },
+          "mediane": 1024.0,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              1024.0,
+              1024.0,
+              2048.0,
+              400.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [],
+            "k_final": 1024.0
+          }
+        },
+        "0.04": {
+          "par_seed": {
+            "101": 400.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 400.0,
+            "105": 400.0
+          },
+          "mediane": 400.0,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              400.0,
+              400.0,
+              400.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "0.05": {
+          "par_seed": {
+            "101": 256.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 400.0,
+            "105": 256.0
+          },
+          "mediane": 400.0,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              400.0,
+              400.0,
+              400.0,
+              256.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        }
+      },
+      "80": {
+        "0.02": {
+          "par_seed": {
+            "101": 1024.0,
+            "102": 1024.0,
+            "103": 1024.0,
+            "104": 1024.0,
+            "105": 2048.0
+          },
+          "mediane": 2048.0,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              1024.0,
+              1024.0,
+              1024.0,
+              2048.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [
+              {
+                "niveau_teste": 1024.0,
+                "n_seeds_offenders": 1
+              }
+            ],
+            "k_final": 2048.0
+          }
+        },
+        "0.03": {
+          "par_seed": {
+            "101": 1024.0,
+            "102": 1024.0,
+            "103": 1024.0,
+            "104": 1024.0,
+            "105": 2048.0
+          },
+          "mediane": 1024.0,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              1024.0,
+              1024.0,
+              1024.0,
+              2048.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [],
+            "k_final": 1024.0
+          }
+        },
+        "0.04": {
+          "par_seed": {
+            "101": 400.0,
+            "102": 400.0,
+            "103": 1024.0,
+            "104": 400.0,
+            "105": 400.0
+          },
+          "mediane": 400.0,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              400.0,
+              1024.0,
+              400.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "0.05": {
+          "par_seed": {
+            "101": 400.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 400.0,
+            "105": 400.0
+          },
+          "mediane": 400.0,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              400.0,
+              400.0,
+              400.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        }
+      }
+    },
+    "ferm": {
+      "10": {
+        "0.02": {
+          "par_seed": {
+            "101": 32.0,
+            "102": 32.0,
+            "103": 32.0,
+            "104": 32.0,
+            "105": 32.0
+          },
+          "mediane": 32.0,
+          "audit": {
+            "k_par_seed": [
+              32.0,
+              32.0,
+              32.0,
+              32.0,
+              32.0
+            ],
+            "mediane_initiale": 32.0,
+            "escalades": [],
+            "k_final": 32.0
+          }
+        },
+        "0.03": {
+          "par_seed": {
+            "101": 32.0,
+            "102": 32.0,
+            "103": 32.0,
+            "104": 32.0,
+            "105": 32.0
+          },
+          "mediane": 32.0,
+          "audit": {
+            "k_par_seed": [
+              32.0,
+              32.0,
+              32.0,
+              32.0,
+              32.0
+            ],
+            "mediane_initiale": 32.0,
+            "escalades": [],
+            "k_final": 32.0
+          }
+        },
+        "0.04": {
+          "par_seed": {
+            "101": 32.0,
+            "102": 32.0,
+            "103": 32.0,
+            "104": 32.0,
+            "105": 32.0
+          },
+          "mediane": 32.0,
+          "audit": {
+            "k_par_seed": [
+              32.0,
+              32.0,
+              32.0,
+              32.0,
+              32.0
+            ],
+            "mediane_initiale": 32.0,
+            "escalades": [],
+            "k_final": 32.0
+          }
+        },
+        "0.05": {
+          "par_seed": {
+            "101": 32.0,
+            "102": 32.0,
+            "103": 32.0,
+            "104": 32.0,
+            "105": 32.0
+          },
+          "mediane": 32.0,
+          "audit": {
+            "k_par_seed": [
+              32.0,
+              32.0,
+              32.0,
+              32.0,
+              32.0
+            ],
+            "mediane_initiale": 32.0,
+            "escalades": [],
+            "k_final": 32.0
+          }
+        }
+      },
+      "80": {
+        "0.02": {
+          "par_seed": {
+            "101": 32.0,
+            "102": 32.0,
+            "103": 32.0,
+            "104": 32.0,
+            "105": 32.0
+          },
+          "mediane": 32.0,
+          "audit": {
+            "k_par_seed": [
+              32.0,
+              32.0,
+              32.0,
+              32.0,
+              32.0
+            ],
+            "mediane_initiale": 32.0,
+            "escalades": [],
+            "k_final": 32.0
+          }
+        },
+        "0.03": {
+          "par_seed": {
+            "101": 32.0,
+            "102": 32.0,
+            "103": 32.0,
+            "104": 32.0,
+            "105": 32.0
+          },
+          "mediane": 32.0,
+          "audit": {
+            "k_par_seed": [
+              32.0,
+              32.0,
+              32.0,
+              32.0,
+              32.0
+            ],
+            "mediane_initiale": 32.0,
+            "escalades": [],
+            "k_final": 32.0
+          }
+        },
+        "0.04": {
+          "par_seed": {
+            "101": 32.0,
+            "102": 32.0,
+            "103": 32.0,
+            "104": 32.0,
+            "105": 32.0
+          },
+          "mediane": 32.0,
+          "audit": {
+            "k_par_seed": [
+              32.0,
+              32.0,
+              32.0,
+              32.0,
+              32.0
+            ],
+            "mediane_initiale": 32.0,
+            "escalades": [],
+            "k_final": 32.0
+          }
+        },
+        "0.05": {
+          "par_seed": {
+            "101": 32.0,
+            "102": 32.0,
+            "103": 32.0,
+            "104": 32.0,
+            "105": 32.0
+          },
+          "mediane": 32.0,
+          "audit": {
+            "k_par_seed": [
+              32.0,
+              32.0,
+              32.0,
+              32.0,
+              32.0
+            ],
+            "mediane_initiale": 32.0,
+            "escalades": [],
+            "k_final": 32.0
+          }
+        }
+      }
+    },
+    "shuf": {
+      "10": {
+        "0.02": {
+          "par_seed": {
+            "101": "inf",
+            "102": "inf",
+            "103": "inf",
+            "104": "inf",
+            "105": "inf"
+          },
+          "mediane": "inf",
+          "audit": {
+            "k_par_seed": [
+              "inf",
+              "inf",
+              "inf",
+              "inf",
+              "inf"
+            ],
+            "mediane_initiale": "inf",
+            "escalades": [],
+            "k_final": "inf"
+          }
+        },
+        "0.03": {
+          "par_seed": {
+            "101": 2048.0,
+            "102": 2048.0,
+            "103": "inf",
+            "104": "inf",
+            "105": "inf"
+          },
+          "mediane": "inf",
+          "audit": {
+            "k_par_seed": [
+              2048.0,
+              2048.0,
+              "inf",
+              "inf",
+              "inf"
+            ],
+            "mediane_initiale": "inf",
+            "escalades": [],
+            "k_final": "inf"
+          }
+        },
+        "0.04": {
+          "par_seed": {
+            "101": 2048.0,
+            "102": 2048.0,
+            "103": "inf",
+            "104": "inf",
+            "105": "inf"
+          },
+          "mediane": "inf",
+          "audit": {
+            "k_par_seed": [
+              2048.0,
+              2048.0,
+              "inf",
+              "inf",
+              "inf"
+            ],
+            "mediane_initiale": "inf",
+            "escalades": [],
+            "k_final": "inf"
+          }
+        },
+        "0.05": {
+          "par_seed": {
+            "101": 2048.0,
+            "102": 2048.0,
+            "103": "inf",
+            "104": "inf",
+            "105": "inf"
+          },
+          "mediane": "inf",
+          "audit": {
+            "k_par_seed": [
+              2048.0,
+              2048.0,
+              "inf",
+              "inf",
+              "inf"
+            ],
+            "mediane_initiale": "inf",
+            "escalades": [],
+            "k_final": "inf"
+          }
+        }
+      },
+      "80": {
+        "0.02": {
+          "par_seed": {
+            "101": "inf",
+            "102": "inf",
+            "103": "inf",
+            "104": "inf",
+            "105": "inf"
+          },
+          "mediane": "inf",
+          "audit": {
+            "k_par_seed": [
+              "inf",
+              "inf",
+              "inf",
+              "inf",
+              "inf"
+            ],
+            "mediane_initiale": "inf",
+            "escalades": [],
+            "k_final": "inf"
+          }
+        },
+        "0.03": {
+          "par_seed": {
+            "101": "inf",
+            "102": "inf",
+            "103": "inf",
+            "104": "inf",
+            "105": "inf"
+          },
+          "mediane": "inf",
+          "audit": {
+            "k_par_seed": [
+              "inf",
+              "inf",
+              "inf",
+              "inf",
+              "inf"
+            ],
+            "mediane_initiale": "inf",
+            "escalades": [],
+            "k_final": "inf"
+          }
+        },
+        "0.04": {
+          "par_seed": {
+            "101": "inf",
+            "102": "inf",
+            "103": "inf",
+            "104": "inf",
+            "105": "inf"
+          },
+          "mediane": "inf",
+          "audit": {
+            "k_par_seed": [
+              "inf",
+              "inf",
+              "inf",
+              "inf",
+              "inf"
+            ],
+            "mediane_initiale": "inf",
+            "escalades": [],
+            "k_final": "inf"
+          }
+        },
+        "0.05": {
+          "par_seed": {
+            "101": "inf",
+            "102": "inf",
+            "103": "inf",
+            "104": 2048.0,
+            "105": "inf"
+          },
+          "mediane": "inf",
+          "audit": {
+            "k_par_seed": [
+              "inf",
+              "inf",
+              "inf",
+              2048.0,
+              "inf"
+            ],
+            "mediane_initiale": "inf",
+            "escalades": [],
+            "k_final": "inf"
+          }
+        }
+      }
+    }
+  },
+  "surface_kstar_v2": {
+    "10": {
+      "0.02": 1024.0,
+      "0.03": 400.0,
+      "0.04": 400.0,
+      "0.05": 256.0
+    },
+    "20": {
+      "0.02": 1024.0,
+      "0.03": 400.0,
+      "0.04": 400.0,
+      "0.05": 400.0
+    },
+    "40": {
+      "0.02": 1024.0,
+      "0.03": 1024.0,
+      "0.04": 400.0,
+      "0.05": 400.0
+    },
+    "80": {
+      "0.02": 2048.0,
+      "0.03": 1024.0,
+      "0.04": 400.0,
+      "0.05": 400.0
+    }
+  },
+  "gate_controles": {
+    "statut": "VIOLATION",
+    "violations": [
+      {
+        "bras": "shuf",
+        "L": 10,
+        "seed": 101,
+        "jnd": 0.03,
+        "k_star_obtenu": 2048.0,
+        "k_star_attendu": "inf"
+      },
+      {
+        "bras": "shuf",
+        "L": 10,
+        "seed": 102,
+        "jnd": 0.03,
+        "k_star_obtenu": 2048.0,
+        "k_star_attendu": "inf"
+      },
+      {
+        "bras": "shuf",
+        "L": 10,
+        "seed": 101,
+        "jnd": 0.04,
+        "k_star_obtenu": 2048.0,
+        "k_star_attendu": "inf"
+      },
+      {
+        "bras": "shuf",
+        "L": 10,
+        "seed": 102,
+        "jnd": 0.04,
+        "k_star_obtenu": 2048.0,
+        "k_star_attendu": "inf"
+      },
+      {
+        "bras": "shuf",
+        "L": 10,
+        "seed": 101,
+        "jnd": 0.05,
+        "k_star_obtenu": 2048.0,
+        "k_star_attendu": "inf"
+      },
+      {
+        "bras": "shuf",
+        "L": 10,
+        "seed": 102,
+        "jnd": 0.05,
+        "k_star_obtenu": 2048.0,
+        "k_star_attendu": "inf"
+      },
+      {
+        "bras": "shuf",
+        "L": 80,
+        "seed": 104,
+        "jnd": 0.05,
+        "k_star_obtenu": 2048.0,
+        "k_star_attendu": "inf"
+      }
+    ],
+    "n_cellules_par_bras": {
+      "ferm": 40,
+      "shuf": 40
+    },
+    "n_violations_par_bras": {
+      "ferm": 0,
+      "shuf": 7
+    }
+  },
+  "pentes_v2": {
+    "0.02": {
+      "k_star_L40": 1024.0,
+      "k_star_L80": 2048.0,
+      "pente": 25.6,
+      "ic95": [
+        -25.6,
+        25.6
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704
+    },
+    "0.03": {
+      "k_star_L40": 1024.0,
+      "k_star_L80": 1024.0,
+      "pente": 0.0,
+      "ic95": [
+        -25.6,
+        41.2
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704
+    },
+    "0.04": {
+      "k_star_L40": 400.0,
+      "k_star_L80": 400.0,
+      "pente": 0.0,
+      "ic95": [
+        0.0,
+        15.6
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704
+    },
+    "0.05": {
+      "k_star_L40": 400.0,
+      "k_star_L80": 400.0,
+      "pente": 0.0,
+      "ic95": [
+        0.0,
+        3.6
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704
+    }
+  },
+  "verdict_A3_v2_audit": {
+    "par_jnd": {
+      "0.02": "INDETERMINE",
+      "0.03": "INDETERMINE",
+      "0.04": "PASS",
+      "0.05": "PASS"
+    },
+    "global_": "INDETERMINE",
+    "messages_capacite_par_jnd": {},
+    "message_capacite_global": null,
+    "issue_mappee": "NON LISIBLE : gate d'instrument en violation (amendement famille 2) — remonter avant toute lecture d'issue."
+  },
+  "verdict_v2_scelle": {
+    "lisible": false,
+    "message": "NON LISIBLE : gate d'instrument en violation (amendement famille 2) — remonter avant toute lecture d'issue.",
+    "issue_mappee": "NON LISIBLE : gate d'instrument en violation (amendement famille 2) — remonter avant toute lecture d'issue."
+  },
+  "issue_mappee": "NON LISIBLE : gate d'instrument en violation (amendement famille 2) — remonter avant toute lecture d'issue."
+}

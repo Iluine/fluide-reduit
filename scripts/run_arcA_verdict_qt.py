@@ -403,7 +403,7 @@ def figure_jnd_sensitivity_qt(k80_par_bras: dict[str, dict[float, float]], path:
     y_budgets, y_inf, y_coupure = _y_categoriel_budgets()
     y_ferm = math.log10(ATTENDU_FERM_QT)
 
-    fig, ax = plt.subplots(figsize=(6.5, 5.5))
+    fig, ax = plt.subplots(figsize=(7.5, 5.5))
     x = [jnd * 100.0 for jnd in JND_LIST]
     for arm in ARMS:
         ys = [_position_y(k80_par_bras[arm][jnd], y_inf) for jnd in JND_LIST]
