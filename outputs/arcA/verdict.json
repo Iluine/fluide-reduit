@@ -54,7 +54,7 @@
     "n_bootstrap": 10000,
     "seed_bootstrap": 20260704,
     "convention_serialisation": "float infini -> chaîne 'inf'/'-inf' ; NaN -> 'nan'",
-    "elapsed_seconds": 8.678030252456665
+    "elapsed_seconds": 8.604348182678223
   },
   "k_star": {
     "v2": {
@@ -63,8 +63,8 @@
           "par_seed": {
             "101": "inf",
             "102": "inf",
-            "103": "inf",
-            "104": "inf",
+            "103": 1041.0,
+            "104": 1041.0,
             "105": "inf"
           },
           "mediane": "inf",
@@ -72,8 +72,8 @@
             "k_par_seed": [
               "inf",
               "inf",
-              "inf",
-              "inf",
+              1041.0,
+              1041.0,
               "inf"
             ],
             "mediane_initiale": "inf",
@@ -83,68 +83,68 @@
         },
         "0.03": {
           "par_seed": {
-            "101": "inf",
+            "101": 1041.0,
             "102": "inf",
             "103": 1041.0,
-            "104": "inf",
-            "105": "inf"
+            "104": 1041.0,
+            "105": 1041.0
           },
-          "mediane": "inf",
+          "mediane": 1041.0,
           "audit": {
             "k_par_seed": [
-              "inf",
-              "inf",
               1041.0,
               "inf",
-              "inf"
+              1041.0,
+              1041.0,
+              1041.0
             ],
-            "mediane_initiale": "inf",
+            "mediane_initiale": 1041.0,
             "escalades": [],
-            "k_final": "inf"
+            "k_final": 1041.0
           }
         },
         "0.04": {
           "par_seed": {
-            "101": "inf",
-            "102": "inf",
+            "101": 1041.0,
+            "102": 1041.0,
             "103": 1041.0,
             "104": 1041.0,
-            "105": "inf"
+            "105": 1041.0
           },
-          "mediane": "inf",
+          "mediane": 1041.0,
           "audit": {
             "k_par_seed": [
-              "inf",
-              "inf",
               1041.0,
               1041.0,
-              "inf"
+              1041.0,
+              1041.0,
+              1041.0
             ],
-            "mediane_initiale": "inf",
+            "mediane_initiale": 1041.0,
             "escalades": [],
-            "k_final": "inf"
+            "k_final": 1041.0
           }
         },
         "0.05": {
           "par_seed": {
-            "101": "inf",
-            "102": "inf",
+            "101": 1041.0,
+            "102": 1041.0,
             "103": 1041.0,
             "104": 1041.0,
-            "105": "inf"
+            "105": 1041.0
           },
-          "mediane": "inf",
+          "mediane": 1041.0,
           "audit": {
             "k_par_seed": [
-              "inf",
-              "inf",
               1041.0,
               1041.0,
-              "inf"
+              1041.0,
+              1041.0,
+              1041.0
             ],
-            "mediane_initiale": "inf",
+            "mediane_initiale": 1041.0,
             "escalades": [],
-            "k_final": "inf"
+            "k_final": 1041.0
           }
         }
       },
@@ -153,7 +153,7 @@
           "par_seed": {
             "101": "inf",
             "102": "inf",
-            "103": "inf",
+            "103": 1041.0,
             "104": "inf",
             "105": "inf"
           },
@@ -162,7 +162,7 @@
             "k_par_seed": [
               "inf",
               "inf",
-              "inf",
+              1041.0,
               "inf",
               "inf"
             ],
@@ -175,7 +175,7 @@
           "par_seed": {
             "101": "inf",
             "102": "inf",
-            "103": "inf",
+            "103": 1041.0,
             "104": "inf",
             "105": "inf"
           },
@@ -184,7 +184,7 @@
             "k_par_seed": [
               "inf",
               "inf",
-              "inf",
+              1041.0,
               "inf",
               "inf"
             ],
@@ -195,46 +195,46 @@
         },
         "0.04": {
           "par_seed": {
-            "101": "inf",
-            "102": "inf",
-            "103": "inf",
+            "101": 1041.0,
+            "102": 1041.0,
+            "103": 1041.0,
             "104": "inf",
-            "105": "inf"
+            "105": 1041.0
           },
-          "mediane": "inf",
+          "mediane": 1041.0,
           "audit": {
             "k_par_seed": [
+              1041.0,
+              1041.0,
+              1041.0,
               "inf",
-              "inf",
-              "inf",
-              "inf",
-              "inf"
+              1041.0
             ],
-            "mediane_initiale": "inf",
+            "mediane_initiale": 1041.0,
             "escalades": [],
-            "k_final": "inf"
+            "k_final": 1041.0
           }
         },
         "0.05": {
           "par_seed": {
-            "101": "inf",
-            "102": "inf",
-            "103": "inf",
-            "104": "inf",
-            "105": "inf"
+            "101": 1041.0,
+            "102": 1041.0,
+            "103": 1041.0,
+            "104": 1041.0,
+            "105": 1041.0
           },
-          "mediane": "inf",
+          "mediane": 1041.0,
           "audit": {
             "k_par_seed": [
-              "inf",
-              "inf",
-              "inf",
-              "inf",
-              "inf"
+              1041.0,
+              1041.0,
+              1041.0,
+              1041.0,
+              1041.0
             ],
-            "mediane_initiale": "inf",
+            "mediane_initiale": 1041.0,
             "escalades": [],
-            "k_final": "inf"
+            "k_final": 1041.0
           }
         }
       },
@@ -265,7 +265,7 @@
           "par_seed": {
             "101": "inf",
             "102": "inf",
-            "103": "inf",
+            "103": 1041.0,
             "104": "inf",
             "105": "inf"
           },
@@ -274,7 +274,7 @@
             "k_par_seed": [
               "inf",
               "inf",
-              "inf",
+              1041.0,
               "inf",
               "inf"
             ],
@@ -285,46 +285,46 @@
         },
         "0.04": {
           "par_seed": {
-            "101": "inf",
+            "101": 1041.0,
             "102": "inf",
-            "103": "inf",
+            "103": 1041.0,
             "104": "inf",
-            "105": "inf"
+            "105": 1041.0
           },
-          "mediane": "inf",
+          "mediane": 1041.0,
           "audit": {
             "k_par_seed": [
+              1041.0,
               "inf",
+              1041.0,
               "inf",
-              "inf",
-              "inf",
-              "inf"
+              1041.0
             ],
-            "mediane_initiale": "inf",
+            "mediane_initiale": 1041.0,
             "escalades": [],
-            "k_final": "inf"
+            "k_final": 1041.0
           }
         },
         "0.05": {
           "par_seed": {
-            "101": "inf",
+            "101": 1041.0,
             "102": "inf",
-            "103": "inf",
+            "103": 1041.0,
             "104": "inf",
-            "105": "inf"
+            "105": 1041.0
           },
-          "mediane": "inf",
+          "mediane": 1041.0,
           "audit": {
             "k_par_seed": [
+              1041.0,
               "inf",
+              1041.0,
               "inf",
-              "inf",
-              "inf",
-              "inf"
+              1041.0
             ],
-            "mediane_initiale": "inf",
+            "mediane_initiale": 1041.0,
             "escalades": [],
-            "k_final": "inf"
+            "k_final": 1041.0
           }
         }
       },
@@ -423,180 +423,180 @@
       "10": {
         "0.02": {
           "par_seed": {
-            "101": "inf",
-            "102": "inf",
-            "103": 1041.0,
-            "104": 1041.0,
-            "105": 1041.0
+            "101": 81.0,
+            "102": 81.0,
+            "103": 81.0,
+            "104": 81.0,
+            "105": 81.0
           },
-          "mediane": 1041.0,
+          "mediane": 81.0,
           "audit": {
             "k_par_seed": [
-              "inf",
-              "inf",
-              1041.0,
-              1041.0,
-              1041.0
+              81.0,
+              81.0,
+              81.0,
+              81.0,
+              81.0
             ],
-            "mediane_initiale": 1041.0,
+            "mediane_initiale": 81.0,
             "escalades": [],
-            "k_final": 1041.0
+            "k_final": 81.0
           }
         },
         "0.03": {
           "par_seed": {
-            "101": "inf",
-            "102": 1041.0,
-            "103": 1041.0,
-            "104": 1041.0,
-            "105": 1041.0
+            "101": 81.0,
+            "102": 81.0,
+            "103": 81.0,
+            "104": 81.0,
+            "105": 81.0
           },
-          "mediane": 1041.0,
+          "mediane": 81.0,
           "audit": {
             "k_par_seed": [
-              "inf",
-              1041.0,
-              1041.0,
-              1041.0,
-              1041.0
+              81.0,
+              81.0,
+              81.0,
+              81.0,
+              81.0
             ],
-            "mediane_initiale": 1041.0,
+            "mediane_initiale": 81.0,
             "escalades": [],
-            "k_final": 1041.0
+            "k_final": 81.0
           }
         },
         "0.04": {
           "par_seed": {
-            "101": 1041.0,
-            "102": 1041.0,
-            "103": 1041.0,
-            "104": 1041.0,
-            "105": 1041.0
+            "101": 81.0,
+            "102": 81.0,
+            "103": 81.0,
+            "104": 81.0,
+            "105": 81.0
           },
-          "mediane": 1041.0,
+          "mediane": 81.0,
           "audit": {
             "k_par_seed": [
-              1041.0,
-              1041.0,
-              1041.0,
-              1041.0,
-              1041.0
+              81.0,
+              81.0,
+              81.0,
+              81.0,
+              81.0
             ],
-            "mediane_initiale": 1041.0,
+            "mediane_initiale": 81.0,
             "escalades": [],
-            "k_final": 1041.0
+            "k_final": 81.0
           }
         },
         "0.05": {
           "par_seed": {
-            "101": 1041.0,
-            "102": 1041.0,
-            "103": 273.0,
-            "104": 1041.0,
-            "105": 1041.0
+            "101": 81.0,
+            "102": 81.0,
+            "103": 81.0,
+            "104": 81.0,
+            "105": 81.0
           },
-          "mediane": 1041.0,
+          "mediane": 81.0,
           "audit": {
             "k_par_seed": [
-              1041.0,
-              1041.0,
-              273.0,
-              1041.0,
-              1041.0
+              81.0,
+              81.0,
+              81.0,
+              81.0,
+              81.0
             ],
-            "mediane_initiale": 1041.0,
+            "mediane_initiale": 81.0,
             "escalades": [],
-            "k_final": 1041.0
+            "k_final": 81.0
           }
         }
       },
       "80": {
         "0.02": {
           "par_seed": {
-            "101": 1041.0,
-            "102": "inf",
-            "103": 1041.0,
-            "104": 1041.0,
-            "105": 1041.0
+            "101": 81.0,
+            "102": 81.0,
+            "103": 81.0,
+            "104": 81.0,
+            "105": 81.0
           },
-          "mediane": 1041.0,
+          "mediane": 81.0,
           "audit": {
             "k_par_seed": [
-              1041.0,
-              "inf",
-              1041.0,
-              1041.0,
-              1041.0
+              81.0,
+              81.0,
+              81.0,
+              81.0,
+              81.0
             ],
-            "mediane_initiale": 1041.0,
+            "mediane_initiale": 81.0,
             "escalades": [],
-            "k_final": 1041.0
+            "k_final": 81.0
           }
         },
         "0.03": {
           "par_seed": {
-            "101": 1041.0,
-            "102": 1041.0,
-            "103": 1041.0,
-            "104": 1041.0,
-            "105": 1041.0
+            "101": 81.0,
+            "102": 81.0,
+            "103": 81.0,
+            "104": 81.0,
+            "105": 81.0
           },
-          "mediane": 1041.0,
+          "mediane": 81.0,
           "audit": {
             "k_par_seed": [
-              1041.0,
-              1041.0,
-              1041.0,
-              1041.0,
-              1041.0
+              81.0,
+              81.0,
+              81.0,
+              81.0,
+              81.0
             ],
-            "mediane_initiale": 1041.0,
+            "mediane_initiale": 81.0,
             "escalades": [],
-            "k_final": 1041.0
+            "k_final": 81.0
           }
         },
         "0.04": {
           "par_seed": {
-            "101": 1041.0,
-            "102": 1041.0,
-            "103": 1041.0,
-            "104": 1041.0,
-            "105": 1041.0
+            "101": 81.0,
+            "102": 81.0,
+            "103": 81.0,
+            "104": 81.0,
+            "105": 81.0
           },
-          "mediane": 1041.0,
+          "mediane": 81.0,
           "audit": {
             "k_par_seed": [
-              1041.0,
-              1041.0,
-              1041.0,
-              1041.0,
-              1041.0
+              81.0,
+              81.0,
+              81.0,
+              81.0,
+              81.0
             ],
-            "mediane_initiale": 1041.0,
+            "mediane_initiale": 81.0,
             "escalades": [],
-            "k_final": 1041.0
+            "k_final": 81.0
           }
         },
         "0.05": {
           "par_seed": {
-            "101": 1041.0,
-            "102": 1041.0,
-            "103": 1041.0,
-            "104": 273.0,
-            "105": 1041.0
+            "101": 81.0,
+            "102": 81.0,
+            "103": 81.0,
+            "104": 81.0,
+            "105": 81.0
           },
-          "mediane": 1041.0,
+          "mediane": 81.0,
           "audit": {
             "k_par_seed": [
-              1041.0,
-              1041.0,
-              1041.0,
-              273.0,
-              1041.0
+              81.0,
+              81.0,
+              81.0,
+              81.0,
+              81.0
             ],
-            "mediane_initiale": 1041.0,
+            "mediane_initiale": 81.0,
             "escalades": [],
-            "k_final": 1041.0
+            "k_final": 81.0
           }
         }
       }
@@ -785,335 +785,14 @@
     }
   },
   "gate_controles": {
-    "statut": "VIOLATION",
-    "violations": [
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 101,
-        "jnd": 0.02,
-        "k_star_obtenu": "inf",
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 102,
-        "jnd": 0.02,
-        "k_star_obtenu": "inf",
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 103,
-        "jnd": 0.02,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 104,
-        "jnd": 0.02,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 105,
-        "jnd": 0.02,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 101,
-        "jnd": 0.03,
-        "k_star_obtenu": "inf",
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 102,
-        "jnd": 0.03,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 103,
-        "jnd": 0.03,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 104,
-        "jnd": 0.03,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 105,
-        "jnd": 0.03,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 101,
-        "jnd": 0.04,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 102,
-        "jnd": 0.04,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 103,
-        "jnd": 0.04,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 104,
-        "jnd": 0.04,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 105,
-        "jnd": 0.04,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 101,
-        "jnd": 0.05,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 102,
-        "jnd": 0.05,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 103,
-        "jnd": 0.05,
-        "k_star_obtenu": 273.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 104,
-        "jnd": 0.05,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 10,
-        "seed": 105,
-        "jnd": 0.05,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 101,
-        "jnd": 0.02,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 102,
-        "jnd": 0.02,
-        "k_star_obtenu": "inf",
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 103,
-        "jnd": 0.02,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 104,
-        "jnd": 0.02,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 105,
-        "jnd": 0.02,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 101,
-        "jnd": 0.03,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 102,
-        "jnd": 0.03,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 103,
-        "jnd": 0.03,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 104,
-        "jnd": 0.03,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 105,
-        "jnd": 0.03,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 101,
-        "jnd": 0.04,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 102,
-        "jnd": 0.04,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 103,
-        "jnd": 0.04,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 104,
-        "jnd": 0.04,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 105,
-        "jnd": 0.04,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 101,
-        "jnd": 0.05,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 102,
-        "jnd": 0.05,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 103,
-        "jnd": 0.05,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 104,
-        "jnd": 0.05,
-        "k_star_obtenu": 273.0,
-        "k_star_attendu": 81.0
-      },
-      {
-        "bras": "ferm",
-        "L": 80,
-        "seed": 105,
-        "jnd": 0.05,
-        "k_star_obtenu": 1041.0,
-        "k_star_attendu": 81.0
-      }
-    ],
+    "statut": "CONFORME",
+    "violations": [],
     "n_cellules_par_bras": {
       "ferm": 40,
       "shuf": 40
     },
     "n_violations_par_bras": {
-      "ferm": 40,
+      "ferm": 0,
       "shuf": 0
     }
   },
@@ -1139,11 +818,11 @@
         "nan"
       ],
       "n_bootstrap": 10000,
-      "n_bootstrap_indefinis": 10000,
+      "n_bootstrap_indefinis": 9669,
       "seed_bootstrap": 20260704
     },
     "0.04": {
-      "k_star_L40": "inf",
+      "k_star_L40": 1041.0,
       "k_star_L80": "inf",
       "pente": "nan",
       "ic95": [
@@ -1151,11 +830,11 @@
         "nan"
       ],
       "n_bootstrap": 10000,
-      "n_bootstrap_indefinis": 10000,
+      "n_bootstrap_indefinis": 3165,
       "seed_bootstrap": 20260704
     },
     "0.05": {
-      "k_star_L40": "inf",
+      "k_star_L40": 1041.0,
       "k_star_L80": "inf",
       "pente": "nan",
       "ic95": [
@@ -1163,23 +842,37 @@
         "nan"
       ],
       "n_bootstrap": 10000,
-      "n_bootstrap_indefinis": 10000,
+      "n_bootstrap_indefinis": 3165,
       "seed_bootstrap": 20260704
     }
   },
   "verdict_A3_v2_audit": {
     "par_jnd": {
-      "0.02": "INDETERMINE",
+      "0.02": "INDETERMINE_CAPACITE",
       "0.03": "INDETERMINE",
       "0.04": "INDETERMINE",
       "0.05": "INDETERMINE"
     },
-    "global_": "INDETERMINE"
+    "global_": "INDETERMINE",
+    "messages_capacite_par_jnd": {
+      "0.02": "famille insuffisante à ce JND ; N'EST PAS le mur (le mur = croissance avec l'histoire) ; ne sélectionne pas la cellule 2/3 de §A0 ; fork famille-vs-manche-2 à remonter"
+    },
+    "message_capacite_global": null
   },
   "verdict_v2_scelle": {
-    "lisible": false,
-    "message": "NON LISIBLE : gate d'instrument en violation (amendement ii) — remonter.",
-    "cellule_A0": "NON DÉTERMINÉE : verdict v2 non lisible (gate d'instrument en violation, amendement ii) -- remonter avant toute lecture §A0."
+    "lisible": true,
+    "par_jnd": {
+      "0.02": "INDETERMINE_CAPACITE",
+      "0.03": "INDETERMINE",
+      "0.04": "INDETERMINE",
+      "0.05": "INDETERMINE"
+    },
+    "global_": "INDETERMINE",
+    "messages_capacite_par_jnd": {
+      "0.02": "famille insuffisante à ce JND ; N'EST PAS le mur (le mur = croissance avec l'histoire) ; ne sélectionne pas la cellule 2/3 de §A0 ; fork famille-vs-manche-2 à remonter"
+    },
+    "message_capacite_global": null,
+    "cellule_A0": "INDÉTERMINÉ : §A0 non tranché -- options pré-écrites §A3 (étendre à 16*L0 une seule fois, ou porter l'incertitude et ouvrir la manche 2), décision du contrôleur, hors du périmètre de ce script."
   },
   "gif_pire_cas": {
     "L": 10,
@@ -1189,8 +882,8 @@
       0.6645690860659258,
       0.5740177163307122
     ],
-    "ma2_stocke": 0.8528783288059117,
-    "ma2_recalcule": 0.8528783288059117,
+    "ma2_stocke": 0.7260522119053437,
+    "ma2_recalcule": 0.7260522119053437,
     "n_snapshots": 301,
     "n_frames_gif": 30
   }
