@@ -46,6 +46,16 @@ Extrait verbatim (brief, volet 2) :
       - sinon -> « global INDÉTERMINÉ -- surface k*(L, JND) portée à l'Arc C »
         (lecture pré-écrite clause 4).
 
+AMENDEMENT DE PORTÉE (NON verbatim ci-dessus -- gravé APRÈS le run, PREREGISTRATION.md
+pocCascade2phys, commit `fa54d20`, 2026-07-04, « Arbitrage portée-shuf : option 1
+endossée ») : l'attendu shuf « k*=∞ partout » ci-dessus est REQUALIFIÉ « k*=∞ SOUS LE
+CAP » -- portée opérationnelle exacte et justification dans la docstring de
+`gate_controles_qt`. Clause de forme 2 associée (étoile Arc C, même commit) : toute
+cellule de la surface k*(L, JND) dont le budget médian ∈ {1024, 2048} est
+« non-discriminant vs bruit », drapée dans `surface_kstar_v2` (JSON) et sur
+`arcA_kstar_surface_qt.png` (figure) -- cf. `_non_discriminant`. Zéro re-run, zéro
+seuil §A3 touché : re-lecture mécanique des mesures existantes de `measures_qt.npz`.
+
 Ordre d'exécution (mécanique, non négociable, IDENTIQUE famille 1) :
   1. GATE DES CONTRÔLES (ferm/shuf), calculé PAR CELLULE (bras, L, seed, JND)
      -- `gate_controles_qt` APPELLE LITTÉRALEMENT `k_star_groupe_qt` avec un
@@ -92,6 +102,7 @@ sys.path.insert(0, str(ROOT))
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
 from scripts.run_arcA_measure import (ARMS, CAP_FLOATS_10PCT, JND_LIST,
@@ -119,7 +130,15 @@ N_BOOTSTRAP: int = 10_000
 SEED_BOOTSTRAP: int = 20260704                               # figée, fraîche PAR JND (idem famille 1)
 
 ATTENDU_FERM_QT: float = float(BUDGET_FERM)   # amendement famille 2 : 32.0
-ATTENDU_SHUF_QT: float = float("inf")         # inchangé vs famille 1
+ATTENDU_SHUF_QT: float = float("inf")         # cible conceptuelle inchangée (∞) ; PORTÉE
+                                               # requalifiée « SOUS LE CAP » par l'amendement
+                                               # fa54d20 (2026-07-04) -- gate_controles_qt teste
+                                               # k* > CAP_FLOATS, PAS l'égalité stricte à ∞.
+
+# Clause de forme 2 (étoile Arc C, même commit fa54d20) : budgets médians "non-discriminants
+# vs bruit" -- ce sont précisément les deux budgets diagnostiques (>= moitié du domaine) qui
+# ont motivé la requalification de ATTENDU_SHUF_QT ci-dessus.
+BUDGETS_NON_DISCRIMINANTS: tuple[float, ...] = (1024.0, 2048.0)
 
 
 # --- k*(L, seed ; JND) et k*(L ; JND) (médiane + clause 2xJND), axe budgets --
@@ -219,19 +238,40 @@ def gate_controles_qt(sous_jnd_ferm: np.ndarray, ma1_ferm: np.ndarray, ma2_ferm:
     avec un groupe réduit à CETTE SEULE seed (n_seed=1) -- même fonction,
     mêmes budgets croissants, même clause 2xJND que le bras v2. Équivalent
     exact de `gate_controles` (famille 1), attendus mis à jour pour la
-    famille 2 (`ATTENDU_FERM_QT`=32.0, `ATTENDU_SHUF_QT`=∞). Comparaison par
-    égalité EXACTE (mêmes raisons que famille 1 : valeurs discrètes dans
-    {32.0, 64.0, ..., 2048.0, inf}, jamais un résultat d'arithmétique).
+    famille 2 (`ATTENDU_FERM_QT`=32.0, `ATTENDU_SHUF_QT`=∞).
+
+    AMENDEMENT DE PORTÉE -- shuf (PREREGISTRATION.md, pocCascade2phys, commit
+    `fa54d20`, 2026-07-04, « Arbitrage portée-shuf : option 1 endossée ») :
+    l'attendu shuf est REQUALIFIÉ de « k* == ∞ » (égalité stricte sur TOUTE la
+    grille de budgets) à « k* = ∞ SOUS LE CAP ». Justification (test de
+    défendabilité gravé au commit) : la propriété que le contrôle-infermable
+    garde est l'ANTI-TRIVIALITÉ SOUS le cap anti-trivialité (`CAP_FLOATS` =
+    409.6 floats-éq) -- c'est le cap qui définit ce que le verdict a le droit
+    de lire, pas l'égalité stricte à ∞ sur des budgets diagnostiques (1024,
+    2048) qui dépassent volontairement la moitié de la résolution complète du
+    domaine (4096 floats). Qu'un champ permuté ferme à cette proximité de la
+    résolution pleine est un théorème d'échantillonnage, pas une fuite de
+    l'instrument. Opérationnellement : cellule shuf CONFORME ssi
+    k* > CAP_FLOATS (aucune fermeture à budget <= 400) ; VIOLATION ssi
+    k* <= 400. `ATTENDU_SHUF_QT` (∞) reste la cible CONCEPTUELLE reportée dans
+    `k_star_attendu` -- seule la RÈGLE DE COMPARAISON change (seuil de cap au
+    lieu d'égalité stricte).
+
+    Ferm INCHANGÉ : k* == `ATTENDU_FERM_QT` (32.0) par égalité EXACTE, partout
+    (même raison que famille 1 : valeur discrète, jamais un résultat
+    d'arithmétique). Ce re-calibrage ne touche NI `k_star_seed_qt` NI
+    `k_star_groupe_qt` NI la clause 2xJND NI §A3 -- seule la règle de LECTURE
+    de la cellule shuf change ici.
 
     Retourne (statut, violations) ; statut = "CONFORME" ssi zéro violation
     sur les 80 cellules (2 bras x {10,80} x 5 seeds x 4 JND), sinon
     "VIOLATION"."""
     violations: list[dict] = []
     specs = (
-        ("ferm", sous_jnd_ferm, ma1_ferm, ma2_ferm, ATTENDU_FERM_QT),
-        ("shuf", sous_jnd_shuf, ma1_shuf, ma2_shuf, ATTENDU_SHUF_QT),
+        ("ferm", sous_jnd_ferm, ma1_ferm, ma2_ferm),
+        ("shuf", sous_jnd_shuf, ma1_shuf, ma2_shuf),
     )
-    for arm_name, sous_jnd_arm, ma1_arm, ma2_arm, attendu in specs:
+    for arm_name, sous_jnd_arm, ma1_arm, ma2_arm in specs:
         for L in L_LIST_CONTROL:
             iL = L_LIST.index(L)
             for jnd in JND_LIST:
@@ -241,7 +281,14 @@ def gate_controles_qt(sous_jnd_ferm: np.ndarray, ma1_ferm: np.ndarray, ma2_ferm:
                     ma1_grp = ma1_arm[iL, iS:iS + 1, :]
                     ma2_grp = ma2_arm[iL, iS:iS + 1, :]
                     k, _audit = k_star_groupe_qt(sous_jnd_grp, ma1_grp, ma2_grp, jnd)
-                    conforme = (k == attendu)
+                    if arm_name == "ferm":
+                        conforme = (k == ATTENDU_FERM_QT)
+                        attendu = ATTENDU_FERM_QT
+                    else:
+                        # amendement fa54d20 : conforme ssi SOUS LE CAP (k* > CAP_FLOATS),
+                        # PAS égalité stricte à ATTENDU_SHUF_QT (∞) -- cf. docstring.
+                        conforme = (k > CAP_FLOATS)
+                        attendu = ATTENDU_SHUF_QT
                     if not conforme:
                         violations.append(dict(bras=arm_name, L=int(L), seed=int(seed),
                                                jnd=float(jnd), k_star_obtenu=k,
@@ -330,6 +377,26 @@ def issue_mappee(gate_statut: str, verdict_global: str) -> str:
     if verdict_global == "INDETERMINE_CAPACITE":
         return MESSAGE_ISSUE_CAPACITE
     return MESSAGE_ISSUE_INDETERMINE
+
+
+# --- Étoile Arc C (clause de forme 2, amendement fa54d20) -------------------
+
+
+def _non_discriminant(k: float) -> bool:
+    """Clause de forme 2 (PREREGISTRATION.md, pocCascade2phys, commit
+    `fa54d20`, 2026-07-04) : un budget médian k* ∈ `BUDGETS_NON_DISCRIMINANTS`
+    (1024, 2048) est marqué « non-discriminant vs bruit » -- ce sont
+    précisément les deux budgets diagnostiques (>= moitié de la résolution
+    complète du domaine, 4096 floats) qui ont motivé la requalification de
+    l'attendu shuf dans `gate_controles_qt` : à cette proximité de la
+    résolution pleine, même un champ SANS STRUCTURE (permuté) devient
+    approximable par l'arbre adaptatif, donc un k* médian à 1024/2048 ne
+    discrimine plus fiablement structure et bruit. Drapeau PERMANENT porté
+    par la surface (JSON `surface_kstar_v2` + figure
+    `arcA_kstar_surface_qt.png`), pas seulement consigné au journal -- ne
+    change NI le budget NI le verdict §A3, uniquement une annotation de
+    lecture. `k=∞` ou tout budget < 1024 -> False."""
+    return math.isfinite(k) and float(k) in BUDGETS_NON_DISCRIMINANTS
 
 
 # --- Figures ------------------------------------------------------------------
@@ -438,7 +505,13 @@ def figure_kstar_surface_qt(k_table_v2: dict, path: Path) -> None:
     BUDGETS+∞ (colormap séquentielle) ; cellules dont le budget dépasse le
     cap anti-trivialité (409.6) marquées "(>cap)". Vue COMPLÉMENTAIRE des
     courbes k*(L) par JND (`figure_kstar_vs_L_qt`) -- même donnée, lecture en
-    grille plutôt qu'en courbes."""
+    grille plutôt qu'en courbes.
+
+    Étoile Arc C (clause de forme 2, amendement fa54d20, cf. `_non_discriminant`) :
+    toute cellule dont le budget médian ∈ {1024, 2048} porte un astérisque sur
+    son étiquette ET une hachure superposée (drapeau « non-discriminant vs
+    bruit »), plus une légende explicite en pied de figure -- le caveat SUIT
+    la surface, il n'est pas seulement consigné au journal."""
     ordre = list(BUDGETS) + [float("inf")]
     n = len(ordre)
     grille = np.zeros((len(L_LIST), len(JND_LIST)))
@@ -456,9 +529,14 @@ def figure_kstar_surface_qt(k_table_v2: dict, path: Path) -> None:
             etiquette = "∞" if not math.isfinite(k) else str(int(k))
             if math.isfinite(k) and k > CAP_FLOATS:
                 etiquette += "\n(>cap)"
+            if _non_discriminant(k):
+                etiquette += "*"
+                ax.add_patch(mpatches.Rectangle(
+                    (iJ - 0.5, iL - 0.5), 1, 1, fill=False, hatch="////",
+                    edgecolor="white", linewidth=0.0, zorder=2.5))
             couleur_texte = "black" if grille[iL, iJ] >= (n - 1) * 0.6 else "white"
             ax.text(iJ, iL, etiquette, ha="center", va="center",
-                   color=couleur_texte, fontsize=9, fontweight="bold")
+                   color=couleur_texte, fontsize=9, fontweight="bold", zorder=3)
 
     ax.set_xticks(range(len(JND_LIST)))
     ax.set_xticklabels([f"{jnd * 100:.0f} %" for jnd in JND_LIST])
@@ -470,7 +548,11 @@ def figure_kstar_surface_qt(k_table_v2: dict, path: Path) -> None:
     cbar = fig.colorbar(im, ax=ax, ticks=range(n))
     cbar.ax.set_yticklabels([str(b) for b in BUDGETS] + ["∞"])
     cbar.set_label("k*(L, JND) -- budget (floats-éq)")
-    fig.tight_layout()
+    fig.text(0.5, 0.005,
+             "* + hachure : budget ∈ {1024, 2048} — « non-discriminant vs bruit »\n"
+             "(clause de forme 2, Arc C, amendement fa54d20)",
+             ha="center", va="bottom", fontsize=7.5, color="#444444")
+    fig.tight_layout(rect=(0.0, 0.065, 1.0, 1.0))
     fig.savefig(path, dpi=140)
     plt.close(fig)
 
@@ -510,7 +592,9 @@ def main() -> None:
     print("=" * 78)
     print("ARC A / FAMILLE 2 (QUADTREE) -- GATE DES CONTRÔLES -- EN PREMIER")
     print("=" * 78)
-    print(f"Attendus : ferm -> k*={ATTENDU_FERM_QT:.0f} partout ; shuf -> k*=∞ partout "
+    print(f"Attendus : ferm -> k*={ATTENDU_FERM_QT:.0f} partout ; "
+         f"shuf -> k*=∞ SOUS LE CAP (conforme ssi k*>{CAP_FLOATS:.1f}, amendement de "
+         "portée fa54d20 2026-07-04) "
          f"(L∈{L_LIST_CONTROL}, seeds={SEEDS}, JND={[f'{j:.2f}' for j in JND_LIST]}).")
     for arm in ("ferm", "shuf"):
         print(f"-- bras {arm} : {n_violations_par_bras[arm]}/{n_cells_par_bras[arm]} "
@@ -584,10 +668,17 @@ def main() -> None:
     print(f"ISSUE MAPPÉE (clause gravée, brief volet 2) : {issue}")
     print("=" * 78)
 
-    # --- 3. Surface k*(L, JND) (bras v2, médianes) -- rapportée TELLE QUELLE --
-    surface_kstar_v2 = {str(L): {str(jnd): k_table["v2"][L][jnd]["mediane"]
-                                 for jnd in JND_LIST}
-                        for L in L_LIST}
+    # --- 3. Surface k*(L, JND) (bras v2, médianes) -- rapportée TELLE QUELLE, ---
+    # + étoile Arc C (clause de forme 2, amendement fa54d20) : drapeau
+    # `non_discriminant` par cellule (budget médian ∈ {1024, 2048}).
+    surface_kstar_v2 = {
+        str(L): {
+            str(jnd): dict(k_star=k_table["v2"][L][jnd]["mediane"],
+                          non_discriminant=_non_discriminant(k_table["v2"][L][jnd]["mediane"]))
+            for jnd in JND_LIST
+        }
+        for L in L_LIST
+    }
     print("SURFACE k*(L, JND) -- bras v2, médianes (4L x 4JND) :")
     header = "  L\\JND  " + "  ".join(f"{jnd * 100:5.0f}%" for jnd in JND_LIST)
     print(header)
@@ -630,6 +721,19 @@ def main() -> None:
             budgets=list(BUDGETS), jnd=list(JND_LIST),
             cap_floats_10pct=CAP_FLOATS, budget_ferm=BUDGET_FERM,
             attendu_ferm_qt=ATTENDU_FERM_QT, attendu_shuf_qt="inf",
+            attendu_shuf_qt_regle_amendement=(
+                "PREREGISTRATION.md pocCascade2phys commit fa54d20 (2026-07-04) : attendu "
+                "shuf requalifié « k*=∞ SOUS LE CAP » -- conforme ssi k* > cap_floats_10pct "
+                "(409.6), violation ssi k* <= 400 ; ferm inchangé (égalité stricte à 32)."),
+            budgets_non_discriminants=list(BUDGETS_NON_DISCRIMINANTS),
+            note_etoile_arc_c=(
+                "Clause de forme 2 (Arc C, PREREGISTRATION.md pocCascade2phys commit "
+                "fa54d20, 2026-07-04) : toute cellule de `surface_kstar_v2` dont `k_star` "
+                "∈ {1024, 2048} porte `non_discriminant: true` -- budget non-discriminant "
+                "vs bruit (à cette proximité de la résolution complète du domaine, même un "
+                "champ shuf devient approximable). Caveat permanent, porté par la surface "
+                "(ce JSON + la figure arcA_kstar_surface_qt.png), pas seulement par le "
+                "journal."),
             L_slope=list(L_SLOPE), n_bootstrap=N_BOOTSTRAP,
             seed_bootstrap=SEED_BOOTSTRAP,
             convention_serialisation="float infini -> chaîne 'inf'/'-inf' ; NaN -> 'nan'",

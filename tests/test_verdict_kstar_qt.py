@@ -9,7 +9,11 @@ donc PAS génériques sur l'axe des tailles -- ce fichier ferme, pour les
 équivalents `_qt` : (i) l'ordre croissant 32->...->2048, (ii) la clause
 d'escalade 2xJND RÉELLEMENT déclenchée, (iii) « aucun budget ne satisfait ->
 ∞ », (iv) l'équivalence gate n=1 (`k_star_groupe_qt` sur groupe singleton ==
-`k_star_seed_qt`), (v) le gate câblé sur l'attendu famille 2 (ferm=32).
+`k_star_seed_qt`), (v) le gate câblé sur l'attendu famille 2 (ferm=32), (vi) le
+gate REQUALIFIÉ shuf (amendement de portée, PREREGISTRATION.md pocCascade2phys,
+commit `fa54d20`, 2026-07-04 : shuf CONFORME ssi k* > CAP_FLOATS=409.6, VIOLATION
+ssi k* <= 400 ; ferm inchangé), (vii) l'étoile Arc C (`_non_discriminant`, même
+commit : budgets médians {1024, 2048} -> drapeau permanent).
 
 Les briques GÉNÉRIQUES (`verdict_A3_jnd`, `capacite_insuffisante_jnd`, etc.,
 importées telles quelles par `run_arcA_verdict_qt.py`) restent testées dans
@@ -29,9 +33,12 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+import math
+
 from scripts.run_arcA_measure import JND_LIST, L_LIST, L_LIST_CONTROL, SEEDS
 from scripts.run_arcA_measure_qt import BUDGETS
 from scripts.run_arcA_verdict_qt import (ATTENDU_FERM_QT, ATTENDU_SHUF_QT,
+                                         CAP_FLOATS, _non_discriminant,
                                          gate_controles_qt, k_star_groupe_qt,
                                          k_star_seed_qt)
 
@@ -226,3 +233,119 @@ def test_gate_controles_qt_detecte_une_violation_ponctuelle():
     assert v["k_star_attendu"] == ATTENDU_FERM_QT
     assert ATTENDU_FERM_QT == 32.0
     assert ATTENDU_SHUF_QT == float("inf")
+
+
+# --- (vi) gate REQUALIFIÉ (amendement de portée, PREREGISTRATION.md pocCascade2phys,
+# commit fa54d20, 2026-07-04) : shuf CONFORME ssi k* > CAP_FLOATS (409.6), VIOLATION
+# ssi k* <= 400 -- ferm INCHANGÉ (égalité stricte à 32). ---------------------------
+
+
+def _gate_synthetic_shuf(k_star_vise: float) -> tuple[str, list[dict]]:
+    """Jeu synthétique ferm+shuf minimal (mêmes axes que les tests (v) ci-dessus) où
+    ferm ferme partout à 32 (CONFORME, inchangé) et shuf ferme EXACTEMENT à
+    `k_star_vise` (un budget fini de BUDGETS, ou float("inf")) sur toute la grille de
+    contrôle -- isole la clause requalifiée shuf de `gate_controles_qt` sans retoucher
+    ferm ni la clause 2xJND."""
+    nL, nSeed, nBudget, nJND = len(L_LIST), len(SEEDS), len(BUDGETS), len(JND_LIST)
+    i32 = BUDGETS.index(32)
+
+    sous_jnd_ferm = np.zeros((nL, nSeed, nBudget, nJND), dtype=bool)
+    ma1_ferm = np.zeros((nL, nSeed, nBudget))
+    ma2_ferm = np.zeros((nL, nSeed, nBudget))
+    for L in L_LIST_CONTROL:
+        iL = L_LIST.index(L)
+        sous_jnd_ferm[iL, :, i32, :] = True
+        ma1_ferm[iL, :, i32] = 0.1 * min(JND_LIST)
+
+    sous_jnd_shuf = np.zeros((nL, nSeed, nBudget, nJND), dtype=bool)
+    ma1_shuf = np.zeros((nL, nSeed, nBudget))
+    ma2_shuf = np.zeros((nL, nSeed, nBudget))
+    if math.isfinite(k_star_vise):
+        i_vise = BUDGETS.index(int(k_star_vise))
+        for L in L_LIST_CONTROL:
+            iL = L_LIST.index(L)
+            sous_jnd_shuf[iL, :, i_vise, :] = True
+            ma1_shuf[iL, :, i_vise] = 0.1 * min(JND_LIST)
+    # sinon (k_star_vise = inf) : sous_jnd_shuf reste tout à False -> k*=∞ partout.
+
+    return gate_controles_qt(sous_jnd_ferm, ma1_ferm, ma2_ferm,
+                             sous_jnd_shuf, ma1_shuf, ma2_shuf)
+
+
+def test_gate_controles_qt_shuf_kstar_2048_est_conforme_sous_le_cap():
+    """Amendement fa54d20 : shuf fermant EXACTEMENT à budget=2048 (> CAP_FLOATS =
+    409.6) est désormais CONFORME. Avant l'amendement (égalité stricte à ∞), ceci
+    aurait été une VIOLATION -- c'est très exactement le comportement observé sur
+    `measures_qt.npz` (7 cellules shuf fermant à 2048, cf. rapport)."""
+    statut, violations = _gate_synthetic_shuf(2048.0)
+    assert statut == "CONFORME"
+    assert violations == []
+
+
+def test_gate_controles_qt_shuf_kstar_infini_reste_conforme():
+    """k*=∞ (aucun budget jamais sous-JND) reste CONFORME après l'amendement --
+    la requalification ÉLARGIT la zone de conformité, elle ne retire rien à ce qui
+    l'était déjà avant."""
+    statut, violations = _gate_synthetic_shuf(float("inf"))
+    assert statut == "CONFORME"
+    assert violations == []
+
+
+def test_gate_controles_qt_shuf_kstar_400_est_en_violation():
+    """k*=400 (<= CAP_FLOATS=409.6, donc SOUS le cap) reste une VIOLATION -- la
+    requalification ne dispense QUE les budgets qui dépassent le cap (1024, 2048),
+    pas les budgets sous-cap."""
+    assert CAP_FLOATS == 409.6 and 400.0 <= CAP_FLOATS   # 400 est bien SOUS le cap
+    statut, violations = _gate_synthetic_shuf(400.0)
+    assert statut == "VIOLATION"
+    assert len(violations) == len(L_LIST_CONTROL) * len(SEEDS) * len(JND_LIST)
+    assert all(v["bras"] == "shuf" and v["k_star_obtenu"] == 400.0 for v in violations)
+    assert all(v["k_star_attendu"] == ATTENDU_SHUF_QT for v in violations)
+
+
+def test_gate_controles_qt_ferm_inchange_sous_amendement():
+    """Ferm reste INCHANGÉ par l'amendement (portée shuf uniquement) : égalité
+    stricte à 32 -- un ferm fermant à 64 (budget immédiatement supérieur, plausible
+    si l'amendement avait été mal câblé sur les deux bras) reste une VIOLATION, PAS
+    une conformité par "proximité" du cap ou d'un budget voisin."""
+    nL, nSeed, nBudget, nJND = len(L_LIST), len(SEEDS), len(BUDGETS), len(JND_LIST)
+    i64 = BUDGETS.index(64)
+
+    sous_jnd_ferm = np.zeros((nL, nSeed, nBudget, nJND), dtype=bool)
+    ma1_ferm = np.zeros((nL, nSeed, nBudget))
+    ma2_ferm = np.zeros((nL, nSeed, nBudget))
+    for L in L_LIST_CONTROL:
+        iL = L_LIST.index(L)
+        sous_jnd_ferm[iL, :, i64, :] = True   # ferme à 64, PAS 32
+        ma1_ferm[iL, :, i64] = 0.1 * min(JND_LIST)
+
+    sous_jnd_shuf = np.zeros((nL, nSeed, nBudget, nJND), dtype=bool)   # k*=∞, conforme
+    ma1_shuf = np.zeros((nL, nSeed, nBudget))
+    ma2_shuf = np.zeros((nL, nSeed, nBudget))
+
+    statut, violations = gate_controles_qt(sous_jnd_ferm, ma1_ferm, ma2_ferm,
+                                           sous_jnd_shuf, ma1_shuf, ma2_shuf)
+    assert statut == "VIOLATION"
+    assert len(violations) == len(L_LIST_CONTROL) * len(SEEDS) * len(JND_LIST)
+    assert all(v["bras"] == "ferm" for v in violations)
+    assert all(v["k_star_obtenu"] == 64.0 and v["k_star_attendu"] == 32.0
+              for v in violations)
+
+
+# --- (vii) étoile Arc C (clause de forme 2, amendement fa54d20) : `_non_discriminant` --
+
+
+def test_non_discriminant_vrai_pour_budgets_1024_et_2048():
+    """Les deux budgets diagnostiques qui ont motivé la requalification de l'attendu
+    shuf (>= moitié de la résolution complète du domaine) portent le drapeau
+    permanent « non-discriminant vs bruit »."""
+    assert _non_discriminant(1024.0) is True
+    assert _non_discriminant(2048.0) is True
+
+
+def test_non_discriminant_faux_pour_budget_400_et_infini():
+    """Un budget sous-cap (400, donc déjà discriminant par construction du cap) ou
+    ∞ (jamais fermé) ne porte PAS le drapeau -- la clause de forme 2 ne s'applique
+    qu'aux deux budgets diagnostiques {1024, 2048}."""
+    assert _non_discriminant(400.0) is False
+    assert _non_discriminant(float("inf")) is False
