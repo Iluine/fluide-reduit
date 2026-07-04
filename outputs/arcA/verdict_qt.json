@@ -49,6 +49,12 @@
     "budget_ferm": 32,
     "attendu_ferm_qt": 32.0,
     "attendu_shuf_qt": "inf",
+    "attendu_shuf_qt_regle_amendement": "PREREGISTRATION.md pocCascade2phys commit fa54d20 (2026-07-04) : attendu shuf requalifié « k*=∞ SOUS LE CAP » -- conforme ssi k* > cap_floats_10pct (409.6), violation ssi k* <= 400 ; ferm inchangé (égalité stricte à 32).",
+    "budgets_non_discriminants": [
+      1024.0,
+      2048.0
+    ],
+    "note_etoile_arc_c": "Clause de forme 2 (Arc C, PREREGISTRATION.md pocCascade2phys commit fa54d20, 2026-07-04) : toute cellule de `surface_kstar_v2` dont `k_star` ∈ {1024, 2048} porte `non_discriminant: true` -- budget non-discriminant vs bruit (à cette proximité de la résolution complète du domaine, même un champ shuf devient approximable). Caveat permanent, porté par la surface (ce JSON + la figure arcA_kstar_surface_qt.png), pas seulement par le journal.",
     "L_slope": [
       40,
       80
@@ -56,7 +62,7 @@
     "n_bootstrap": 10000,
     "seed_bootstrap": 20260704,
     "convention_serialisation": "float infini -> chaîne 'inf'/'-inf' ; NaN -> 'nan'",
-    "elapsed_seconds": 1.8580701351165771
+    "elapsed_seconds": 1.9291636943817139
   },
   "k_star": {
     "v2": {
@@ -793,97 +799,88 @@
   },
   "surface_kstar_v2": {
     "10": {
-      "0.02": 1024.0,
-      "0.03": 400.0,
-      "0.04": 400.0,
-      "0.05": 256.0
+      "0.02": {
+        "k_star": 1024.0,
+        "non_discriminant": true
+      },
+      "0.03": {
+        "k_star": 400.0,
+        "non_discriminant": false
+      },
+      "0.04": {
+        "k_star": 400.0,
+        "non_discriminant": false
+      },
+      "0.05": {
+        "k_star": 256.0,
+        "non_discriminant": false
+      }
     },
     "20": {
-      "0.02": 1024.0,
-      "0.03": 400.0,
-      "0.04": 400.0,
-      "0.05": 400.0
+      "0.02": {
+        "k_star": 1024.0,
+        "non_discriminant": true
+      },
+      "0.03": {
+        "k_star": 400.0,
+        "non_discriminant": false
+      },
+      "0.04": {
+        "k_star": 400.0,
+        "non_discriminant": false
+      },
+      "0.05": {
+        "k_star": 400.0,
+        "non_discriminant": false
+      }
     },
     "40": {
-      "0.02": 1024.0,
-      "0.03": 1024.0,
-      "0.04": 400.0,
-      "0.05": 400.0
+      "0.02": {
+        "k_star": 1024.0,
+        "non_discriminant": true
+      },
+      "0.03": {
+        "k_star": 1024.0,
+        "non_discriminant": true
+      },
+      "0.04": {
+        "k_star": 400.0,
+        "non_discriminant": false
+      },
+      "0.05": {
+        "k_star": 400.0,
+        "non_discriminant": false
+      }
     },
     "80": {
-      "0.02": 2048.0,
-      "0.03": 1024.0,
-      "0.04": 400.0,
-      "0.05": 400.0
+      "0.02": {
+        "k_star": 2048.0,
+        "non_discriminant": true
+      },
+      "0.03": {
+        "k_star": 1024.0,
+        "non_discriminant": true
+      },
+      "0.04": {
+        "k_star": 400.0,
+        "non_discriminant": false
+      },
+      "0.05": {
+        "k_star": 400.0,
+        "non_discriminant": false
+      }
     }
   },
   "gate_controles": {
-    "statut": "VIOLATION",
-    "violations": [
-      {
-        "bras": "shuf",
-        "L": 10,
-        "seed": 101,
-        "jnd": 0.03,
-        "k_star_obtenu": 2048.0,
-        "k_star_attendu": "inf"
-      },
-      {
-        "bras": "shuf",
-        "L": 10,
-        "seed": 102,
-        "jnd": 0.03,
-        "k_star_obtenu": 2048.0,
-        "k_star_attendu": "inf"
-      },
-      {
-        "bras": "shuf",
-        "L": 10,
-        "seed": 101,
-        "jnd": 0.04,
-        "k_star_obtenu": 2048.0,
-        "k_star_attendu": "inf"
-      },
-      {
-        "bras": "shuf",
-        "L": 10,
-        "seed": 102,
-        "jnd": 0.04,
-        "k_star_obtenu": 2048.0,
-        "k_star_attendu": "inf"
-      },
-      {
-        "bras": "shuf",
-        "L": 10,
-        "seed": 101,
-        "jnd": 0.05,
-        "k_star_obtenu": 2048.0,
-        "k_star_attendu": "inf"
-      },
-      {
-        "bras": "shuf",
-        "L": 10,
-        "seed": 102,
-        "jnd": 0.05,
-        "k_star_obtenu": 2048.0,
-        "k_star_attendu": "inf"
-      },
-      {
-        "bras": "shuf",
-        "L": 80,
-        "seed": 104,
-        "jnd": 0.05,
-        "k_star_obtenu": 2048.0,
-        "k_star_attendu": "inf"
-      }
-    ],
+    "statut": "CONFORME",
+    "violations": [],
     "n_cellules_par_bras": {
       "ferm": 40,
       "shuf": 40
     },
     "n_violations_par_bras": {
       "ferm": 0,
-      "shuf": 7
+      "shuf": 0
     }
   },
   "pentes_v2": {
@@ -946,12 +943,20 @@
     "global_": "INDETERMINE",
     "messages_capacite_par_jnd": {},
     "message_capacite_global": null,
-    "issue_mappee": "NON LISIBLE : gate d'instrument en violation (amendement famille 2) — remonter avant toute lecture d'issue."
+    "issue_mappee": "global INDÉTERMINÉ — surface k*(L, JND) portée à l'Arc C"
   },
   "verdict_v2_scelle": {
-    "lisible": false,
-    "message": "NON LISIBLE : gate d'instrument en violation (amendement famille 2) — remonter avant toute lecture d'issue.",
-    "issue_mappee": "NON LISIBLE : gate d'instrument en violation (amendement famille 2) — remonter avant toute lecture d'issue."
+    "lisible": true,
+    "par_jnd": {
+      "0.02": "INDETERMINE",
+      "0.03": "INDETERMINE",
+      "0.04": "PASS",
+      "0.05": "PASS"
+    },
+    "global_": "INDETERMINE",
+    "messages_capacite_par_jnd": {},
+    "message_capacite_global": null,
+    "issue_mappee": "global INDÉTERMINÉ — surface k*(L, JND) portée à l'Arc C"
   },
-  "issue_mappee": "NON LISIBLE : gate d'instrument en violation (amendement famille 2) — remonter avant toute lecture d'issue."
+  "issue_mappee": "global INDÉTERMINÉ — surface k*(L, JND) portée à l'Arc C"
 }
