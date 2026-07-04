@@ -102,3 +102,8 @@ Task 1 : DONE (commits 4f5c1c6, d98642f) — src/arcC_stimuli.py + scripts/build
   outputs/arcC/stimuli_catalogue.npz + tests. 327/327 verts. R1 recoupe ma1_v2 à l'EXACT 0.0 sur
   7 budgets. Catalogue bracket JND [~1-6%] : budget 256 (Δχ(1)∈[2.78,7.85]%), 400 (∈[1.77,4.18]%).
   140 courbes toutes monotones (observé, non imposé). EN REVUE (relecteur dispatché).
+Task 1 : COMPLETE (commits 4f5c1c6..9bef82f, review clean). Re-revue sur pièces : 3 findings
+  corrigés (assert tautologique→observation ; chargeur ré-importé avec garde-fou b0 ; test
+  S_HALF_OP==0.05·RELIEF). Suite complète 327/327 verte, npz catalogue bit-identique.
+Task 2 : dispatché (harnais ABX + staircase 2 régimes + auto-calibration §C7 ; sujet synthétique,
+  aucun humain). Brief .superpowers/sdd/arcC-task2-abx-brief.md. BASE = 9bef82f.
