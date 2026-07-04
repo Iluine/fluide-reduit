@@ -271,6 +271,45 @@ def run_episode(s: np.ndarray, b0: np.ndarray, center_frac: tuple[float, float],
     return _integrate_exner(s, times, hs, hus, hvs, params)
 
 
+def _integrate_exner_trajectoire(s0: np.ndarray, times: np.ndarray, hs: np.ndarray,
+                                 hus: np.ndarray, hvs: np.ndarray,
+                                 params: SedimentParams) -> list[np.ndarray]:
+    """Variante ADDITIVE de `_integrate_exner` (cas `return_terms=False`) : même
+    boucle de contrôle (mêmes indices de snapshots, même `dt`), même loi Exner
+    -- réutilise `_exner_step` telle quelle, SANS la dupliquer -- mais accumule et
+    retourne la séquence COMPLÈTE des `s` intermédiaires (un par snapshot
+    d'intégration Exner, `s0` en tête) au lieu du seul état final. `_integrate_exner`
+    n'est ni appelée ni modifiée ici : aucun chemin de code existant n'est affecté,
+    ses appelants restent bit-identiques (cf. tests/test_sediment.py)."""
+    s = s0.copy()
+    n = len(times)
+    trajectoire = [s.copy()]
+    for i in range(params.save_every, n, params.save_every):
+        dt = float(times[i] - times[i - params.save_every])
+        s = _exner_step(s, hs[i], hus[i], hvs[i], dt, params)
+        trajectoire.append(s.copy())
+    return trajectoire
+
+
+def run_episode_trajectoire(s: np.ndarray, b0: np.ndarray,
+                            center_frac: tuple[float, float],
+                            params: SedimentParams = SedimentParams()
+                            ) -> list[np.ndarray]:
+    """Variante ADDITIVE de `run_episode` (M-0bis, M-A2-mini) : MÊME physique
+    (pulse -> relaxation `simulate_wetdry_o2` sur `b_eff = b0 + s` gelé ->
+    intégration Exner séquentielle), mais retourne la séquence COMPLÈTE des `s`
+    intermédiaires aux snapshots d'intégration Exner (au lieu du seul état final).
+    Le DERNIER élément de la séquence retournée est bit-identique à
+    `run_episode(s, b0, center_frac, params)` sur le même cas (prouvé par test) --
+    même `_relax_episode` (inchangée), même `_exner_step` (loi Exner inchangée),
+    seule la boucle de contrôle de l'intégration est réexécutée ici pour accumuler
+    la trajectoire (`_integrate_exner_trajectoire`, cf. ci-dessus). Fonction PURE :
+    ne mute ni `s` ni `b0`."""
+    b_eff = b0 + s
+    times, hs, hus, hvs = _relax_episode(b_eff, center_frac, params)
+    return _integrate_exner_trajectoire(s, times, hs, hus, hvs, params)
+
+
 def run_history(seed: int, n_episodes: int, b0: np.ndarray,
                 params: SedimentParams = SedimentParams(),
                 checkpoints: set[int] | None = None) -> dict[int, np.ndarray]:

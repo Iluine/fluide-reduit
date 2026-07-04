@@ -4,7 +4,8 @@ import pytest
 from dataclasses import replace
 
 from config import GridConfig
-from src.sediment import (default_terrain, run_episode, run_history, resfrac_history,
+from src.sediment import (default_terrain, run_episode, run_episode_trajectoire,
+                          run_history, resfrac_history,
                           SedimentParams, KD_CALIBRE, KD_CALIBRE_V2, KE_CALIBRE_V2,
                           _relax_episode, _integrate_exner, _exner_step, _DRY_EPS)
 
@@ -188,3 +189,49 @@ def test_resfrac_history_increases_with_ke():
     rf_lo = resfrac_history(seed=7, n_episodes=3, b0=B0, params=params_lo)
     rf_hi = resfrac_history(seed=7, n_episodes=3, b0=B0, params=params_hi)
     assert rf_hi > rf_lo
+
+
+# --- run_episode_trajectoire (M-0bis, additif -- cf. brief refond-task2-m0bis) --
+
+
+def test_run_episode_trajectoire_endpoint_matches_run_episode():
+    """L'endpoint de la trajectoire (dernier élément) doit être bit-identique à
+    `run_episode` sur le même cas -- preuve que la variante ADDITIVE réutilise
+    exactement la même mécanique (`_relax_episode` + `_exner_step`), sans dupliquer
+    ni dévier de la loi Exner. N_settle réduit (_SMALL_PARAMS) pour la vitesse du
+    test -- la propriété testée (identité de l'endpoint) ne dépend pas de N_settle."""
+    s0 = np.zeros_like(B0)
+    traj = run_episode_trajectoire(s0, B0, _CENTER, _SMALL_PARAMS)
+    s_direct = run_episode(s0, B0, _CENTER, _SMALL_PARAMS)
+    assert np.array_equal(traj[-1], s_direct)
+
+
+def test_run_episode_trajectoire_length_and_first_element():
+    """Longueur = 1 (s0 en tête) + nombre de pas d'intégration Exner
+    (range(save_every, N_settle+1, save_every)) ; premier élément = s0 (valeur
+    égale, copie -- pas la même identité d'objet)."""
+    s0 = np.zeros_like(B0)
+    traj = run_episode_trajectoire(s0, B0, _CENTER, _SMALL_PARAMS)
+    n = _SMALL_PARAMS.N_settle + 1
+    n_pas = len(range(_SMALL_PARAMS.save_every, n, _SMALL_PARAMS.save_every))
+    assert len(traj) == 1 + n_pas
+    assert np.array_equal(traj[0], s0)
+    assert traj[0] is not s0
+
+
+def test_run_episode_trajectoire_is_pure_no_mutation():
+    s0 = np.zeros_like(B0)
+    b0_copy = B0.copy()
+    s0_copy = s0.copy()
+    _ = run_episode_trajectoire(s0, B0, _CENTER, _SMALL_PARAMS)
+    assert np.array_equal(B0, b0_copy)
+    assert np.array_equal(s0, s0_copy)
+
+
+def test_run_episode_trajectoire_deterministic_bitwise():
+    s0 = np.zeros_like(B0)
+    traj1 = run_episode_trajectoire(s0, B0, _CENTER, _SMALL_PARAMS)
+    traj2 = run_episode_trajectoire(s0, B0, _CENTER, _SMALL_PARAMS)
+    assert len(traj1) == len(traj2)
+    for a, b in zip(traj1, traj2):
+        assert np.array_equal(a, b)
