@@ -52,3 +52,15 @@ Task 6 (verdict): complete (commits 96eaf70+cf6c131, correctif 12f0446, revue + 
   Minors reportés à la revue finale : duplication axes catégoriels entre figures ; clé JSON
   "global_" ; main() ~150 lignes ; invariant sous_jnd violé sciemment dans le test d'escalade
   (documenté).
+Itération ordre 0 : BLOCKED intermédiaire correct de l'implémenteur — S∘R bit-à-bit échouait
+  d'1 ULP à ℓ=3 (numpy .mean non-binaire sur 64 élts/bloc). Décision contrôleur : summarize
+  ré-implémentée en cascade 2×2 itérée (définition récursive de Harten, sémantique inchangée,
+  exacte par construction sur blocs constants) — promesse gravée rendue vraie en flottant.
+  Reproduction bit-exacte de M-0bis/run v1 = par checkout historique (consigné).
+Itération ordre 0 : complete (commits c35e4dd/ab7de1e/04b8163/c518b11, revue Approved, vérif
+  indépendante sur données) — 164 tests. Gate CONFORME (ferm 0/40 exact 0.0 ; shuf 0/40).
+  PREMIER VERDICT LISIBLE : JND 2 % = INDETERMINE_CAPACITE ; 3/4/5 % = INDÉTERMINÉ ;
+  global INDÉTERMINÉ. k* finis pour la première fois : 1041 aux petits L (hors cap),
+  ∞ à L=80 (JND 4-5 %). Prédiction directionnelle FALSIFIÉE (Δχ baissent 120/120).
+  Diag escalier : Δχ(0)=0.3265, max=0.3875, rapport 1.187. Remonté à Romain (fork clause 1).
+  Minors : docstrings longs ; tolérance absolue 1e-12 non nommée dans _verifier_masse_restituee.
