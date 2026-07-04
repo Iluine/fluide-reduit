@@ -64,3 +64,12 @@ Itération ordre 0 : complete (commits c35e4dd/ab7de1e/04b8163/c518b11, revue Ap
   ∞ à L=80 (JND 4-5 %). Prédiction directionnelle FALSIFIÉE (Δχ baissent 120/120).
   Diag escalier : Δχ(0)=0.3265, max=0.3875, rapport 1.187. Remonté à Romain (fork clause 1).
   Minors : docstrings longs ; tolérance absolue 1e-12 non nommée dans _verifier_masse_restituee.
+Famille 2 quadtree (module) : commits 18e52b9+e0eae53, 286 tests (122 nouveaux), S∘R strict
+  arbre inclus aux 7 budgets × 3 champs. ARBITRAGE IMPLÉMENTEUR VALIDÉ PAR LE CONTRÔLEUR :
+  la clause brief « masses 16×16 vs original 1e-12 » était insatisfiable sous troncature
+  (feuille englobante = redistribution uniforme, contre-exemple en test exécutable) ; lecture
+  actée = conservation TOTALE 1e-12 + par-feuille 1e-12 + 16×16 exactes vs RÉGÉNÉRÉ +
+  16×16 vs original là où dérivables (anti-vacuité). Fidélité spatiale jugée par le readout
+  (design). Interruption limite API pendant le GREEN, reprise propre. Revue en cours.
+Famille 2 (module) : complete (revue Approved, vérifications par exécution indépendante).
+  Minors : boundary 400→398 non pinné en test ; formule taille dupliquée ; init _pyramide indirect.
