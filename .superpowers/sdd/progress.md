@@ -26,3 +26,10 @@ Task 1 (M-0): complete (commit 09fca34, revue clean 1er passage) — VERDICT lec
   Tasks 2–4 NON lancées, gate §A9 à repenser avant tout build. Remonté à Romain.
   Minors reportés à la revue finale : littéraux N_EPISODES/SEED/BOX dupliqués (phase_a ne les
   expose pas) ; pas de micro-test _f_ordre ; print dict brut du plancher relief.
+M-0bis (sonde de testabilité): complete (commits 32e9004..cc61056, revue clean 1er passage) —
+  VERDICT T_testable : max(M-A1, M-A2-mini) sous cap ∈ [0.13, 0.63] vs seuil 0.02, les 4 cellules
+  échouent le test de trivialité. src/summary.py (spec gravée Task 4 manche 1) construit en TDD,
+  21 tests ; run_episode_trajectoire additive (+4 tests) ; 130 verts. Remonté à Romain.
+  Minors reportés à la revue finale : Summary.__eq__/__hash__ latent (suggérer eq=False) ;
+  duplication boucle de contrôle _integrate_exner_trajectoire ; assert nu 11ᵉ centre (python -O) ;
+  round-trip testé sur constante dyadique 4.0 ; pas de test level invalide.
