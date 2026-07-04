@@ -84,3 +84,11 @@ Re-lecture gate (amendement fa54d20) : commits 49189d1+11091a0, re-revue Approve
   0/80 ; k*/pentes bit-identiques à l'audit (déverrouillage = règle de lecture seule) ; 301 tests.
   VERDICT LISIBLE : 2%=INDÉT, 3%=INDÉT, 4%=PASS, 5%=PASS ; global INDÉTERMINÉ → surface → Arc C.
   6/16 cellules étoilées non-discriminantes. Minor : rupture de schéma surface_kstar_v2 (documentée).
+
+## Arc C — Pin JND (branche arc-c-pin-jnd, plan docs/superpowers/plans/arc-c-pin-jnd.md)
+Task 0 (partiel) : addendum §C0-§C5 gravé (pocCascade2phys c494d50, commit dédié) ; branche +
+  plan commités ; inventaire : stimuli spatiaux OK (h_s101..105.npz : s_L{10,20,40,80} 64×64),
+  rendu réel OK (render.py/io_utils : viridis, vmin=0, vmax=1, origin lower) ;
+  BOUSSINESQ Ra=1e7 ABSENT de la machine (grep src/scripts/docs vide — code jamais porté ici,
+  journal seul ; cf. mémoire substrat-sediment-introuvable). POINT D'ARRÊT remonté à Romain :
+  validation C-0 + conditions d'affichage + arbitrage axe temporel sans générateur.
