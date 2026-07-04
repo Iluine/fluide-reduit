@@ -42,28 +42,29 @@ sys.path.insert(0, str(ROOT))
 
 import numpy as np
 
-from scripts.run_arcA_measure import _versions
+from scripts.run_arcA_measure import L_LIST, SEEDS, _load_history, _versions
 from scripts.run_arcA_revalidate import S_HALF_OP
 from src.arcC_stimuli import courbe_delta_chi
 
-HIST_DIR = ROOT / "outputs" / "arcA" / "histories"
 OUT_DIR = ROOT / "outputs" / "arcC"
 OUT_PATH = OUT_DIR / "stimuli_catalogue.npz"
 MEASURES_QT_PATH = ROOT / "outputs" / "arcA" / "measures_qt.npz"
 
-# Grille manche 1 -- IMPORTÉE en dur ici (mêmes valeurs que
-# `scripts.run_arcA_measure_qt`, cf. brief : "Réutilise-les comme axe des
-# budgets" -- pas de réimport croisé de script à script pour ces constantes
-# simples, afin de ne pas coupler ce script à l'exécution de la mesure M-A1).
-SEEDS: tuple[int, ...] = (101, 102, 103, 104, 105)
-L_LIST: tuple[int, ...] = (10, 20, 40, 80)
+# SEEDS et L_LIST : IMPORTÉS de `scripts.run_arcA_measure` (module déjà
+# importé pour `_versions` -- zéro couplage nouveau), pour réutiliser le
+# chargeur `_load_history` avec son garde-fou d'intégrité (b0 vs B0). BUDGETS
+# reste local : grille propre à `scripts.run_arcA_measure_qt`, non importée
+# ici (cf. brief : "Réutilise-les comme axe des budgets" -- pas de réimport
+# croisé de script à script pour cette constante).
 BUDGETS: tuple[int, ...] = (32, 64, 128, 256, 400, 1024, 2048)
 TS: np.ndarray = np.linspace(0.0, 1.0, 11)
 
 
 def _charger_s_true(seed: int, L: int) -> np.ndarray:
-    with np.load(HIST_DIR / f"h_s{seed}.npz") as d:
-        return np.array(d[f"s_L{L}"], dtype=np.float64)
+    """Champ de sédiment `s_L{L}` de l'histoire de la seed -- via le chargeur
+    de manche 1 (`_load_history`), qui vérifie la cohérence `b0` du npz vs
+    `B0` gravé (garde-fou d'intégrité, cf. `scripts.run_arcA_measure`)."""
+    return np.array(_load_history(seed)[f"s_L{L}"], dtype=np.float64)
 
 
 def construire_catalogue() -> Path:

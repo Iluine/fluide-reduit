@@ -31,7 +31,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from scripts.run_arcA_revalidate import S_HALF_OP
+from scripts.run_arcA_revalidate import RELIEF, S_HALF_OP
 from src.arcC_stimuli import courbe_delta_chi, delta_chi_stim, melange, regenere_budget
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -136,7 +136,7 @@ def test_courbe_delta_chi_bornes_sans_hypothese_de_monotonie(seed, L, budget):
     # Observation SEULE (pas d'assert) -- documente le choix du brief : la
     # courbe peut être non-monotone, ce n'est pas un échec de test.
     est_monotone = bool(np.all(np.diff(courbe) >= -1e-15))
-    assert est_monotone in (True, False)  # tautologie : juste marquer l'observation
+    print(f"[observation] courbe monotone (non assertée) : {est_monotone}")
 
 
 # --- Famille 4 : bornes physiques de `melange` --------------------------------
@@ -220,4 +220,4 @@ def test_s_half_op_importe_est_celui_grave():
     """Sanity anti-recalcul : S_HALF_OP = 0.05*RELIEF (gravé manche 1),
     importé tel quel de `scripts.run_arcA_revalidate` -- ne doit jamais être
     recalculé localement dans `src/arcC_stimuli.py`."""
-    assert S_HALF_OP > 0.0
+    assert S_HALF_OP == 0.05 * RELIEF
