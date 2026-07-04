@@ -22,6 +22,12 @@ Extrait verbatim (plan, Task 6) :
     Verdict global retenu ssi stable sur TOUTE la plage JND, sinon INDÉTERMINÉ
     (sensibilité §A3).
 
+Clause 1 (gravée, arbitrage 9bcb09a -- s'ajoute à la grille §A3 sans en changer
+le reste) : si k*(L ; JND) = ∞ pour TOUS les L de la grille, le verdict de
+cette cellule JND est INDETERMINE_CAPACITE (au lieu d'INDETERMINE générique),
+avec message mécanique gravé (cf. MESSAGE_INDETERMINE_CAPACITE) ; global
+INDETERMINE_CAPACITE ssi les 4 JND le sont.
+
 Et l'amendement (ii), qui S'APPLIQUE AVANT toute lecture du verdict v2 :
 
     contrôle-fermable : attendu k* = 81 partout ; contrôle-infermable : attendu
@@ -340,10 +346,53 @@ def verdict_A3_global(verdicts_par_jnd: dict[float, str]) -> str:
     return "INDETERMINE"
 
 
+# --- Clause 1 (gravée, arbitrage 9bcb09a) : label INDETERMINE_CAPACITE --------
+
+# Message mécanique GRAVÉ (clause 1, verbatim -- testé tel quel dans
+# tests/test_verdict_kstar.py) : accompagne toute cellule/global
+# INDETERMINE_CAPACITE, sans interprétation ajoutée.
+MESSAGE_INDETERMINE_CAPACITE: str = (
+    "famille insuffisante à ce JND ; N'EST PAS le mur (le mur = croissance "
+    "avec l'histoire) ; ne sélectionne pas la cellule 2/3 de §A0 ; fork "
+    "famille-vs-manche-2 à remonter")
+
+
+def capacite_insuffisante_jnd(k_par_L: dict[int, float]) -> bool:
+    """Clause 1 : True ssi k*(L ; JND) = ∞ pour TOUS les L de la grille du
+    bras -- la famille {block-mean ℓ, invariants} ne ferme RIEN sous le cap à
+    ce JND, y compris à L₀ : elle manque de capacité (ce qui n'est PAS le mur,
+    cf. MESSAGE_INDETERMINE_CAPACITE)."""
+    return all(not math.isfinite(float(k)) for k in k_par_L.values())
+
+
+def verdict_A3_jnd_avec_capacite(k_par_L: dict[int, float], k40: float, k80: float,
+                                 ic_lo: float, ic_hi: float) -> str:
+    """Verdict d'UNE cellule JND, clause 1 appliquée EN PREMIER (plus
+    spécifique que l'INDETERMINE générique : k*=∞ à TOUS les L rend la
+    machinerie pente/IC sans objet -- la grille §A3 présupposait des k*
+    finis) : si k*(L ; JND) = ∞ partout -> INDETERMINE_CAPACITE ; sinon
+    lecture mécanique §A3 INCHANGÉE (`verdict_A3_jnd`)."""
+    if capacite_insuffisante_jnd(k_par_L):
+        return "INDETERMINE_CAPACITE"
+    return verdict_A3_jnd(k40, k80, ic_lo, ic_hi)
+
+
+def verdict_A3_global_avec_capacite(verdicts_par_jnd: dict[float, str]) -> str:
+    """Verdict global, clause 1 : si les 4 JND sont INDETERMINE_CAPACITE ->
+    global INDETERMINE_CAPACITE (même message). Sinon, règle globale INCHANGÉE
+    (`verdict_A3_global` : stable sur toute la plage, sinon INDETERMINE) -- un
+    cas mixte (capacité à un JND, autre chose ailleurs) ne produit donc JAMAIS
+    le label en global."""
+    if all(v == "INDETERMINE_CAPACITE" for v in verdicts_par_jnd.values()):
+        return "INDETERMINE_CAPACITE"
+    return verdict_A3_global(verdicts_par_jnd)
+
+
 def cellule_A0(gate_statut: str, verdict_global: str) -> str:
     """Citation MÉCANIQUE de la cellule §A0 sélectionnée par le verdict de la
-    manche (grille pré-interprétée §A0, PREREGISTRATION.md pocCascade2phys) --
-    aucune interprétation ajoutée au-delà de la grille déjà gravée."""
+    manche (grille pré-interprétée §A0, PREREGISTRATION.md pocCascade2phys ;
+    clause 1 gravée 9bcb09a pour INDETERMINE_CAPACITE) -- aucune
+    interprétation ajoutée au-delà des grilles déjà gravées."""
     if gate_statut != "CONFORME":
         return ("NON DÉTERMINÉE : verdict v2 non lisible (gate d'instrument en "
                "violation, amendement ii) -- remonter avant toute lecture §A0.")
@@ -354,6 +403,9 @@ def cellule_A0(gate_statut: str, verdict_global: str) -> str:
     if verdict_global == "FAIL":
         return ("Cellule 2-ou-3 (à départager par la manche 2, §A0) -- un FAIL de "
                "la manche 1 est NON-EXISTENTIEL, pré-étiqueté « il ne tue rien ».")
+    if verdict_global == "INDETERMINE_CAPACITE":
+        return ("AUCUNE cellule §A0 sélectionnée (clause 1 gravée 9bcb09a) : "
+               + MESSAGE_INDETERMINE_CAPACITE + ".")
     return ("INDÉTERMINÉ : §A0 non tranché -- options pré-écrites §A3 (étendre à "
            "16*L0 une seule fois, ou porter l'incertitude et ouvrir la manche 2), "
            "décision du contrôleur, hors du périmètre de ce script.")
@@ -649,9 +701,18 @@ def main() -> None:
         res = pente_bootstrap(data["sous_jnd_v2"], data["ma1_v2"], data["ma2_v2"],
                               jnd, k40, k80)
         pentes_v2[jnd] = res
-        verdicts_par_jnd[jnd] = verdict_A3_jnd(k40, k80, res["ic95"][0], res["ic95"][1])
+        # Clause 1 (gravée 9bcb09a) : la capacité se juge sur TOUS les L de la
+        # grille v2, pas seulement L_SLOPE -- puis lecture §A3 inchangée sinon.
+        k_par_L = {L: k_table["v2"][L][jnd]["mediane"] for L in L_LIST}
+        verdicts_par_jnd[jnd] = verdict_A3_jnd_avec_capacite(
+            k_par_L, k40, k80, res["ic95"][0], res["ic95"][1])
 
-    verdict_global = verdict_A3_global(verdicts_par_jnd)
+    verdict_global = verdict_A3_global_avec_capacite(verdicts_par_jnd)
+    messages_par_jnd = {jnd: MESSAGE_INDETERMINE_CAPACITE
+                        for jnd, v in verdicts_par_jnd.items()
+                        if v == "INDETERMINE_CAPACITE"}
+    message_global = (MESSAGE_INDETERMINE_CAPACITE
+                      if verdict_global == "INDETERMINE_CAPACITE" else None)
 
     print("-" * 78)
     print(f"Pente k*(L) sur L∈{L_SLOPE} (bras v2) + IC95% bootstrap "
@@ -664,11 +725,15 @@ def main() -> None:
 
     print("-" * 78)
     if gate_statut == "CONFORME":
-        print("VERDICT DE LA MANCHE (§A3, bras v2, mécanique) :")
+        print("VERDICT DE LA MANCHE (§A3 + clause 1, bras v2, mécanique) :")
         for jnd in JND_LIST:
-            print(f"  jnd={jnd:.2f} : {verdicts_par_jnd[jnd]}")
-        print(f"  GLOBAL (stable sur toute la plage JND ssi identique ci-dessus) : "
-             f"{verdict_global}")
+            suffixe = (f"  [{MESSAGE_INDETERMINE_CAPACITE}]"
+                       if jnd in messages_par_jnd else "")
+            print(f"  jnd={jnd:.2f} : {verdicts_par_jnd[jnd]}{suffixe}")
+        print(f"  GLOBAL (stable sur toute la plage JND ssi identique ci-dessus ; "
+             f"clause 1 si 4/4 INDETERMINE_CAPACITE) : {verdict_global}")
+        if message_global is not None:
+            print(f"  [{message_global}]")
         print(f"§A0 -- cellule sélectionnée : {cellule_A0(gate_statut, verdict_global)}")
     else:
         print("verdict_v2_scelle : NON LISIBLE : gate d'instrument en violation "
@@ -680,10 +745,14 @@ def main() -> None:
     k80_par_bras = {arm: {jnd: k_table[arm][L_SLOPE[1]][jnd]["mediane"] for jnd in JND_LIST}
                    for arm in ARMS}
 
-    verdict_v2_audit = dict(par_jnd=verdicts_par_jnd, global_=verdict_global)
+    verdict_v2_audit = dict(par_jnd=verdicts_par_jnd, global_=verdict_global,
+                            messages_capacite_par_jnd=messages_par_jnd,
+                            message_capacite_global=message_global)
     if gate_statut == "CONFORME":
         verdict_v2_scelle = dict(lisible=True, par_jnd=verdicts_par_jnd,
                                  global_=verdict_global,
+                                 messages_capacite_par_jnd=messages_par_jnd,
+                                 message_capacite_global=message_global,
                                  cellule_A0=cellule_A0(gate_statut, verdict_global))
     else:
         verdict_v2_scelle = dict(

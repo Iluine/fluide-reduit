@@ -25,8 +25,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from scripts.run_arcA_verdict import (ATTENDU_FERM, ATTENDU_SHUF, JND_LIST,
-                                      LEVELS, L_LIST, L_LIST_CONTROL, SEEDS,
-                                      gate_controles, k_star_groupe, k_star_seed)
+                                      LEVELS, L_LIST, L_LIST_CONTROL,
+                                      MESSAGE_INDETERMINE_CAPACITE, SEEDS,
+                                      gate_controles, k_star_groupe, k_star_seed,
+                                      verdict_A3_global_avec_capacite,
+                                      verdict_A3_jnd_avec_capacite)
 
 JND = 0.03  # JND de test, dans la plage réelle {2,3,4,5}% -- valeur non spéciale.
 
@@ -225,3 +228,75 @@ def test_gate_controles_detecte_une_violation_ponctuelle():
     assert v["k_star_obtenu"] == float("inf")
     assert v["k_star_attendu"] == ATTENDU_FERM
     assert ATTENDU_SHUF == float("inf")   # sanity de la constante utilisée par le bras shuf
+
+
+# --- Clause 1 (gravée 9bcb09a) : label INDETERMINE_CAPACITE ------------------
+
+INF = float("inf")
+# IC contenant 0 (compatible PASS si k fini sous cap) -- pour vérifier que la
+# clause capacité est PRIORITAIRE sur la lecture pente/IC quand k*=∞ partout.
+_IC_LO, _IC_HI = -1.0, 1.0
+
+
+def test_verdict_jnd_indetermine_capacite_si_k_infini_a_tous_les_L():
+    """Clause 1 : k*(L ; JND) = ∞ pour TOUS les L de la grille -> le verdict de
+    cette cellule JND est INDETERMINE_CAPACITE (pas l'INDETERMINE générique)."""
+    k_par_L = {L: INF for L in L_LIST}
+    verdict = verdict_A3_jnd_avec_capacite(k_par_L, INF, INF, _IC_LO, _IC_HI)
+    assert verdict == "INDETERMINE_CAPACITE"
+
+
+def test_verdict_jnd_pas_capacite_si_un_L_est_fini():
+    """Un seul L fini (ici L=10 -> 81) suffit à NE PAS déclencher la clause
+    capacité : le verdict retombe sur la lecture mécanique §A3 existante
+    (ici k*(40)=∞ -> INDETERMINE générique, comportement INCHANGÉ)."""
+    k_par_L = {L: INF for L in L_LIST}
+    k_par_L[10] = 81.0
+    verdict = verdict_A3_jnd_avec_capacite(k_par_L, INF, INF, _IC_LO, _IC_HI)
+    assert verdict == "INDETERMINE"
+
+
+def test_verdict_jnd_k_finis_partout_semantique_inchangee():
+    """AUCUN autre changement de sémantique : avec des k* finis partout, la
+    cellule JND rend exactement ce que rendait la lecture §A3 (ici PASS :
+    pente nulle, IC ∋ 0, k*(80)=81 <= cap)."""
+    k_par_L = {L: 81.0 for L in L_LIST}
+    verdict = verdict_A3_jnd_avec_capacite(k_par_L, 81.0, 81.0, _IC_LO, _IC_HI)
+    assert verdict == "PASS"
+
+
+def test_verdict_global_indetermine_capacite_si_4_sur_4():
+    """Clause 1, verdict global : les 4 JND INDETERMINE_CAPACITE -> global
+    INDETERMINE_CAPACITE (même message mécanique)."""
+    verdicts = {jnd: "INDETERMINE_CAPACITE" for jnd in JND_LIST}
+    assert verdict_A3_global_avec_capacite(verdicts) == "INDETERMINE_CAPACITE"
+
+
+def test_verdict_global_cas_mixte_ne_produit_pas_le_label():
+    """Cas mixte exigé par la spec : ∞ à un JND (INDETERMINE_CAPACITE), fini à
+    un autre (ici PASS) -> le global n'est PAS INDETERMINE_CAPACITE ; la règle
+    globale INCHANGÉE s'applique (non stable sur la plage -> INDETERMINE)."""
+    verdicts = {jnd: "INDETERMINE_CAPACITE" for jnd in JND_LIST}
+    verdicts[JND_LIST[-1]] = "PASS"
+    verdict = verdict_A3_global_avec_capacite(verdicts)
+    assert verdict != "INDETERMINE_CAPACITE"
+    assert verdict == "INDETERMINE"
+
+
+def test_verdict_global_regle_inchangee_hors_capacite():
+    """Sans aucun INDETERMINE_CAPACITE, la règle globale est INCHANGÉE :
+    stable sur toute la plage -> la valeur ; sinon INDETERMINE."""
+    assert verdict_A3_global_avec_capacite(
+        {jnd: "PASS" for jnd in JND_LIST}) == "PASS"
+    assert verdict_A3_global_avec_capacite(
+        {jnd: ("PASS" if i else "FAIL") for i, jnd in enumerate(JND_LIST)}
+    ) == "INDETERMINE"
+
+
+def test_message_indetermine_capacite_verbatim_grave():
+    """Le message mécanique doit être VERBATIM celui gravé (clause 1,
+    arbitrage 9bcb09a / brief volet 2)."""
+    assert MESSAGE_INDETERMINE_CAPACITE == (
+        "famille insuffisante à ce JND ; N'EST PAS le mur (le mur = croissance "
+        "avec l'histoire) ; ne sélectionne pas la cellule 2/3 de §A0 ; fork "
+        "famille-vs-manche-2 à remonter")
