@@ -33,3 +33,9 @@ M-0bis (sonde de testabilité): complete (commits 32e9004..cc61056, revue clean 
   Minors reportés à la revue finale : Summary.__eq__/__hash__ latent (suggérer eq=False) ;
   duplication boucle de contrôle _integrate_exner_trajectoire ; assert nu 11ᵉ centre (python -O) ;
   round-trip testé sur constante dyadique 4.0 ; pas de test level invalide.
+Manche 1 relancée SUR v2 (arbitrage Romain, amendements gravés 8e02dd6 ; plan amendé 069b70e).
+Task 3 (histoires): complete (commit 04ac96f, revue clean 1er passage) — 5 npz (seeds 101-105,
+  L∈{10,20,40,80}), sanity PASS ×2 (f_ordre(101,102)=0.7136 ; replay bit-à-bit). 130 tests verts.
+  Minors : constantes reconstruites localement vs importées ; _load_history_npz charge tout.
+  Note pour Task 5/6 : max(s)/relief dérive au-delà de la fenêtre de calibration à L=80 (attendu,
+  la calibration visait L₀=10).
