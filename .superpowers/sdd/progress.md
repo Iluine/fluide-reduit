@@ -45,3 +45,10 @@ Task 5 (mesures): complete (commits a64185b+4a572c5, revue clean 1er passage) �
   k*=81 : plancher de round-trip du régénérateur bilinéaire à ℓ=3 = 0.09-0.19 > JND max —
   observation brute, lecture formelle en Task 6 (gate d'instrument attendu : STOP).
   Minors : _versions() recalculé à l'assemble ; errstate redondant ; sanity préfixe re-exécutée.
+Task 6 (verdict): complete (commits 96eaf70+cf6c131, correctif 12f0446, revue + re-revue Approved) —
+  GATE DES CONTRÔLES = VIOLATION (ferm 40/40 : jamais k*=81 ; shuf 0/40 conforme).
+  Verdict §A3 v2 SCELLÉ « NON LISIBLE » (audit : INDÉTERMINÉ ×4 JND, k*(L)=∞ partout).
+  139 tests verts. Manche 1 au point d'arrêt obligatoire — remonté à Romain.
+  Minors reportés à la revue finale : duplication axes catégoriels entre figures ; clé JSON
+  "global_" ; main() ~150 lignes ; invariant sous_jnd violé sciemment dans le test d'escalade
+  (documenté).
