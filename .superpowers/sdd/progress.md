@@ -39,3 +39,9 @@ Task 3 (histoires): complete (commit 04ac96f, revue clean 1er passage) — 5 npz
   Minors : constantes reconstruites localement vs importées ; _load_history_npz charge tout.
   Note pour Task 5/6 : max(s)/relief dérive au-delà de la fenêtre de calibration à L=80 (attendu,
   la calibration visait L₀=10).
+Task 5 (mesures): complete (commits a64185b+4a572c5, revue clean 1er passage) — measures.npz
+  3 bras. v2 : rien ne ferme sous cap (ℓ=2/3 ∈ [0.10, 0.85]) ; ℓ=1 (hors cap) ∈ [0.022, 0.117].
+  Contrôle shuf CONFORME (1.36-2.28, jamais fermé). Contrôle ferm EN VIOLATION de l'attendu
+  k*=81 : plancher de round-trip du régénérateur bilinéaire à ℓ=3 = 0.09-0.19 > JND max —
+  observation brute, lecture formelle en Task 6 (gate d'instrument attendu : STOP).
+  Minors : _versions() recalculé à l'assemble ; errstate redondant ; sanity préfixe re-exécutée.
