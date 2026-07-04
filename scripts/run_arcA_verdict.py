@@ -31,11 +31,14 @@ Et l'amendement (ii), qui S'APPLIQUE AVANT toute lecture du verdict v2 :
 
 Ordre d'exécution (mécanique, non négociable) :
   1. GATE DES CONTRÔLES (ferm/shuf), calculé PAR CELLULE (bras, L, seed, JND) --
-     MÊME définition de k* que le bras v2 (mêmes niveaux 81->273->1041, même
-     clause 2xJND -- la clause y est un no-op mécanique prouvé au docstring de
-     `k_star_groupe`, PAS un raccourci pris ici). gate_controles = "CONFORME"
-     ssi zéro violation sur les 80 cellules (2 bras x {10,80} x 5 seeds x 4
-     JND), sinon "VIOLATION" -- imprimé et sérialisé EN PREMIER.
+     `gate_controles` APPELLE LITTÉRALEMENT `k_star_groupe` avec un groupe
+     réduit à une seule seed (n_seed=1) : MÊME code, mêmes niveaux
+     81->273->1041, même clause 2xJND que le bras v2 -- la clause y est un
+     no-op mécanique prouvé au docstring de `k_star_groupe` ET vérifié par
+     exécution (`tests/test_verdict_kstar.py`), pas un raccourci pris ici.
+     gate_controles = "CONFORME" ssi zéro violation sur les 80 cellules (2
+     bras x {10,80} x 5 seeds x 4 JND), sinon "VIOLATION" -- imprimé et
+     sérialisé EN PREMIER.
   2. k*(L) bras v2 (médiane + clause 2xJND), pente L∈{40,80} + IC bootstrap,
      verdict §A3 par JND + global -- CALCULÉS ET STOCKÉS dans tous les cas
      (audit), mais IMPRIMÉS comme verdict de la manche SSI gate_controles =
@@ -199,24 +202,46 @@ def calculer_k_star_arm(sous_jnd_arm: np.ndarray, ma1_arm: np.ndarray,
 # --- Gate des contrôles (amendement ii) --------------------------------------
 
 
-def gate_controles(k_table_ferm: dict, k_table_shuf: dict) -> tuple[str, list[dict]]:
+def gate_controles(sous_jnd_ferm: np.ndarray, ma1_ferm: np.ndarray, ma2_ferm: np.ndarray,
+                   sous_jnd_shuf: np.ndarray, ma1_shuf: np.ndarray, ma2_shuf: np.ndarray
+                   ) -> tuple[str, list[dict]]:
     """Gate d'instrument (amendement ii), calculé PAR CELLULE (bras, L, seed,
-    JND) -- PAS de médiane : réutilise directement `par_seed` de
-    `calculer_k_star_arm` (= `k_star_seed` par cellule, cf. preuve de non-effet
-    de la clause 2xJND à n_seed=1 dans `k_star_groupe`). Comparaison par égalité
-    EXACTE (pas de tolérance flottante) : toutes les valeurs en jeu sont des
-    membres discrets de {81.0, 273.0, 1041.0, inf}, jamais le résultat d'une
+    JND) -- PAS de médiane : appelle LITTÉRALEMENT `k_star_groupe` avec un
+    groupe réduit à CETTE SEULE seed (n_seed=1, shape (1, nLevel) sur les 3
+    arguments) -- même fonction, mêmes niveaux 81->273->1041, même clause
+    2xJND que le bras v2. La preuve de non-effet de la clause à n_seed=1
+    (docstring de `k_star_groupe`) est ainsi VÉRIFIÉE PAR EXÉCUTION à chaque
+    cellule -- pas une lecture directe de `par_seed` (= `k_star_seed`) qui ne
+    ferait qu'ÉNONCER l'équivalence sans jamais exercer le code d'escalade
+    (corrige le raccourci relevé en revue). Comparaison par égalité EXACTE
+    (pas de tolérance flottante) : toutes les valeurs en jeu sont des membres
+    discrets de {81.0, 273.0, 1041.0, inf}, jamais le résultat d'une
     arithmétique -- l'égalité exacte est donc le bon test.
+
+    `sous_jnd_{ferm,shuf}`/`ma1_{ferm,shuf}`/`ma2_{ferm,shuf}` : tableaux BRUTS
+    de `measures.npz` (mêmes tableaux que ceux passés à `calculer_k_star_arm`),
+    shape (nL=len(L_LIST), nSeed, nLevel[, nJND] pour `sous_jnd`) -- indexés
+    ici directement, sans passer par la table k*/médiane.
 
     Retourne (statut, violations) ; statut = "CONFORME" ssi zéro violation sur
     les 80 cellules (2 bras x {10,80} x 5 seeds x 4 JND), sinon "VIOLATION"."""
     violations: list[dict] = []
-    specs = (("ferm", k_table_ferm, ATTENDU_FERM), ("shuf", k_table_shuf, ATTENDU_SHUF))
-    for arm_name, table, attendu in specs:
+    specs = (
+        ("ferm", sous_jnd_ferm, ma1_ferm, ma2_ferm, ATTENDU_FERM),
+        ("shuf", sous_jnd_shuf, ma1_shuf, ma2_shuf, ATTENDU_SHUF),
+    )
+    for arm_name, sous_jnd_arm, ma1_arm, ma2_arm, attendu in specs:
         for L in L_LIST_CONTROL:
+            iL = L_LIST.index(L)
             for jnd in JND_LIST:
-                for seed in SEEDS:
-                    k = table[L][jnd]["par_seed"][seed]
+                iJ = JND_LIST.index(jnd)
+                for iS, seed in enumerate(SEEDS):
+                    # Groupe réduit à CETTE SEULE seed -- MÊME appel k_star_groupe
+                    # que le bras v2, degré n=1 (pas une branche spéciale).
+                    sous_jnd_grp = sous_jnd_arm[iL, iS:iS + 1, :, iJ]
+                    ma1_grp = ma1_arm[iL, iS:iS + 1, :]
+                    ma2_grp = ma2_arm[iL, iS:iS + 1, :]
+                    k, _audit = k_star_groupe(sous_jnd_grp, ma1_grp, ma2_grp, jnd)
                     conforme = (k == attendu)
                     if not conforme:
                         violations.append(dict(bras=arm_name, L=int(L), seed=int(seed),
@@ -572,7 +597,12 @@ def main() -> None:
     }
 
     # --- 1. GATE DES CONTRÔLES (amendement ii) -- EN PREMIER ------------------
-    gate_statut, gate_violations = gate_controles(k_table["ferm"], k_table["shuf"])
+    # Appel LITTÉRAL de k_star_groupe (groupe n=1), sur les tableaux BRUTS de
+    # measures.npz -- PAS une lecture de k_table["ferm"/"shuf"] (cf. docstring
+    # de gate_controles, correctif post-revue).
+    gate_statut, gate_violations = gate_controles(
+        data["sous_jnd_ferm"], data["ma1_ferm"], data["ma2_ferm"],
+        data["sous_jnd_shuf"], data["ma1_shuf"], data["ma2_shuf"])
     n_cells_par_bras = {"ferm": len(L_LIST_CONTROL) * len(SEEDS) * len(JND_LIST),
                         "shuf": len(L_LIST_CONTROL) * len(SEEDS) * len(JND_LIST)}
     n_violations_par_bras = {
