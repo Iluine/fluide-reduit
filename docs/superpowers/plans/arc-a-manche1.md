@@ -182,3 +182,25 @@ sous M-0bis (commits 32e9004..cc61056). Le reste du plan est INCHANGÉ, plus les
   - Toute cellule de contrôle qui viole son attendu → STOP, remonter (gate d'instrument type G0).
   - Les contrôles ne participent PAS au verdict §A3 ; ils conditionnent le droit de le lire.
 - Exécution : Task 3 (histoires) → Task 5 (mesures, étendue aux contrôles) → Task 6 (verdict).
+
+## AMENDEMENT INSTRUMENT — Régénérateur constant-par-blocs (2026-07-04, gravé au contrat `9bcb09a`)
+
+Suite au gate d'instrument en VIOLATION (ferm 40/40, plancher bilinéaire supra-JND à ℓ=3) :
+
+- **Spec Task 4 amendée** : `regenerate(summary)` = **upsampling CONSTANT-PAR-BLOCS** (chaque
+  bloc 2^ℓ rempli de sa valeur coarse — Harten ordre 0), clip ≥ 0 conservé (no-op sur champ ≥ 0),
+  **rescale remplacé par une VÉRIFICATION** des 16 masses 4×4 (1e-12 relatif, `raise` si violée)
+  sans multiplication. Propriétés à TESTER : S∘R = id **bit-à-bit** (summarize(regenerate(x),
+  level) == coarse exact) ; idempotence R∘S∘R∘S = R∘S bit-à-bit ; M-A3/anti-fuite/tailles
+  inchangés. Le bilinéaire est conservé sous `regenerer_bilineaire` (audit, reproductibilité
+  M-0bis/run v1), plus jamais utilisé par les mesures.
+- **Clause 1** : issue « k\* = ∞ uniforme (aucune fermeture sous cap à aucun L, JND donné) »
+  pré-écrite = **INDETERMINE_CAPACITE** (famille insuffisante à ce JND ; PAS le mur ; pas de
+  cellule §A0 2/3 ; fork famille-vs-manche-2 remonté). Task 6 amendée mécaniquement pour émettre
+  ce label. Prédiction directionnelle gravée : M-A1/M-A2 v2 montent à chaque ℓ.
+- **Clause 2** : diagnostic non-bloquant, cellule (L=10, seed=101, ℓ=3) : trajectoire complète
+  Δχ(t) du rollout s_ferm vs s_L, sérialisée ; rapporter Δχ(0), max_t Δχ(t), rapport.
+- **Clause 3** : contrôle-fermable requalifié en contrôle de PLOMBERIE (passe par construction) ;
+  le contrôle discriminant est le shuf.
+- Re-run Tasks 5–6 (mêmes scripts, mêmes seuils, nouvelle sémantique de `regenerate` par import),
+  remontée du verdict dans tous les cas.
