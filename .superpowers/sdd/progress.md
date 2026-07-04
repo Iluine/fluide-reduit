@@ -73,3 +73,10 @@ Famille 2 quadtree (module) : commits 18e52b9+e0eae53, 286 tests (122 nouveaux),
   (design). Interruption limite API pendant le GREEN, reprise propre. Revue en cours.
 Famille 2 (module) : complete (revue Approved, vérifications par exécution indépendante).
   Minors : boundary 400→398 non pinné en test ; formule taille dupliquée ; init _pyramide indirect.
+Famille 2 (harnais + RUN) : complete (commits 2ee1120/0a81832/a86b929, revue Approved, violation
+  vérifiée dans les données brutes) — 295 tests. GATE = VIOLATION : shuf 7/40, UNIQUEMENT au
+  budget plafond 2048 (JND 3-5 %) ; sous cap : 0 violation (400 → 0.52-0.91, jamais fermé) ;
+  ferm PARFAIT 0/40 (Δχ=0.0 exact, 7 budgets). Verdict scellé NON LISIBLE. Surface v2 (audit,
+  sous scellé) : premières fermetures SOUS CAP de la manche (400 et 256 à JND 4-5 %, tous L).
+  Remonté à Romain (portée de l'attendu shuf). Minors : duplication verdict_qt justifiée ;
+  titre figure ; npz témoin gitignoré.
