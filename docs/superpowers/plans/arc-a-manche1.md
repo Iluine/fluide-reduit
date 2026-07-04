@@ -204,3 +204,27 @@ Suite au gate d'instrument en VIOLATION (ferm 40/40, plancher bilinéaire supra-
   le contrôle discriminant est le shuf.
 - Re-run Tasks 5–6 (mêmes scripts, mêmes seuils, nouvelle sémantique de `regenerate` par import),
   remontée du verdict dans tous les cas.
+
+## AMENDEMENT FAMILLE 2 — Quadtree de moyennes (2026-07-04, gravé au contrat `a8ed659`)
+
+Deuxième et DERNIÈRE famille sous cette pré-enregistration (règle de dernière famille, clause 3).
+Spec opérationnelle complète au contrat `a8ed659` (géométrie gloutonne figée, comptabilité
+bits d'arbre 32 bits = 1 float-éq, cap 409.6 inchangé). Résumé exécutable :
+
+- `src/summary_quadtree.py` (nouveau) : `SummaryQT` (topologie préordre + moyennes de feuilles +
+  shape), `summarize_qt(field, budget)` (glouton SSE, tie-break (gain, y, x), jamais de split à
+  gain nul, budget = feuilles + ceil(nœuds/32) respecté après chaque split),
+  `regenerate_qt(summary)` (1 param, feuilles peintes, pas de clip), `size_floats_qt`.
+  Tests : S∘R = id bit-à-bit ARBRE INCLUS ; idempotence ; déterminisme cross-process ;
+  anti-fuite (signature + décoy) ; comptabilité exacte sur cas construits ; invariants (masse
+  totale + 16 masses 4×4) dérivés exacts ; budgets {32..2048} sur champs sparse.
+- `scripts/run_arcA_measure_qt.py` (nouveau, helpers importés de run_arcA_measure) : 3 bras,
+  budgets {32, 64, 128, 256, 400, 1024, 2048} ; ferm = R(S(s_L, 32)), attendu Δχ=0 exact à tous
+  budgets ; shuf inchangé ; phasé --arm/--L ; measures_qt.npz.
+- `scripts/run_arcA_verdict_qt.py` (nouveau) : k\*(L, seed ; JND) = plus petit budget de la
+  grille complète sous-JND (clause 2×JND inchangée) ; gate contrôles d'abord (ferm : k\*=32
+  partout ; shuf : ∞ partout) ; pente §A3 sur L∈{40,80} ; INDÉTERMINÉ-CAPACITÉ inchangé ;
+  mapping des trois issues (PASS→cellule 1 ; FAIL→cellule 2 FAIL-mur ; global CAPACITÉ→
+  NON-DÉMONTRÉ manche 2 ; sinon→INDÉTERMINÉ + surface k\*(L,JND) portée à l'Arc C) ;
+  surface k\*(L, JND) rapportée telle quelle + figure ; verdict_qt.json.
+- Les scripts famille 1 restent INTOUCHÉS.
