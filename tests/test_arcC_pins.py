@@ -1,237 +1,485 @@
-"""Arc C / Task 3 — tests du post-traitement → pins
-(`scripts/run_arcC_pins.py`), addendum §C8 de PREREGISTRATION.md
-(pocCascade2phys, commits `c494d50`→`d7c95e3`), reproduit verbatim dans
-`.superpowers/sdd/arcC-task3-runner-brief.md`. **AUCUN sujet humain, aucun
-verdict de manche imprimé** : ce module CALCULE le pin + IC depuis les logs
+"""Arc C / Task 3 (conformance §C10) — tests du post-traitement → pins
+CONFORMES au contrat de sortie gravé (`scripts/run_arcC_pins.py`,
+`schemas/arcC-pins-spatial-v1.schema.json`), reproduit verbatim dans
+`.superpowers/sdd/arcC-task3conform-schema-brief.md`. **AUCUN sujet humain,
+aucun verdict de manche imprimé/écrit** : ce module CALCULE des MESURES
+(pin + IC par régime, roll-up timing, contrôle directionnel) depuis les logs
 d'une campagne (sujet SYNTHÉTIQUE en test) -- la LECTURE §C4 est au
-contrôleur (Task 5), pas ici.
+contrôleur (Task 5), jamais ici (`additionalProperties:false` du schéma
+l'interdit structurellement).
 
-Familles de tests (brief, §Tests 4/6/7) :
-  4. Agrégation -> pin + IC : seuils synthétiques connus -> `evalue_dispersion`
-     + `statut_condition` produisent le pin (moyenne) et l'IC attendu ;
-     dispersion > 30% -> INSTRUMENT_NE_PEUT_PAS_REPONDRE, pin=None.
-  6. Bout-en-bout synthétique (LE GATE) : mini-campagne (sujet synthétique à
-     theta connu) -> pins_spatial.json dont le JND agrégé retrouve theta +/-
-     tolérance ; déterminisme (replay bit-identique hors `latence_s`).
-  7. Schéma `pins_spatial.json` stable, round-trip."""
+Familles de tests (brief) :
+  1. Validation schéma : sortie synthétique bout-en-bout VALIDE ; cas
+     construit NON conforme (champ hors schéma / statut nu sans motif) ->
+     `ecrit_pins_json` LÈVE avant écriture (rien n'est écrit).
+  2. Statut 3-voies + `motif_statut` : RESOLU / INDETERMINE (dispersion
+     > 0.30, jnd NON null) / INVALIDE (catch < 0.90, jnd/ic null).
+  3. Contrôle directionnel : IC laxiste entièrement sous sévère -> `true` ;
+     IC chevauchants (même mal ordonnés) -> `false` ; régime non-RESOLU ->
+     `false`.
+  4. Exclusions nommées : source exclue apparaît avec son `chi_ancre`,
+     `utilisees` correct, jamais silencieuse.
+  5. `branche_combinee_active` : 3 staircases -> `false`, pas d'`ic_combine` ;
+     6 staircases -> `true`, `ic_combine` = mean±2SEM exact.
+  6. Copie du schéma pocPhysicator : draft-07 valide, se charge.
+  7. Non-régression bout-en-bout : figures + absence de verdict §C4
+     préservées."""
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
+from jsonschema import Draft7Validator
 
-from src.arcC_abx import (STATUT_CONTINUE, STATUT_INSTRUMENT_NE_PEUT_PAS_REPONDRE,
-                          STATUT_RESOLU, ParametresEscalier, lit_log_jsonl,
-                          rejoue_escalier)
-from src.arcC_synthetic import fabrique_sujet_synthetique
-from scripts.run_arcC_orchestration import (N_STAIRCASES, ecrit_manifeste_json,
-                                            lit_manifeste_json, orchestre_campagne)
-from scripts.run_arcC_pins import (METHODE_IC, agrege_regime, calcule_ic,
-                                   construit_pins, ecrit_pins_json, lit_pins_json)
+from src.arcC_abx import STATUT_CONTINUE, STATUT_STOP_2_INVALIDES, ParametresEscalier
+from scripts.run_arcC_orchestration import N_STAIRCASES, orchestre_campagne
+from scripts.run_arcC_pins import (SCHEMA_PATH, STATUT_INDETERMINE, STATUT_INVALIDE,
+                                   STATUT_RESOLU, calcule_branche_combinee_active,
+                                   calcule_controle_directionnel, calcule_ic,
+                                   calcule_ic_combine, charge_schema, construit_pins,
+                                   construit_regime_pins, construit_sources,
+                                   determine_statut_regime, ecrit_pins_json, lit_pins_json,
+                                   valide_pins)
+
+SCHEMA = charge_schema()
 
 
 # =============================================================================
-# Famille 4 : agrégation -> pin + IC (seuils synthétiques connus)
+# Fixtures de test -- sessions/manifeste CONSTRUITS (pas de campagne réelle)
 # =============================================================================
 
 
-def _session(numero: int, regime: str, seuil: float | None, complet: bool = True,
-            valide: bool = True) -> dict:
-    return dict(numero_staircase=numero, regime=regime, seed_roving=1, seed_catch=2,
-               seed_sujet=3, log_path="/inexistant.jsonl", n_essais=20, n_reversals=8,
-               complet=complet, seuil=seuil,
-               validite=dict(n_catch=10, n_catch_ok=10, taux_reussite_catch=1.0,
-                             seuil_reussite_catch=0.90, valide=valide))
+def _session(numero: int, regime: str, seuil: float | None, *, complet: bool = True,
+            valide: bool = True, n_catch: int = 10, n_catch_ok: int | None = None,
+            n_essais: int = 20, n_reversals: int = 8, log_path: str | None = None) -> dict:
+    """Enregistrement `sessions[]` -- format `orchestre_regime` (§C8)."""
+    if n_catch_ok is None:
+        n_catch_ok = n_catch if valide else 0
+    taux = (n_catch_ok / n_catch) if n_catch > 0 else float("nan")
+    return dict(
+        numero_staircase=numero, regime=regime, seed_roving=1, seed_catch=2, seed_sujet=3,
+        log_path=(log_path if log_path is not None else f"/inexistant_{regime}_{numero}.jsonl"),
+        n_essais=n_essais, n_reversals=n_reversals, complet=complet, seuil=seuil,
+        validite=dict(n_catch=n_catch, n_catch_ok=n_catch_ok, taux_reussite_catch=taux,
+                     seuil_reussite_catch=0.90, valide=valide))
+
+
+def _manifeste(regimes: dict, *, sujet: str = "synthetique", ppd: float = 40.0,
+              taille_domaine_px: int = 73, luminosite: str | None = None,
+              conditions: str | None = None, seuil_exclusion: float = 0.16,
+              entrees_exclusions: list[dict] | None = None, n_sources: int = 20) -> dict:
+    """Manifeste minimal (format `orchestre_campagne`) suffisant pour
+    `construit_pins` -- pas de campagne réelle lancée."""
+    entrees = entrees_exclusions if entrees_exclusions is not None else []
+    n_exclues = sum(1 for e in entrees if e["exclu"])
+    return dict(
+        sujet=sujet, commit_harnais="deadbeef" * 5, date_session="2026-07-05T12:00:00",
+        base_seed=1,
+        parametres_graves=dict(ancre_budget=32, haut_jnd_plausible=0.08,
+                               seuil_exclusion=seuil_exclusion, n_staircases=3, budget_catch=32,
+                               geometrie="pic-csf", catch_sources_fortes=False,
+                               fraction_sources_fortes=None),
+        config_affichage=dict(geometrie="pic-csf", ppd=ppd, taille_domaine_px=taille_domaine_px),
+        conditions_validite=dict(
+            luminosite=luminosite, conditions=conditions,
+            calibration=dict(ppd=ppd, long_ref_px=1920.0, long_ref_mm=310.0, distance_mm=600.0)),
+        exclusions=dict(entrees=entrees, sources_exclues=[], sources_incluses=[],
+                        n_exclues=n_exclues, n_sources=n_sources, budget=32,
+                        seuil_exclusion=seuil_exclusion, n_exclusions_stop=10,
+                        statut=STATUT_CONTINUE),
+        statut_global=STATUT_CONTINUE,
+        regimes=regimes)
+
+
+# =============================================================================
+# Famille 6 : copie du schéma -- draft-07 valide, se charge
+# =============================================================================
+
+
+def test_copie_schema_pocphysicator_charge_et_est_draft07_valide():
+    schema = charge_schema()
+    assert schema["$schema"] == "http://json-schema.org/draft-07/schema#"
+    assert schema["$id"] == "arcC-pins-spatial-v1.schema.json"
+    Draft7Validator.check_schema(schema)  # méta-validation -- ne lève pas si draft-07 correct
+
+
+def test_copie_schema_chemin_attendu():
+    assert SCHEMA_PATH == Path(__file__).resolve().parents[1] / "schemas" / \
+        "arcC-pins-spatial-v1.schema.json"
+    assert SCHEMA_PATH.exists()
+
+
+# =============================================================================
+# Famille 2 : statut 3-voies + motif_statut
+# =============================================================================
+
+
+def test_determine_statut_regime_resolu_dispersion_basse_catch_ok():
+    sessions = [_session(0, "severe", 0.030), _session(1, "severe", 0.032),
+               _session(2, "severe", 0.028)]
+    statut, motif, dispersion = determine_statut_regime(sessions, STATUT_CONTINUE)
+    assert statut == STATUT_RESOLU
+    assert motif is None
+    assert dispersion["coherent"] is True
+
+
+def test_construit_regime_pins_resolu_jnd_ic_non_null_pas_de_motif():
+    sessions = [_session(0, "severe", 0.030), _session(1, "severe", 0.032),
+               _session(2, "severe", 0.028)]
+    regime = construit_regime_pins("severe", sessions, STATUT_CONTINUE, False)
+    assert regime["statut"] == STATUT_RESOLU
+    assert regime["jnd"] == pytest.approx(np.mean([0.030, 0.032, 0.028]))
+    assert regime["ic"] == [pytest.approx(0.028), pytest.approx(0.032)]
+    assert "motif_statut" not in regime
+
+
+def test_construit_regime_pins_indetermine_dispersion_trop_grande_jnd_non_null_motif():
+    """CV > 30% -> INDETERMINE (PAS INVALIDE) -- `jnd`/`ic` NON null (valeur
+    centrale rapportée mais non fiable, `null` réservé à INVALIDE, §C10)."""
+    sessions = [_session(0, "severe", 0.010), _session(1, "severe", 0.030),
+               _session(2, "severe", 0.080)]
+    regime = construit_regime_pins("severe", sessions, STATUT_CONTINUE, False)
+    assert regime["statut"] == STATUT_INDETERMINE
+    assert regime["jnd"] is not None
+    assert regime["ic"] is not None
+    assert "motif_statut" in regime and regime["motif_statut"]
+
+
+def test_construit_regime_pins_invalide_catch_sous_90pct_jnd_ic_null_motif():
+    sessions = [_session(0, "severe", 0.030), _session(1, "severe", 0.032, valide=False,
+                                                        n_catch=10, n_catch_ok=5),
+               _session(2, "severe", 0.028)]
+    regime = construit_regime_pins("severe", sessions, STATUT_CONTINUE, False)
+    assert regime["statut"] == STATUT_INVALIDE
+    assert regime["jnd"] is None
+    assert regime["ic"] is None
+    assert "motif_statut" in regime and regime["motif_statut"]
+
+
+def test_construit_regime_pins_invalide_arret_2_invalides_jnd_ic_null_motif():
+    sessions = [_session(0, "severe", 0.05, valide=False, n_catch_ok=2),
+               _session(1, "severe", 0.05, valide=False, n_catch_ok=1)]
+    regime = construit_regime_pins("severe", sessions, STATUT_STOP_2_INVALIDES, False)
+    assert regime["statut"] == STATUT_INVALIDE
+    assert regime["jnd"] is None
+    assert regime["ic"] is None
+    assert "arrêt" in regime["motif_statut"].lower()
+
+
+def test_construit_regime_pins_staircases_brutes_toutes_incluses_meme_incompletes():
+    sessions = [_session(0, "severe", 0.030), _session(1, "severe", 0.032),
+               _session(2, "severe", None, complet=False)]
+    regime = construit_regime_pins("severe", sessions, STATUT_CONTINUE, False)
+    assert len(regime["staircases"]) == 3  # TOUTES, y compris l'incomplète
+    assert regime["staircases"][2]["seuil"] is None
+    assert all(s["renversements_moyennes"] == 6 for s in regime["staircases"])
+
+
+def test_construit_regime_pins_taux_catch_global_pondere_sur_tous_les_essais():
+    sessions = [_session(0, "severe", 0.030, n_catch=10, n_catch_ok=10),
+               _session(1, "severe", 0.032, n_catch=10, n_catch_ok=8, valide=True),
+               _session(2, "severe", 0.028, n_catch=10, n_catch_ok=10)]
+    # Session 1 valide malgré 8/10 (>= seuil_reussite_catch construit à la main ici) --
+    # le test cible taux_catch_global, pas le gate de validité individuel.
+    regime = construit_regime_pins("severe", sessions, STATUT_CONTINUE, False)
+    assert regime["taux_catch_global"] == pytest.approx((10 + 8 + 10) / 30)
+
+
+# =============================================================================
+# Famille 3 : contrôle directionnel
+# =============================================================================
+
+
+def test_controle_directionnel_ic_laxiste_entierement_sous_severe_true():
+    sev = dict(statut=STATUT_RESOLU, ic=[0.03, 0.04])
+    lax = dict(statut=STATUT_RESOLU, ic=[0.01, 0.02])  # entièrement SOUS severe -> mauvais ordre
+    assert calcule_controle_directionnel(sev, lax) is True
+
+
+def test_controle_directionnel_ic_chevauchants_meme_mal_ordonnes_false():
+    sev = dict(statut=STATUT_RESOLU, ic=[0.03, 0.05])
+    lax = dict(statut=STATUT_RESOLU, ic=[0.02, 0.04])  # chevauchent (0.03-0.04 commun)
+    assert calcule_controle_directionnel(sev, lax) is False
+
+
+def test_controle_directionnel_ic_bon_ordre_disjoints_false():
+    sev = dict(statut=STATUT_RESOLU, ic=[0.01, 0.02])
+    lax = dict(statut=STATUT_RESOLU, ic=[0.04, 0.05])  # BON ordre (lax > sev) -- attendu, pas violation
+    assert calcule_controle_directionnel(sev, lax) is False
+
+
+def test_controle_directionnel_regime_non_resolu_false():
+    sev = dict(statut=STATUT_INDETERMINE, ic=[0.03, 0.04])
+    lax = dict(statut=STATUT_RESOLU, ic=[0.01, 0.02])
+    assert calcule_controle_directionnel(sev, lax) is False
+    sev2 = dict(statut=STATUT_INVALIDE, ic=None)
+    lax2 = dict(statut=STATUT_RESOLU, ic=[0.01, 0.02])
+    assert calcule_controle_directionnel(sev2, lax2) is False
+
+
+# =============================================================================
+# Famille 4 : exclusions nommées -- jamais silencieuses
+# =============================================================================
+
+
+def test_sources_exclues_nommees_avec_chi_ancre_et_utilisees_correct():
+    entrees = [dict(seed=103, L=10, delta_chi_ancre=0.1551, exclu=True)] + \
+        [dict(seed=s, L=10, delta_chi_ancre=0.5, exclu=False) for s in range(1, 20)]
+    manifeste = _manifeste({}, entrees_exclusions=entrees, n_sources=20)
+    src = construit_sources(manifeste)
+    assert src["utilisees"] == 19
+    assert len(src["exclues"]) == 1
+    assert src["exclues"][0]["id"] == "s103_L10"
+    assert src["exclues"][0]["chi_ancre"] == pytest.approx(0.1551)
+
+
+def test_sources_aucune_exclusion_liste_vide():
+    entrees = [dict(seed=s, L=10, delta_chi_ancre=0.5, exclu=False) for s in range(1, 21)]
+    manifeste = _manifeste({}, entrees_exclusions=entrees, n_sources=20)
+    src = construit_sources(manifeste)
+    assert src["utilisees"] == 20
+    assert src["exclues"] == []
+
+
+# =============================================================================
+# Famille 5 : branche_combinee_active + ic_combine (mean±2SEM)
+# =============================================================================
+
+
+def test_calcule_branche_combinee_active_false_avec_3_staircases_par_regime():
+    regimes = {"severe": dict(sessions=[_session(i, "severe", 0.03) for i in range(3)]),
+              "laxiste": dict(sessions=[_session(i, "laxiste", 0.04) for i in range(3)])}
+    assert calcule_branche_combinee_active(regimes) is False
+
+
+def test_calcule_branche_combinee_active_true_avec_6_staircases_par_regime():
+    regimes = {"severe": dict(sessions=[_session(i, "severe", 0.03) for i in range(6)]),
+              "laxiste": dict(sessions=[_session(i, "laxiste", 0.04) for i in range(6)])}
+    assert calcule_branche_combinee_active(regimes) is True
+
+
+def test_calcule_branche_combinee_active_false_si_un_seul_regime_a_6():
+    regimes = {"severe": dict(sessions=[_session(i, "severe", 0.03) for i in range(6)]),
+              "laxiste": dict(sessions=[_session(i, "laxiste", 0.04) for i in range(3)])}
+    assert calcule_branche_combinee_active(regimes) is False
+
+
+def test_construit_regime_pins_3_staircases_pas_dic_combine():
+    sessions = [_session(i, "severe", v) for i, v in enumerate([0.030, 0.032, 0.028])]
+    regime = construit_regime_pins("severe", sessions, STATUT_CONTINUE, False)
+    assert "ic_combine" not in regime
+
+
+def test_construit_regime_pins_6_staircases_ic_combine_mean_2sem_exact():
+    seuils = [0.030, 0.032, 0.028, 0.031, 0.029, 0.033]
+    sessions = [_session(i, "severe", v) for i, v in enumerate(seuils)]
+    regime = construit_regime_pins("severe", sessions, STATUT_CONTINUE, True)
+    assert "ic_combine" in regime
+    arr = np.asarray(seuils)
+    moyenne, sem = arr.mean(), arr.std(ddof=1) / np.sqrt(6)
+    assert regime["ic_combine"][0] == pytest.approx(moyenne - 2.0 * sem)
+    assert regime["ic_combine"][1] == pytest.approx(moyenne + 2.0 * sem)
+
+
+def test_calcule_ic_combine_moins_de_2_seuils_est_none():
+    assert calcule_ic_combine([]) is None
+    assert calcule_ic_combine([0.03]) is None
 
 
 def test_calcule_ic_min_max_sur_seuils_connus():
-    ic = calcule_ic([0.030, 0.032, 0.028])
-    assert ic["methode"] == METHODE_IC
-    assert ic["borne_inf"] == pytest.approx(0.028)
-    assert ic["borne_sup"] == pytest.approx(0.032)
+    assert calcule_ic([0.030, 0.032, 0.028]) == [pytest.approx(0.028), pytest.approx(0.032)]
 
 
 def test_calcule_ic_liste_vide_est_none():
     assert calcule_ic([]) is None
 
 
-def test_agrege_regime_staircases_coherentes_resolu():
-    sessions = [_session(0, "severe", 0.030), _session(1, "severe", 0.032),
-               _session(2, "severe", 0.028)]
-    resultat = agrege_regime(sessions)
-    assert resultat["statut"] == STATUT_RESOLU
-    assert resultat["jnd"] == pytest.approx(np.mean([0.030, 0.032, 0.028]))
-    assert resultat["ic"]["methode"] == METHODE_IC
-    assert resultat["ic"]["borne_inf"] == pytest.approx(0.028)
-    assert resultat["ic"]["borne_sup"] == pytest.approx(0.032)
-    assert resultat["n_staircases"] == 3
-
-
-def test_agrege_regime_dispersion_trop_grande_instrument_muet():
-    """CV > 30% -> INSTRUMENT_NE_PEUT_PAS_REPONDRE, `jnd=None`, JAMAIS un pin
-    fabriqué."""
-    sessions = [_session(0, "severe", 0.010), _session(1, "severe", 0.030),
-               _session(2, "severe", 0.080)]
-    resultat = agrege_regime(sessions)
-    assert resultat["statut"] == STATUT_INSTRUMENT_NE_PEUT_PAS_REPONDRE
-    assert resultat["jnd"] is None
-    assert resultat["ic"] is None
-
-
-def test_agrege_regime_session_invalide_instrument_muet_meme_coherent():
-    """Une session INVALIDE (§C5) -> instrument muet, même si les seuils
-    (des staircases complètes/valides) seraient cohérents entre eux."""
-    sessions = [_session(0, "severe", 0.030), _session(1, "severe", 0.032, valide=False),
-               _session(2, "severe", 0.028)]
-    resultat = agrege_regime(sessions)
-    assert resultat["statut"] == STATUT_INSTRUMENT_NE_PEUT_PAS_REPONDRE
-    assert resultat["jnd"] is None
-
-
-def test_agrege_regime_staircase_incomplete_exclue_du_calcul_de_seuil():
-    """Une staircase INCOMPLÈTE (`complet=False`, `seuil=None`) n'entre PAS
-    dans les seuils agrégés (moins de 3 seuils complets -> incohérent, comme
-    `evalue_dispersion` l'exige déjà)."""
-    sessions = [_session(0, "severe", 0.030), _session(1, "severe", 0.032),
-               _session(2, "severe", None, complet=False)]
-    resultat = agrege_regime(sessions)
-    assert resultat["n_staircases_completes"] == 2
-    assert resultat["statut"] == STATUT_INSTRUMENT_NE_PEUT_PAS_REPONDRE  # n<3 complets
-    assert resultat["jnd"] is None
-
-
 # =============================================================================
-# Famille 7 : schéma pins_spatial.json -- round-trip
+# Famille : calibration -- luminosite/conditions None (synthétique) -> string
 # =============================================================================
 
 
-def test_construit_pins_schema_stable_et_round_trip(tmp_path):
-    manifeste = dict(
-        parametres_graves=dict(ancre_budget=32, haut_jnd_plausible=0.08,
-                               seuil_exclusion=0.16, n_staircases=3, budget_catch=32,
-                               geometrie="pic-csf", catch_sources_fortes=False,
-                               fraction_sources_fortes=None),
-        config_affichage=dict(geometrie="pic-csf", ppd=40.0, taille_domaine_px=73),
-        exclusions=dict(entrees=[dict(seed=103, L=10, delta_chi_ancre=0.1551, exclu=True)],
-                        sources_exclues=[[103, 10]], sources_incluses=[[101, 10]],
-                        n_exclues=1, n_sources=2, budget=32, seuil_exclusion=0.16,
-                        n_exclusions_stop=10, statut=STATUT_CONTINUE),
-        base_seed=1,
-        statut_global=STATUT_CONTINUE,
-        regimes={
-            "severe": dict(sessions=[_session(0, "severe", 0.030), _session(1, "severe", 0.032),
-                                     _session(2, "severe", 0.028)],
-                          statut_orchestration=STATUT_CONTINUE, n_staircases_lancees=3),
-            "laxiste": dict(sessions=[_session(0, "laxiste", 0.040), _session(1, "laxiste", 0.041),
-                                      _session(2, "laxiste", 0.039)],
-                           statut_orchestration=STATUT_CONTINUE, n_staircases_lancees=3),
-        })
-    pins = construit_pins(manifeste)
-    for cle in ("parametres_graves", "exclusions", "statut_global", "regimes"):
-        assert cle in pins
-    assert pins["parametres_graves"]["methode_ic"] == METHODE_IC
-    for regime_nom in ("severe", "laxiste"):
-        for cle in ("jnd", "ic", "statut", "n_staircases"):
-            assert cle in pins["regimes"][regime_nom]
+def test_construit_pins_calibration_luminosite_none_devient_synthetique(tmp_path):
+    sessions_sev = [_session(i, "severe", 0.030 + 0.001 * i) for i in range(3)]
+    sessions_lax = [_session(i, "laxiste", 0.040 + 0.001 * i) for i in range(3)]
+    manifeste = _manifeste(dict(
+        severe=dict(sessions=sessions_sev, statut_orchestration=STATUT_CONTINUE),
+        laxiste=dict(sessions=sessions_lax, statut_orchestration=STATUT_CONTINUE)),
+        luminosite=None, conditions=None)
+    pins = construit_pins(manifeste, manifeste_path=tmp_path / "manifeste.json")
+    assert pins["calibration"]["luminosite"] == "(synthetique)"
+    assert pins["calibration"]["conditions"] == "(synthetique)"
 
-    path = tmp_path / "pins_spatial.json"
-    ecrit_pins_json(path, pins)
-    relu = lit_pins_json(path)
+
+def test_construit_pins_calibration_luminosite_fournie_preservee(tmp_path):
+    sessions_sev = [_session(i, "severe", 0.030 + 0.001 * i) for i in range(3)]
+    sessions_lax = [_session(i, "laxiste", 0.040 + 0.001 * i) for i in range(3)]
+    manifeste = _manifeste(dict(
+        severe=dict(sessions=sessions_sev, statut_orchestration=STATUT_CONTINUE),
+        laxiste=dict(sessions=sessions_lax, statut_orchestration=STATUT_CONTINUE)),
+        luminosite="120 nits", conditions="bureau, jour, stable")
+    pins = construit_pins(manifeste, manifeste_path=tmp_path / "manifeste.json")
+    assert pins["calibration"]["luminosite"] == "120 nits"
+    assert pins["calibration"]["conditions"] == "bureau, jour, stable"
+
+
+def test_construit_pins_timing_laxiste_absent_sidecar_zero(tmp_path, capsys):
+    """Sujet synthétique : aucun sidecar `*.timing.jsonl` -> `0.0`/`0.0`,
+    NOTÉ (imprimé), conforme au schéma (informatif nul)."""
+    sessions_sev = [_session(i, "severe", 0.030 + 0.001 * i) for i in range(3)]
+    sessions_lax = [_session(i, "laxiste", 0.040 + 0.001 * i) for i in range(3)]
+    manifeste = _manifeste(dict(
+        severe=dict(sessions=sessions_sev, statut_orchestration=STATUT_CONTINUE),
+        laxiste=dict(sessions=sessions_lax, statut_orchestration=STATUT_CONTINUE)))
+    pins = construit_pins(manifeste, manifeste_path=tmp_path / "manifeste.json")
+    assert pins["timing_laxiste"] == dict(exposition_moyenne_s=0.0, derive_max_pct=0.0)
+    assert "aucun sidecar" in capsys.readouterr().out
+
+
+def test_construit_pins_champs_racine_provenance(tmp_path):
+    sessions_sev = [_session(i, "severe", 0.030 + 0.001 * i) for i in range(3)]
+    sessions_lax = [_session(i, "laxiste", 0.040 + 0.001 * i) for i in range(3)]
+    manifeste = _manifeste(dict(
+        severe=dict(sessions=sessions_sev, statut_orchestration=STATUT_CONTINUE),
+        laxiste=dict(sessions=sessions_lax, statut_orchestration=STATUT_CONTINUE)),
+        sujet="humain")
+    chemin_manifeste = tmp_path / "manifeste.json"
+    pins = construit_pins(manifeste, manifeste_path=chemin_manifeste)
+    assert pins["schema"] == "arcC-pins-spatial-v1"
+    assert pins["sujet"] == "humain"
+    assert pins["base_seed"] == 1
+    assert pins["commit_harnais"] == "deadbeef" * 5
+    assert pins["date_session"] == "2026-07-05T12:00:00"
+    assert pins["manifeste"] == str(chemin_manifeste)
+
+
+def test_construit_pins_refuse_campagne_stop_trop_exclues(tmp_path):
+    """Le schéma n'a AUCUNE représentation pour une campagne arrêtée avant le
+    lancement des régimes -- refus explicite, PAS de `regimes={}` bricolé."""
+    manifeste = _manifeste({})
+    manifeste["statut_global"] = "STOP_TROP_DE_SOURCES_EXCLUES"
+    manifeste["regimes"] = {}
+    with pytest.raises(RuntimeError):
+        construit_pins(manifeste, manifeste_path=tmp_path / "manifeste.json")
+
+
+# =============================================================================
+# Famille 1 : validation schéma -- conforme accepté, non conforme LÈVE
+# =============================================================================
+
+
+def _pins_valide_minimal(tmp_path) -> dict:
+    sessions_sev = [_session(i, "severe", 0.030 + 0.001 * i) for i in range(3)]
+    sessions_lax = [_session(i, "laxiste", 0.040 + 0.001 * i) for i in range(3)]
+    manifeste = _manifeste(dict(
+        severe=dict(sessions=sessions_sev, statut_orchestration=STATUT_CONTINUE),
+        laxiste=dict(sessions=sessions_lax, statut_orchestration=STATUT_CONTINUE)),
+        luminosite="120 nits", conditions="bureau")
+    return construit_pins(manifeste, manifeste_path=tmp_path / "manifeste.json")
+
+
+def test_valide_pins_accepte_document_conforme(tmp_path):
+    pins = _pins_valide_minimal(tmp_path)
+    valide_pins(pins, SCHEMA)  # ne lève pas
+
+
+def test_valide_pins_leve_si_champ_hors_schema(tmp_path):
+    pins = _pins_valide_minimal(tmp_path)
+    pins["verdict_manche"] = "PASS"  # additionalProperties:false à la racine
+    with pytest.raises(ValueError, match="NON CONFORME"):
+        valide_pins(pins, SCHEMA)
+
+
+def test_valide_pins_leve_si_statut_nu_sans_motif(tmp_path):
+    pins = _pins_valide_minimal(tmp_path)
+    pins["regimes"]["severe"]["statut"] = STATUT_INDETERMINE  # sans motif_statut -> non conforme
+    with pytest.raises(ValueError, match="NON CONFORME"):
+        valide_pins(pins, SCHEMA)
+
+
+def test_ecrit_pins_json_leve_avant_ecriture_rien_nest_ecrit(tmp_path):
+    pins = _pins_valide_minimal(tmp_path)
+    pins["verdict_manche"] = "PASS"
+    chemin = tmp_path / "pins_spatial.json"
+    with pytest.raises(ValueError):
+        ecrit_pins_json(chemin, pins)
+    assert not chemin.exists()  # JAMAIS un référent malformé écrit
+
+
+def test_ecrit_pins_json_document_conforme_ecrit_et_round_trip(tmp_path):
+    pins = _pins_valide_minimal(tmp_path)
+    chemin = tmp_path / "pins_spatial.json"
+    ecrit_pins_json(chemin, pins)
+    relu = lit_pins_json(chemin)
     assert relu == pins
-    # Round-trip via json standard aussi (schéma = JSON pur, pas d'objet opaque).
-    with path.open("r", encoding="utf-8") as f:
+    with chemin.open("r", encoding="utf-8") as f:
         assert json.load(f) == pins
-
-
-def test_construit_pins_statut_stop_exclusions_propage_regimes_vides():
-    manifeste = dict(
-        parametres_graves=dict(ancre_budget=32, haut_jnd_plausible=0.08,
-                               seuil_exclusion=0.5, n_staircases=3, budget_catch=32,
-                               geometrie="pic-csf", catch_sources_fortes=False,
-                               fraction_sources_fortes=None),
-        config_affichage=dict(geometrie="pic-csf", ppd=40.0, taille_domaine_px=73),
-        exclusions=dict(entrees=[], sources_exclues=[[1, 10]] * 13, sources_incluses=[],
-                        n_exclues=13, n_sources=20, budget=32, seuil_exclusion=0.5,
-                        n_exclusions_stop=10, statut="STOP_TROP_DE_SOURCES_EXCLUES"),
-        base_seed=1, statut_global="STOP_TROP_DE_SOURCES_EXCLUES", regimes={})
-    pins = construit_pins(manifeste)
-    assert pins["statut_global"] == "STOP_TROP_DE_SOURCES_EXCLUES"
-    assert pins["regimes"] == {}
+    Draft7Validator(SCHEMA).validate(relu)  # re-validation post round-trip, ne lève pas
 
 
 # =============================================================================
-# Famille 6 : bout-en-bout synthétique (LE GATE)
+# Famille 7 : bout-en-bout synthétique RÉEL (LE GATE) -- valide contre schéma,
+# figures préservées, AUCUN verdict.
 # =============================================================================
 
 
-def test_bout_en_bout_mini_campagne_retrouve_theta_connu(tmp_path):
-    """LE GATE (brief) : mini-campagne synthétique à theta CONNU ->
-    pins_spatial.json dont le JND agrégé retrouve theta +/- tolérance, comme
-    le test-clé Task 2 (>= 3 staircases agrégées, ici les DEUX régimes)."""
+def test_bout_en_bout_mini_campagne_valide_contre_schema_et_retrouve_theta(tmp_path):
     theta_sim, sigma = 0.10, 0.025  # marge x1.55 sous le plafond bas (15.5%, D-1)
     params = ParametresEscalier(delta_chi_initial=0.25, facteur_pas=1.20,
                                 n_reversals_cible=10, n_essais_max=300)
     manifeste = orchestre_campagne(
         base_seed=4, n_staircases=N_STAIRCASES, ppd=40.0,
-        theta_sim=theta_sim, sigma_sim=sigma, params=params,
-        out_dir=tmp_path / "logs")
+        theta_sim=theta_sim, sigma_sim=sigma, params=params, out_dir=tmp_path / "logs",
+        long_ref_px=1920.0, long_ref_mm=310.0, distance_mm=600.0,
+        luminosite=None, conditions=None)  # sujet synthétique -- (synthetique) attendu
     assert manifeste["statut_global"] == STATUT_CONTINUE
 
     manifeste_path = tmp_path / "manifeste_campagne.json"
-    ecrit_manifeste_json(manifeste_path, manifeste)
-    manifeste_relu = lit_manifeste_json(manifeste_path)
-    # Round-trip via JSON : les tuples (sources incluses/exclues) redeviennent
-    # des listes -- comparaison normalisée via un aller-retour JSON du côté
-    # gauche aussi (le SCHÉMA doit être stable, pas le type Python opaque).
-    assert manifeste_relu == json.loads(json.dumps(manifeste))
+    manifeste_path.write_text(json.dumps(manifeste, ensure_ascii=False), encoding="utf-8")
+    pins = construit_pins(manifeste, manifeste_path=manifeste_path)
 
-    pins = construit_pins(manifeste_relu)
+    # LE GATE : valide contre le schéma §C10, de bout en bout.
+    valide_pins(pins, SCHEMA)
+
     pins_path = tmp_path / "pins_spatial.json"
     ecrit_pins_json(pins_path, pins)
+    relu = lit_pins_json(pins_path)
+    Draft7Validator(SCHEMA).validate(relu)
 
     for regime_nom in ("severe", "laxiste"):
         resultat = pins["regimes"][regime_nom]
         assert resultat["statut"] == STATUT_RESOLU, (
-            f"régime {regime_nom} : statut={resultat['statut']} -- seeds/paramètres de "
-            "test à revoir, pas le comportement attendu ici.")
+            f"régime {regime_nom} : statut={resultat['statut']} "
+            f"motif={resultat.get('motif_statut')} -- seeds/paramètres à revoir.")
         erreur_relative = abs(resultat["jnd"] - theta_sim) / theta_sim
-        print(f"[bout-en-bout] régime={regime_nom} theta_sim={theta_sim} -> "
-              f"jnd={resultat['jnd']:.5f} (erreur relative={erreur_relative * 100:.2f}%)")
         assert erreur_relative < 0.20, (
             f"régime {regime_nom} : erreur relative {erreur_relative:.3f} > tolérance 20%.")
 
-    # Déterminisme : rejouer chaque staircase depuis son log reproduit les
-    # mêmes essais (hors latence_s), même seuil -- comme le test-clé Task 2.
-    # Le pool de roving DOIT être le même sous-ensemble (post-exclusion, D-2)
-    # que celui utilisé par l'orchestration, sinon `rejoue_escalier` détecte
-    # -- à juste titre -- une divergence de stimulus (cf. son garde-fou).
-    sources_incluses = tuple(tuple(s) for s in manifeste["exclusions"]["sources_incluses"])
-    for regime_nom, regime_data in manifeste["regimes"].items():
-        for session in regime_data["sessions"]:
-            essais_log = lit_log_jsonl(session["log_path"])
-            rejoue = rejoue_escalier(
-                essais_log, numero_staircase=session["numero_staircase"], regime_nom=regime_nom,
-                seed_roving=session["seed_roving"], seed_catch=session["seed_catch"],
-                budget=32, params=params, sources=sources_incluses)
-            assert len(rejoue.essais) == len(essais_log)
-            for e1, e2 in zip(rejoue.essais, essais_log):
-                assert e1.egal_hors_latence(e2)
-            assert rejoue.seuil == session["seuil"]
+    assert pins["calibration"]["luminosite"] == "(synthetique)"
+    assert pins["sujet"] == "synthetique"
+    assert len(pins["artefacts"]["logs"]) >= 1
+    # AUCUN verdict de manche -- le document est structurellement clos
+    # (additionalProperties:false) : aucune clé "verdict"/"pass"/"jnd_seuil"
+    # ne peut exister, déjà garanti par la validation ci-dessus.
 
 
-def test_bout_en_bout_geometrie_plafond_meme_pins_que_pic_csf_structure(tmp_path):
-    """La géométrie NE change QUE l'affichage (D-4) -- schéma pins identique,
-    seule `config_affichage` diffère au manifeste amont (déjà testé dans
-    `test_arcC_orchestration.py` ; ici, on vérifie juste que le pipeline pins
-    fonctionne aussi pour `--geometrie plafond`, sans dépendre de l'affichage)."""
+def test_bout_en_bout_figures_generees_sans_verdict(tmp_path):
+    """Non-régression (famille 7) : les figures psychométriques existantes
+    sont préservées (une par régime), AUCUN verdict de manche tracé/écrit."""
+    from scripts.run_arcC_pins import figure_psychometrique
+
     theta_sim, sigma = 0.10, 0.025
     params = ParametresEscalier(delta_chi_initial=0.25, facteur_pas=1.20,
                                 n_reversals_cible=10, n_essais_max=300)
     manifeste = orchestre_campagne(
-        base_seed=4, n_staircases=N_STAIRCASES, ppd=40.0, geometrie="plafond",
-        theta_sim=theta_sim, sigma_sim=sigma, params=params,
-        out_dir=tmp_path / "logs")
-    pins = construit_pins(manifeste)
-    assert pins["regimes"]["severe"]["statut"] == STATUT_RESOLU
-    assert pins["parametres_graves"]["geometrie"] == "plafond"
+        base_seed=5, n_staircases=N_STAIRCASES, ppd=40.0,
+        theta_sim=theta_sim, sigma_sim=sigma, params=params, out_dir=tmp_path / "logs",
+        long_ref_px=1920.0, long_ref_mm=310.0, distance_mm=600.0)
+    pins = construit_pins(manifeste, manifeste_path=tmp_path / "manifeste.json")
+    for regime_nom, regime_data in manifeste["regimes"].items():
+        path_fig = tmp_path / f"arcC_psychometrique_{regime_nom}.png"
+        figure_psychometrique(regime_nom, regime_data["sessions"], pins["regimes"][regime_nom],
+                              path_fig)
+        assert path_fig.exists() and path_fig.stat().st_size > 0
