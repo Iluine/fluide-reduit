@@ -1,0 +1,262 @@
+{
+  "meta": {
+    "description": "Ratio r0 = 2*RMS/(peak-to-peak) de la bande 4-7 (scale-invariant, regime petit-contraste) — COMPAGNON de ratio_rms_michelson.json (natif intact). Arc C / C-1a Task 3, decision PREREGISTRATION.md §C12.",
+    "definition_r0": "r0 = 2*RMS(composante_bande) / (max-min de la composante_bande) ; mean-independant, scale-invariant ; limite petit-contraste du ratio natif.",
+    "bande": "4-7",
+    "s_half_op": 0.030219219955821115,
+    "ancre_budget": 32,
+    "compagnon_de": "outputs/arcC/ratio_rms_michelson.json",
+    "n_sources_incluses": 19,
+    "sanity_sinus_pur_r0_attendu": 0.7071067811865476
+  },
+  "vrai": {
+    "r0_median": 0.16631727404262303,
+    "r0_q1": 0.15565520776979191,
+    "r0_q3": 0.17020450046129249,
+    "r0_iqr": 0.01454929269150057,
+    "r0_min": 0.14677386648004612,
+    "r0_max": 0.18201953554048034,
+    "n": 19,
+    "par_source": [
+      {
+        "seed": 101,
+        "L": 10,
+        "r0": 0.15961685250042829,
+        "est_porteuse": true
+      },
+      {
+        "seed": 101,
+        "L": 20,
+        "r0": 0.16910700607906168,
+        "est_porteuse": true
+      },
+      {
+        "seed": 101,
+        "L": 40,
+        "r0": 0.15461583881640076,
+        "est_porteuse": true
+      },
+      {
+        "seed": 101,
+        "L": 80,
+        "r0": 0.15973668059363869,
+        "est_porteuse": true
+      },
+      {
+        "seed": 102,
+        "L": 10,
+        "r0": 0.16715384782528017,
+        "est_porteuse": true
+      },
+      {
+        "seed": 102,
+        "L": 20,
+        "r0": 0.15172963533806796,
+        "est_porteuse": true
+      },
+      {
+        "seed": 102,
+        "L": 40,
+        "r0": 0.17500689306751607,
+        "est_porteuse": true
+      },
+      {
+        "seed": 102,
+        "L": 80,
+        "r0": 0.17182299452362296,
+        "est_porteuse": true
+      },
+      {
+        "seed": 103,
+        "L": 20,
+        "r0": 0.15396439195715378,
+        "est_porteuse": true
+      },
+      {
+        "seed": 103,
+        "L": 40,
+        "r0": 0.1678482624286693,
+        "est_porteuse": true
+      },
+      {
+        "seed": 103,
+        "L": 80,
+        "r0": 0.16826971241436162,
+        "est_porteuse": true
+      },
+      {
+        "seed": 104,
+        "L": 10,
+        "r0": 0.18201953554048034,
+        "est_porteuse": true
+      },
+      {
+        "seed": 104,
+        "L": 20,
+        "r0": 0.14677386648004612,
+        "est_porteuse": true
+      },
+      {
+        "seed": 104,
+        "L": 40,
+        "r0": 0.17130199484352332,
+        "est_porteuse": true
+      },
+      {
+        "seed": 104,
+        "L": 80,
+        "r0": 0.17503620673037826,
+        "est_porteuse": true
+      },
+      {
+        "seed": 105,
+        "L": 10,
+        "r0": 0.1517291281278322,
+        "est_porteuse": true
+      },
+      {
+        "seed": 105,
+        "L": 20,
+        "r0": 0.15767517086348531,
+        "est_porteuse": true
+      },
+      {
+        "seed": 105,
+        "L": 40,
+        "r0": 0.1566945767231831,
+        "est_porteuse": true
+      },
+      {
+        "seed": 105,
+        "L": 80,
+        "r0": 0.16631727404262303,
+        "est_porteuse": true
+      }
+    ]
+  },
+  "regenere_budget_32": {
+    "r0_median": 0.1426530536408382,
+    "r0_q1": 0.13544366701890342,
+    "r0_q3": 0.1535148006802206,
+    "r0_iqr": 0.018071133661317185,
+    "r0_min": 0.1273157827251394,
+    "r0_max": 0.17675705706540562,
+    "n": 19,
+    "par_source": [
+      {
+        "seed": 101,
+        "L": 10,
+        "r0": 0.1436884774198697,
+        "est_porteuse": true
+      },
+      {
+        "seed": 101,
+        "L": 20,
+        "r0": 0.15246734965959982,
+        "est_porteuse": true
+      },
+      {
+        "seed": 101,
+        "L": 40,
+        "r0": 0.1273157827251394,
+        "est_porteuse": true
+      },
+      {
+        "seed": 101,
+        "L": 80,
+        "r0": 0.13486436407038788,
+        "est_porteuse": true
+      },
+      {
+        "seed": 102,
+        "L": 10,
+        "r0": 0.1472924927552956,
+        "est_porteuse": true
+      },
+      {
+        "seed": 102,
+        "L": 20,
+        "r0": 0.13525864873859095,
+        "est_porteuse": true
+      },
+      {
+        "seed": 102,
+        "L": 40,
+        "r0": 0.1426530536408382,
+        "est_porteuse": true
+      },
+      {
+        "seed": 102,
+        "L": 80,
+        "r0": 0.13746578221985742,
+        "est_porteuse": true
+      },
+      {
+        "seed": 103,
+        "L": 20,
+        "r0": 0.15456225170084137,
+        "est_porteuse": true
+      },
+      {
+        "seed": 103,
+        "L": 40,
+        "r0": 0.17675705706540562,
+        "est_porteuse": true
+      },
+      {
+        "seed": 103,
+        "L": 80,
+        "r0": 0.13413942264838075,
+        "est_porteuse": true
+      },
+      {
+        "seed": 104,
+        "L": 10,
+        "r0": 0.15641365833373175,
+        "est_porteuse": true
+      },
+      {
+        "seed": 104,
+        "L": 20,
+        "r0": 0.1421652481429116,
+        "est_porteuse": true
+      },
+      {
+        "seed": 104,
+        "L": 40,
+        "r0": 0.15183384188111596,
+        "est_porteuse": true
+      },
+      {
+        "seed": 104,
+        "L": 80,
+        "r0": 0.1608862822979931,
+        "est_porteuse": true
+      },
+      {
+        "seed": 105,
+        "L": 10,
+        "r0": 0.13800794079516654,
+        "est_porteuse": true
+      },
+      {
+        "seed": 105,
+        "L": 20,
+        "r0": 0.1356286852992159,
+        "est_porteuse": true
+      },
+      {
+        "seed": 105,
+        "L": 40,
+        "r0": 0.16090980488329248,
+        "est_porteuse": true
+      },
+      {
+        "seed": 105,
+        "L": 80,
+        "r0": 0.13160315316170856,
+        "est_porteuse": true
+      }
+    ]
+  }
+}

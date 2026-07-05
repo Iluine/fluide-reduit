@@ -281,3 +281,15 @@ Task 2: complete (commits 98d30f0..27fdde7 impl + fix contrôleur, revue SPEC✅
   point-grille 5%, < cap 409.6) ; ic_bas sévère 6.03% → 256,256,400,400 ; pin laxiste 11.5% → 128,256,256,256 ;
   ic_haut laxiste 13.9% → 128 partout. Aucun k* ∞/>cap/non-discriminant sur ces 6 JND. Écart deux-étages (floats,
   au pin) : L=10 delta −128 (laxiste ferme à 128<256), L∈{20,40,80} delta 0. Sortie surface_kstar_aux_pins.json.
+Task 3 (AJOUTÉE par décision Romain §C12) : ratio r0 = 2·RMS/(peak-to-peak) compagnon scale-invariant.
+  complete (commits 6304426..5fb15d7, revue SPEC✅ + QUALITÉ approuvé, 9/9 + suite 508/508). Reviewer a
+  vérifié : natif BYTE-IDENTIQUE (md5 8b541e47 avant/après, jamais ouvert en écriture), r0 sur _composante_bande
+  RÉUTILISÉE (pas de reconstruction), sanity 1/√2, scale/pédestal-invariance 1e-9, cohérence-natif non-tautologique
+  (FFT-Parseval vs std-spatial convergent), 19 sources, dispersion rapportée. MESURE : r0 vrai médiane 0.1663
+  IQR 0.0145 [0.147,0.182] (6× plus resserré que natif — mean-indépendant) ; régénéré-32 médiane 0.1427.
+  r0 ≪ 1/√2 = 0.707 ⟹ bande très spiky (crest factor ~6, cohérent « quasi-binaire »). Sortie ratio_r0_scale_invariant.json.
+  Minors revue finale : ruff absent venv (lint non exécuté) — idem Task 1/2.
+─── C-1a CLOS côté harnais : 3 mesures livrées+validées (ratio natif, k* re-seuillé, r0 compagnon). Suite 508/508.
+  Revue whole-branch SDD non lancée : 3 mesures INDÉPENDANTES (sorties disjointes, r0 lit le natif en RO), chacune
+  déjà revue spec+qualité, natif byte-identique vérifié, suite verte — aucune surface d'intégration à balayer.
+  Point d'arrêt = 3 JSON remontés. Restent à Romain (non dus) : C-1 livraison (ordre de grandeur), 16L₀, axe temporel.
