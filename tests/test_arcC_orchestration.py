@@ -16,8 +16,15 @@ Familles de tests (brief, §Tests 1/2/3/5) :
      consignées, 2 sessions invalides consécutives -> STOP.
   5. Contingence géométrie-plafond (D-4) : `--geometrie plafond` calcule la
      bonne taille d'affichage (`plafond_texture`) ET tourne avec la MÊME
-     ancre/famille/sources que `pic-csf`."""
+     ancre/famille/sources que `pic-csf`.
+  9. Provenance (§C10, correctif) : `sujet`/`commit_harnais`/`date_session`
+     stampés au manifeste par le HARNAIS (jamais par le post-traitement) ;
+     `obtient_commit_harnais` renvoie le SHA git réel, ou `"inconnu"` (loggué)
+     hors dépôt."""
 from __future__ import annotations
+
+import subprocess
+from datetime import datetime
 
 import numpy as np
 import pytest
@@ -28,12 +35,12 @@ from src.arcC_abx import (BUDGET_CATCH, PAIRES_SOURCES, REGIME_LAXISTE, REGIME_S
 from src.arcC_synthetic import fabrique_sujet_synthetique
 from scripts.run_arcC_orchestration import (ANCRE_BUDGET, FRACTION_SOURCES_FORTES,
                                             HAUT_JND_PLAUSIBLE, N_EXCLUSIONS_STOP,
-                                            N_STAIRCASES, SEUIL_EXCLUSION,
+                                            N_STAIRCASES, ROOT, SEUIL_EXCLUSION,
                                             STATUT_STOP_TROP_EXCLUES,
                                             calcule_taille_affichage_px,
                                             construit_manifeste_exclusions, derive_seeds,
-                                            mesure_ancre_source, orchestre_campagne,
-                                            selectionne_sources_fortes)
+                                            mesure_ancre_source, obtient_commit_harnais,
+                                            orchestre_campagne, selectionne_sources_fortes)
 
 
 # =============================================================================
@@ -352,6 +359,62 @@ def test_conditions_validite_presente_meme_sur_statut_stop_trop_exclues(tmp_path
         luminosite="OSD 75%", conditions="salon, soir, lampe stable")
     assert manifeste["statut_global"] == STATUT_STOP_TROP_EXCLUES
     assert manifeste["conditions_validite"]["luminosite"] == "OSD 75%"
+
+
+# =============================================================================
+# Famille 9 : provenance (§C10 correctif) -- sujet/commit_harnais/date_session
+# stampés au manifeste par le HARNAIS, jamais par le post-traitement (Task 3).
+# =============================================================================
+
+
+def test_provenance_stampee_par_defaut_synthetique(tmp_path):
+    fabrique = lambda k, regime_nom, seed_sujet: (  # noqa: E731
+        fabrique_sujet_synthetique(0.05, 0.015, seed=seed_sujet), lambda: None)
+    manifeste = orchestre_campagne(
+        base_seed=21, n_staircases=1, ppd=40.0, fabrique_repondre=fabrique,
+        out_dir=tmp_path / "logs")
+    assert manifeste["sujet"] == "synthetique"  # défaut, non-régression
+    datetime.fromisoformat(manifeste["date_session"])  # ISO 8601, ne lève pas
+    assert isinstance(manifeste["commit_harnais"], str) and len(manifeste["commit_harnais"]) > 0
+
+
+def test_provenance_sujet_humain_stampee(tmp_path):
+    """`sujet` stampé reflète le paramètre du HARNAIS -- pas déduit d'un
+    quelconque champ du `fabrique_repondre` fourni (ici un sujet synthétique
+    substitué, comme partout ailleurs dans ce fichier, pour rester testable)."""
+    fabrique = lambda k, regime_nom, seed_sujet: (  # noqa: E731
+        fabrique_sujet_synthetique(0.05, 0.015, seed=seed_sujet), lambda: None)
+    manifeste = orchestre_campagne(
+        base_seed=22, n_staircases=1, ppd=40.0, fabrique_repondre=fabrique, sujet="humain",
+        out_dir=tmp_path / "logs")
+    assert manifeste["sujet"] == "humain"
+
+
+def test_provenance_stampee_meme_sur_statut_stop_trop_exclues(tmp_path):
+    fabrique = lambda k, regime_nom, seed_sujet: (  # noqa: E731
+        fabrique_sujet_synthetique(0.05, 0.015, seed=seed_sujet), lambda: None)
+    manifeste = orchestre_campagne(
+        base_seed=23, n_staircases=1, ppd=40.0, fabrique_repondre=fabrique,
+        out_dir=tmp_path / "logs", seuil_exclusion=0.5)  # -> STOP (famille 1)
+    assert manifeste["statut_global"] == STATUT_STOP_TROP_EXCLUES
+    assert manifeste["sujet"] == "synthetique"
+    datetime.fromisoformat(manifeste["date_session"])
+
+
+def test_obtient_commit_harnais_correspond_a_git_rev_parse_head():
+    attendu = subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True,
+                             text=True, check=True).stdout.strip()
+    assert obtient_commit_harnais(ROOT) == attendu
+
+
+def test_obtient_commit_harnais_hors_depot_renvoie_inconnu_et_loggue(tmp_path, capsys):
+    """Hors dépôt git -> `"inconnu"`, mais l'échec est LOGGUÉ (imprimé), pas
+    avalé silencieusement (§C10, correctif provenance)."""
+    resultat = obtient_commit_harnais(tmp_path)
+    assert resultat == "inconnu"
+    sortie = capsys.readouterr().out
+    assert "AVERTISSEMENT" in sortie
+    assert "commit" in sortie.lower()
 
 
 def test_valide_conditions_requises_leve_erreur_si_humain_sans_luminosite_ni_conditions():

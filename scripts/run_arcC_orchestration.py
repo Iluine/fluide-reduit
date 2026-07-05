@@ -56,7 +56,9 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
@@ -101,6 +103,26 @@ assert BUDGET_CATCH == ANCRE_BUDGET, (
     f"({ANCRE_BUDGET}) -- la séparation catch/near-threshold (§C8 D-3) repose sur la "
     "SÉLECTION (bout fort), pas sur un budget distinct ; un écart ici invaliderait la "
     "garantie 'tout catch >= SEUIL_EXCLUSION'.")
+
+
+# --- Provenance (§C10 : commit_harnais/date_session/sujet stampés au manifeste) --
+
+
+def obtient_commit_harnais(root: Path = ROOT) -> str:
+    """SHA du commit pocPhysicator ayant produit la session (`git rev-parse
+    HEAD`, `root` = racine du dépôt) -- c'est le HARNAIS qui connaît cette
+    information au moment de la session, jamais le post-traitement (§C10,
+    correctif provenance). Hors dépôt git (ou `git` absent) -> `"inconnu"`,
+    mais l'ÉCHEC est LOGGUÉ (imprimé), jamais avalé silencieusement."""
+    try:
+        resultat = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root,
+                                  capture_output=True, text=True, check=True)
+        return resultat.stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
+        print(f"[AVERTISSEMENT] obtient_commit_harnais : impossible de déterminer le commit "
+              f"git de {root} ({exc}) -- commit_harnais='inconnu' (§C10, échec loggué, "
+              "jamais avalé).")
+        return "inconnu"
 
 
 # --- D-2 : ancre par-source + manifeste d'exclusions ------------------------
@@ -305,7 +327,7 @@ def orchestre_regime(*, regime: Regime, regime_idx: int, n_staircases: int, base
 
 def orchestre_campagne(
         *, base_seed: int, n_staircases: int = N_STAIRCASES, geometrie: str = "pic-csf",
-        catch_sources_fortes: bool = False, ppd: float,
+        catch_sources_fortes: bool = False, ppd: float, sujet: str = "synthetique",
         fabrique_repondre: FabriqueRepondre | None = None,
         theta_sim: float | None = None, sigma_sim: float | None = None,
         out_dir: Path = LOGS_DIR, params: ParametresEscalier = ParametresEscalier(),
@@ -332,7 +354,14 @@ def orchestre_campagne(
     pure ne refuse rien) + rappel des paramètres de calibration
     (`ppd`/`long_ref_px`/`long_ref_mm`/`distance_mm`) sont consignés au
     manifeste sous `conditions_validite`, TOUJOURS présent (y compris sur
-    le statut STOP-trop-exclues)."""
+    le statut STOP-trop-exclues).
+
+    CORRECTIF §C10 (provenance, consommée par `scripts/run_arcC_pins.py`) :
+    `sujet` (`"humain"`/`"synthetique"`, défaut inchangé pour compat
+    ascendante), `commit_harnais` (`obtient_commit_harnais`, SHA pocPhysicator
+    au moment de CETTE session) et `date_session` (ISO 8601, `datetime.now()`)
+    sont stampés au manifeste -- c'est le HARNAIS qui les connaît, jamais le
+    post-traitement Task 3 (pins)."""
     if geometrie not in GEOMETRIES:
         raise ValueError(
             f"orchestre_campagne : geometrie inconnue {geometrie!r} (attendu {GEOMETRIES!r}).")
@@ -348,6 +377,7 @@ def orchestre_campagne(
     taille_px = calcule_taille_affichage_px(geometrie, ppd)
 
     manifeste = dict(
+        sujet=sujet, commit_harnais=obtient_commit_harnais(), date_session=datetime.now().isoformat(),
         parametres_graves=dict(
             ancre_budget=budget, haut_jnd_plausible=HAUT_JND_PLAUSIBLE,
             seuil_exclusion=seuil_exclusion, n_staircases=n_staircases,
@@ -470,7 +500,7 @@ def main() -> None:
 
     manifeste = orchestre_campagne(
         base_seed=args.base_seed, n_staircases=args.n_staircases, geometrie=args.geometrie,
-        catch_sources_fortes=args.catch_sources_fortes, ppd=ppd,
+        catch_sources_fortes=args.catch_sources_fortes, ppd=ppd, sujet=args.sujet,
         fabrique_repondre=fabrique_repondre, out_dir=args.out_dir,
         luminosite=args.luminosite, conditions=args.conditions,
         long_ref_px=args.long_ref_px, long_ref_mm=args.long_ref_mm, distance_mm=args.distance_mm)
