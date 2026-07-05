@@ -1,0 +1,104 @@
+{
+  "meta": {
+    "seeds": [
+      101,
+      102,
+      103,
+      104,
+      105
+    ],
+    "n_episodes": 160,
+    "checkpoints": [
+      10,
+      20,
+      40,
+      80,
+      160
+    ],
+    "checkpoints_communs_manche1": [
+      10,
+      20,
+      40,
+      80
+    ],
+    "grid": {
+      "H": 64,
+      "W": 64,
+      "dx": 1.0,
+      "dy": 1.0
+    },
+    "relief": 0.6043843991164223,
+    "s_half_op": 0.030219219955821115,
+    "kd_calibre_v2": 0.0019109529749704406,
+    "ke_calibre_v2": 0.005232991146814947
+  },
+  "sanity_1_non_regression_bit_a_bit": {
+    "par_seed": [
+      {
+        "detail": {
+          "s_L10": true,
+          "s_L20": true,
+          "s_L40": true,
+          "s_L80": true
+        },
+        "verdict": "PASS",
+        "seed": 101
+      },
+      {
+        "detail": {
+          "s_L10": true,
+          "s_L20": true,
+          "s_L40": true,
+          "s_L80": true
+        },
+        "verdict": "PASS",
+        "seed": 102
+      },
+      {
+        "detail": {
+          "s_L10": true,
+          "s_L20": true,
+          "s_L40": true,
+          "s_L80": true
+        },
+        "verdict": "PASS",
+        "seed": 103
+      },
+      {
+        "detail": {
+          "s_L10": true,
+          "s_L20": true,
+          "s_L40": true,
+          "s_L80": true
+        },
+        "verdict": "PASS",
+        "seed": 104
+      },
+      {
+        "detail": {
+          "s_L10": true,
+          "s_L20": true,
+          "s_L40": true,
+          "s_L80": true
+        },
+        "verdict": "PASS",
+        "seed": 105
+      }
+    ],
+    "condition": "np.array_equal(h160_s{seed}, h_s{seed}) pour L in [10, 20, 40, 80], bit-a-bit, toutes seeds",
+    "verdict": "PASS"
+  },
+  "sanity_2_path_dependence_L160": {
+    "paire": [
+      101,
+      102
+    ],
+    "checkpoint": "s_L160",
+    "jnd": 0.05,
+    "s_half_op": 0.030219219955821115,
+    "f_ordre": 0.730224609375,
+    "condition": "f_ordre > 0",
+    "verdict": "PASS"
+  },
+  "verdict": "PASS"
+}
