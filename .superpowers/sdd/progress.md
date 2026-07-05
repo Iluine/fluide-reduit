@@ -247,3 +247,14 @@ prononcé définitif gaté sur extension 16L₀ (L=160, NON lancée) ; contingen
 s'arme PAS (IC≥4%) ; kx=1@1% moot (JND_sev≥2%) ; consommateurs 2&4 (W1, gate fovéa-z) en attente du
 pin TEMPOREL non mesuré. Blemish : conditions=placeholder (mesure non invalidée). Contrat §C11=6c50345.
 Forks Romain : 16L₀ ? axe temporel (a/a′/d) ? politique zoom §C7-4 ?
+
+═══ C-1a — MICRO-MESURES POUR ENCADREMENT BIBLIO (Romain, plan C-1a) ═══
+Base = commit 196fe75, branche arc-c-pin-jnd. Deux mesures d'analyse PURE (0 sim, 0 RNG, 0 donnée
+humaine), entrées toutes vérifiées présentes (pré-vol falsifiabilité : histories/h_s*.npz + albedo.py
++ run_arcA_verdict_qt.py + measures_qt.npz + pins_spatial.json — RIEN de supposé). Point d'arrêt =
+remonter les deux JSON (C-1 chat consomme le ratio ; arbitrage 16L₀ Romain consomme la surface).
+Task 1: ratio chi_rms/Michelson bande 4-7 sur 19 sources incluses (vrai + régénéré-32) ; sanity sinus
+  pur = 1/√2 ; garde d'honnêteté = dispersion IQR inter-sources. Sortie ratio_rms_michelson.json.
+Task 2: re-seuillage k*(L) famille-2 quadtree aux 6 JND réels du pin (exacts pins_spatial.json ;
+  RÉUTILISE k_star_groupe_qt) ; INTERDIT verdict/pente ; non-régression k*(80)@5%=400 + sous_jnd bit.
+  Sortie surface_kstar_aux_pins.json + écart sévère↔laxiste en floats/L.
