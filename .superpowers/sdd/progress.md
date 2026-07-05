@@ -160,3 +160,8 @@ Task 3 CORRECTIF (avant session) : dispatché (a52ae008). (1) logging durées r�
   (accumulateur pur testé + sidecar timing + résumé réalisé-vs-nominal + avertissement >25%),
   glue matplotlib partagée coquille/orchestrateur ; (2) --luminosite/--conditions REQUIS si humain
   → manifeste conditions_validite. Brief arcC-task3fix-timing-conditions-brief.md. BASE = 38a02e7.
+Task 3 CORRECTIF : DONE (commits bcbdfd6 timing, c317f3b conditions). 432/432 verts (408+24 neufs :
+  17 timing + 7 conditions). Nouveau src/arcC_timing.py (accumulateur pur) câblé dans le chemin
+  humain partagé ; sidecar timing par staircase + résumé réalisé-vs-nominal + avert >25% (écart
+  absolu). --luminosite/--conditions requis si humain → manifeste conditions_validite. EN REVUE
+  (relecteur ac589bca) — dernier gate avant données irréversibles.
