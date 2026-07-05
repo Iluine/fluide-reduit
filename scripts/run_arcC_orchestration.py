@@ -278,6 +278,8 @@ def _fabrique_repondre_humain(taille_px: int, out_dir: Path) -> FabriqueRepondre
                 ) -> tuple[Callable[[EssaiPropose], Reponse], Callable[[], None]]:
         regime = REGIME_SEVERE if regime_nom == REGIME_SEVERE.nom else REGIME_LAXISTE
         fig, axes = _cree_figure(regime, taille_px)
+        fig.suptitle("a : X ressemble à A     b : X ressemble à B     —     Échap / fermer : arrêter",
+                     fontsize=9)
         fig.show()  # affiche la fenêtre de CETTE staircase (mode interactif)
         rng_masque = np.random.default_rng(seed_sujet)
         repondre, journal_timing = _construit_repondre_humain(fig, axes, regime, rng_masque)
@@ -511,12 +513,19 @@ def main() -> None:
             parser.error("--sujet synthetique requiert --theta-sim et --sigma-sim.")
         fabrique_repondre = _fabrique_repondre_synthetique(args.theta_sim, args.sigma_sim)
 
-    manifeste = orchestre_campagne(
-        base_seed=args.base_seed, n_staircases=args.n_staircases, geometrie=args.geometrie,
-        catch_sources_fortes=args.catch_sources_fortes, ppd=ppd, sujet=args.sujet,
-        fabrique_repondre=fabrique_repondre, out_dir=args.out_dir,
-        luminosite=args.luminosite, conditions=args.conditions,
-        long_ref_px=args.long_ref_px, long_ref_mm=args.long_ref_mm, distance_mm=args.distance_mm)
+    from scripts.run_arcC_session import SessionInterrompue
+    try:
+        manifeste = orchestre_campagne(
+            base_seed=args.base_seed, n_staircases=args.n_staircases, geometrie=args.geometrie,
+            catch_sources_fortes=args.catch_sources_fortes, ppd=ppd, sujet=args.sujet,
+            fabrique_repondre=fabrique_repondre, out_dir=args.out_dir,
+            luminosite=args.luminosite, conditions=args.conditions,
+            long_ref_px=args.long_ref_px, long_ref_mm=args.long_ref_mm, distance_mm=args.distance_mm)
+    except SessionInterrompue as exc:
+        print(f"[CAMPAGNE INTERROMPUE] {exc} -- AUCUN manifeste écrit (campagne inachevée = "
+              "fait de session, pas de référent, §C10). Reprends au pré-vol si c'était "
+              "volontaire, sinon remonte.")
+        return
 
     ecrit_manifeste_json(args.manifeste, manifeste)
 

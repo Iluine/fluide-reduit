@@ -120,6 +120,14 @@ def _masque_bruite(shape: tuple[int, int], rng: np.random.Generator) -> np.ndarr
 # --- Sujet HUMAIN (capture clavier) ------------------------------------------
 
 
+class SessionInterrompue(RuntimeError):
+    """Levée quand le sujet interrompt la session (fenêtre FERMÉE ou touche Échap)
+    AVANT d'avoir répondu -- la staircase est incomplète, rien de définitif n'est
+    écrit. Attrapée par `main()` (coquille) et par la campagne
+    (`run_arcC_orchestration.py`) pour un arrêt PROPRE : pas un hang, pas une
+    fenêtre blanche qui se rouvre en boucle (le défaut du 1er essai d'affichage)."""
+
+
 def _construit_repondre_humain(fig: plt.Figure, axes: list[plt.Axes], regime: Regime,
                                rng_masque: np.random.Generator
                                ) -> tuple["callable", JournalTiming]:
@@ -139,14 +147,20 @@ def _construit_repondre_humain(fig: plt.Figure, axes: list[plt.Axes], regime: Re
     écrit le sidecar + imprime le résumé, cf. `main()` ici et
     `_fabrique_repondre_humain`, `scripts/run_arcC_orchestration.py` --
     PARTAGÉ, un seul endroit instrumenté)."""
-    reponse_capturee: dict[str, str] = {}
+    etat: dict = {"reponse": None, "ferme": False}
     journal_timing = JournalTiming()
 
     def on_key(event) -> None:
         if event.key in ("a", "b"):
-            reponse_capturee["valeur"] = event.key.upper()
+            etat["reponse"] = event.key.upper()
+        elif event.key == "escape":
+            etat["ferme"] = True  # abandon volontaire au clavier
+
+    def on_close(_event) -> None:
+        etat["ferme"] = True  # fermeture de la fenêtre = abandon (arrêt propre, pas un hang)
 
     fig.canvas.mpl_connect("key_press_event", on_key)
+    fig.canvas.mpl_connect("close_event", on_close)
 
     def repondre(essai: EssaiPropose) -> Reponse:
         a_a, a_b, a_x = _images_essai(essai)
@@ -192,10 +206,15 @@ def _construit_repondre_humain(fig: plt.Figure, axes: list[plt.Axes], regime: Re
         print(formate_timing_essai(essai.indice_essai,
                                    journal_timing.enregistrements[n_avant:]), flush=True)
 
-        reponse_capturee.clear()
-        while "valeur" not in reponse_capturee:
-            plt.waitforbuttonpress(timeout=0.1)
-        return reponse_capturee["valeur"]  # type: ignore[return-value]
+        etat["reponse"] = None
+        while etat["reponse"] is None:
+            if etat["ferme"]:
+                raise SessionInterrompue(
+                    f"Session interrompue (fenêtre fermée ou Échap) à l'essai "
+                    f"{essai.indice_essai}, régime {regime.nom} -- aucune réponse, staircase "
+                    "incomplète, rien de définitif écrit.")
+            plt.pause(0.05)  # pompe l'event loop Qt + repeint ; laisse on_key/on_close tirer
+        return etat["reponse"]  # type: ignore[return-value]
 
     return repondre, journal_timing
 
@@ -296,16 +315,23 @@ def main() -> None:
                               display=os.environ.get("DISPLAY"))
 
     fig, axes = _cree_figure(regime, taille_px)
+    fig.suptitle("a : X ressemble à A     b : X ressemble à B     —     Échap / fermer : arrêter",
+                 fontsize=9)
     plt.ion()          # mode interactif : la fenêtre s'affiche et pompe les événements
     fig.show()
     rng_masque = np.random.default_rng(args.seed_masque)
     repondre, journal_timing = _construit_repondre_humain(fig, axes, regime, rng_masque)
 
     t0 = time.time()
-    resultat: ResultatEscalier = run_escalier(
-        numero_staircase=args.numero_staircase, regime_nom=regime.nom, repondre=repondre,
-        seed_roving=args.seed_roving, seed_catch=args.seed_catch, budget=args.budget,
-        params=params, banques=banques)
+    try:
+        resultat: ResultatEscalier = run_escalier(
+            numero_staircase=args.numero_staircase, regime_nom=regime.nom, repondre=repondre,
+            seed_roving=args.seed_roving, seed_catch=args.seed_catch, budget=args.budget,
+            params=params, banques=banques)
+    except SessionInterrompue as exc:
+        plt.close(fig)
+        print(f"[SESSION INTERROMPUE] {exc}")
+        return
     plt.close(fig)
 
     validite = evalue_validite_session(resultat.essais)
