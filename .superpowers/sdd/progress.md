@@ -377,3 +377,10 @@ Task 1 : IN-FLIGHT à la pause. Script scripts/run_arcA_m2_sonde.py + tests/test
   sinon re-dispatcher Task 1 (brief m2-task1-brief.md intact) — les fichiers non commités
   peuvent servir de base mais doivent repasser par run réel + tests + revue.
   RAPPEL points d'arrêt : après sonde → remonter la courbe Δχ_i à Romain AVANT Task 2.
+Task 1 : implémenteur DONE avant fermeture session (commit fceddf5 — sonde + tests + json + png).
+  8 tests dédiés + suite 555 passed, gels inchangés. Série Δχ_i = [0, .0057, .0292, .0554, .0276,
+  .0305], lecture=AUTRE (pic sous-JND à i=4 puis relaxation ; aucune traversée, même pas ic_bas).
+  Chronos ~2.8 s/épisode → grille estimée ~2-2.5 h (largement sous gate W0).
+  RESTE À FAIRE : revue Task 1 (non revue !) ; courbe REMONTÉE à Romain (fait, séance du 06/07
+  soir) ; décision Romain sur l'achat de la grille ATTENDUE (lecture AUTRE = pas de branchement
+  automatique) ; puis Task 2 gate d'achat.
