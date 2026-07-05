@@ -293,3 +293,57 @@ Task 3 (AJOUTÉE par décision Romain §C12) : ratio r0 = 2·RMS/(peak-to-peak) 
   Revue whole-branch SDD non lancée : 3 mesures INDÉPENDANTES (sorties disjointes, r0 lit le natif en RO), chacune
   déjà revue spec+qualité, natif byte-identique vérifié, suite verte — aucune surface d'intégration à balayer.
   Point d'arrêt = 3 JSON remontés. Restent à Romain (non dus) : C-1 livraison (ordre de grandeur), 16L₀, axe temporel.
+
+═══════════════════════════════════════════════════════════════════════════════
+MISSION : Extension 16L₀ (L=160) — prononcé cellule 1 (§A12). Base = a5c2731 (arc-c-pin-jnd).
+  Branche : arc-c-pin-jnd (descendante d'arc-a-etat-complet nommée au plan ; SEULE à réunir
+  histoires/mesures Arc A + pin Arc C — déviation notée à Romain). Pin sévère IC ENTIER lu de
+  pins_spatial.json : ic_bas 0.06033 / pin 0.07334 / ic_haut 0.08674.
+Task 0 : contrat §A12 gravé (pocCascade2phys commit 3fd72aa, append-only après §C12). run_history
+  GELÉ vérifié (blob 88e16e2d, md5 b564723a) — appelé n_episodes=160, non modifié. complete.
+Task 1 (générateur h160_s{seed}.npz + vérif bit-identité préfixes) : DISPATCHÉ (implémenteur sonnet).
+  Génération complète 5 seeds (~80 min) = job contrôleur en arrière-plan APRÈS validation script.
+ARCHI 16L₀ (tranchée sur digest Explore) : couche ADDITIVE séparée. L_LIST=(10,20,40,80) gelé,
+  importé par toute la chaîne (run_arcA_measure:107) — NON muté. h160_*.npz (Task1) + measures_160.npz
+  (Task2, v2@160 + ferm/shuf@{10,160}, même layout (L,seed,budget)) séparés ; Task3 agrafe
+  measures_qt.npz (L∈{10..80}) + measures_160.npz (L=160). measures_qt.npz / h_s*.npz / run_arcA_measure*
+  INTACTS. Réutilise _measure_cell_qt/_field_true_qt/k_star_groupe_qt par import. Brief Task2 écrit.
+DÉCISION MÉTHODE Task3 (nommée avant mesure, veto Romain possible) : pente moitié-haute {40,80,160}
+  = OLS de k*(L) vs L (généralisation fidèle du 2-pts §A3 (k80-k40)/40), bootstrap comme §A3
+  (10000, seed 20260704, mêmes indices seeds across L, IC percentile, ∞→NaN). Signal dominant
+  k*(160) plat-256 vs saut-400 = comparaison directe budgets quantifiés, robuste à l'estimateur.
+Task 1 : complete (commits a5c2731..9a2aeac, revue SPEC✅ + QUALITÉ approuvé). 2 fichiers nouveaux,
+  aucun existant touché ; src/sediment.py blob 88e16e2d confirmé gelé. Relecteur a vérifié activement :
+  bit-à-bit EXACT (np.array_equal, 0 allclose ; altération 1e-12 → BLOCKED/SystemExit), pas de clobber
+  des originaux, 4 tests réels (replay ~29 s bit-identique). Suite 512/512. Minor non introduit
+  (VERIFY_PATH figé au chargement, pattern miroir) → pas de correctif. Génération 5 seeds LANCÉE (arrière-plan).
+Task 2 : complete (commits 9a2aeac..cfe4f29 + fix 1fc6ffe). Revue SPEC✅(réserve) + QUALITÉ approuvé ;
+  finding Important corrigé (shuf@L=10 ajouté au test non-régression sous skipif — ferm+shuf couverts,
+  np.array_equal strict, réutilise _mesurer_cellule) + Minor (ARMS importé). Relecteur a vérifié :
+  _measure_cell_qt/_field_true_qt appelés aux bonnes signatures, sous_jnd délégué à sous_jnd_a_jnd,
+  schéma measures_160.npz conforme (ma1/ma2_v2 (1,5,7) L=[160] ; ferm/shuf (2,5,7) L=[10,160]),
+  aucun verdict/pente/k*, aucun fichier gelé touché, meta sans horodatage. Suite 517+1skip.
+  RESTE (⚠ contrôleur) : lever skipif + confirmer non-régression L=10 bit-à-bit APRÈS mesure réelle.
+Task 3 (verdict §A12) : DISPATCHÉ (implémenteur sonnet). Script + tests synthétiques/skipif ; run réel
+  du verdict = contrôleur après measures_160.npz.
+Task 1 npz commités (9c76d16) : 5× h160 + verify_16L0 PASS (préfixes bit-à-bit 5/5, path-dep L=160 f_ordre=0.730).
+Task 2 mesure réelle : measures_160.npz commité (807 s). NON-RÉGRESSION L=10 CONFIRMÉE bit-à-bit (contrôleur,
+  item ⚠ levé) : measures_160[ma1/ma2 × ferm/shuf] tranche L=10 == measures_qt, np.array_equal True 4/4.
+  Aperçu (NON verdict) : ferm=0 exact partout ; shuf grand partout ; v2@160 ma1@256≈0.06-0.08 (straddle pin
+  0.0733 — le verdict k*(160) plat-256 vs saut-400 se joue là, calcul mécanique Task 3, PAS d'œil).
+Task 3 : complete (commits 8a2b38b..068a8f6 + fix Important b920e68 + verdict run). Revue opus SPEC✅ +
+  QUALITÉ approuvé ; combinateur §A12 vérifié empiriquement (INDETERMINE sur cas réel, else=sortie sûre) ;
+  Important corrigé (garde non-régression ancrée à surface_kstar_aux_pins.json, 6 pins×4 L bit-à-bit,
+  non-tautologie prouvée) ; 3 Minor sans correctif (règle NaN moot ; clés JSON = pente/n_bootstrap_indefinis ;
+  gate inline autorisé). Suite 536/0skip.
+VERDICT §A12 = INDETERMINE_JND (gate CONFORME 0/80). Commit verdict = <à suivre>. k*(L) pin sévère :
+  ic_bas 256,256,400,400,400 | pin 256,256,256,256,400 (saut 16×, pente IC∋0) | ic_haut 256 plat×5.
+  Divergence colonnes ⇒ JND-dépendant DANS IC = surface k*(L,JND) pour Arc C. Soupçon pré-nommé NON réalisé
+  (pin central saute, pas ic_bas). Re-dérivé main OK. RESTE : journal §A12 (contrat) + remontée verdict.
+Revue whole-branch (opus) : PRÊT À GRAVER — instrument gelé préservé bit-à-bit end-to-end, appariement
+  seeds prouvé, portée honnête (divergence tranchée par règle générale pas histoire anticipée), complétude OK.
+  2 mineurs non-bloquants non exigés (assert appariement runtime ; scalaire bascule — surface déjà dans JSON).
+Journal §A12-résultat gravé au contrat (pocCascade2phys, commit dédié). Verdict artefacts = c645558 (pocPhysicator).
+═══ MISSION 16L₀ CLOSE. Verdict = INDETERMINE_JND (gate CONFORME). Cellule 1 NON prononcée définitivement :
+  JND-dépendante DANS l'IC sévère = surface k*(L,JND) portée à l'Arc C. Règle dernière famille consommée.
+  Point d'arrêt atteint : verdict remonté à Romain. AUCUN enchaînement manche 2 / 3e famille. ═══
