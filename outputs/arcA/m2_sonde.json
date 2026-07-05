@@ -1,0 +1,74 @@
+{
+  "meta": {
+    "seed": 101,
+    "dt": 4,
+    "k": 256,
+    "n_emissions": 6,
+    "jnd_sev": 0.07334065957385666,
+    "ic": [
+      0.06033229334102097,
+      0.08673568621862042
+    ]
+  },
+  "delta_chi": [
+    0.0,
+    0.00568943322877713,
+    0.02919340385581104,
+    0.0553997937278754,
+    0.02757176438654918,
+    0.03051610193565879
+  ],
+  "taille_commits": [
+    255,
+    255,
+    255,
+    255,
+    255,
+    255
+  ],
+  "episodes_emissions": [
+    4,
+    8,
+    12,
+    16,
+    20,
+    24
+  ],
+  "chronometrage": {
+    "verite_s": 68.86551782400056,
+    "moteur_s": 66.05998625999928,
+    "par_episode_verite_s": 2.8693965760000233,
+    "par_episode_moteur_s": 2.75249942749997
+  },
+  "lecture": "AUTRE",
+  "detail_lecture": {
+    "traverse_jnd_sev": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "s1": false,
+    "s2": false,
+    "max_emissions_2_3": 0.02919340385581104,
+    "max_emissions_4_6": 0.0553997937278754,
+    "traverse_ic_bas": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "traverse_ic_haut": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  }
+}
