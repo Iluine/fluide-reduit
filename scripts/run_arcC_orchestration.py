@@ -220,26 +220,39 @@ def _fabrique_repondre_synthetique(theta_sim: float, sigma_sim: float) -> Fabriq
     return fabrique
 
 
-def _fabrique_repondre_humain(taille_px: int) -> FabriqueRepondre:
+def _fabrique_repondre_humain(taille_px: int, out_dir: Path) -> FabriqueRepondre:
     """Délègue à la coquille interactive (`scripts/run_arcC_session.py`) --
     **NON testé ici** (matplotlib + clavier), **non exécuté par ce build**
     (brief : « AUCUN humain lancé dans ce build »). Une figure/axes est créée
     PAR staircase (régime déterminé par `regime_nom`) et fermée par le
     `cleanup` retourné -- `orchestre_regime` l'appelle après chaque
-    staircase."""
+    staircase.
+
+    CORRECTIF §C9 pièce 1 (timing) : `_construit_repondre_humain` renvoie
+    désormais aussi le `JournalTiming` PUR (`src/arcC_timing.py`) de la
+    staircase -- `cleanup` écrit son sidecar (`session_<regime>_<k>.
+    timing.jsonl`, MÊME convention de nom que le log d'essais écrit ensuite
+    par `orchestre_regime`, `out_dir` fourni ici pour cette raison) et
+    imprime le résumé réalisé-vs-nominal (+ AVERTISSEMENT >25%, jamais un
+    gate dur)."""
     import matplotlib.pyplot as plt
 
     from scripts.run_arcC_session import _cree_figure, _construit_repondre_humain
+    from src.arcC_timing import ecrit_timing_jsonl, formate_resume_timing, resume_timing
 
     def fabrique(numero_staircase: int, regime_nom: str, seed_sujet: int
                 ) -> tuple[Callable[[EssaiPropose], Reponse], Callable[[], None]]:
         regime = REGIME_SEVERE if regime_nom == REGIME_SEVERE.nom else REGIME_LAXISTE
         fig, axes = _cree_figure(regime, taille_px)
         rng_masque = np.random.default_rng(seed_sujet)
-        repondre = _construit_repondre_humain(fig, axes, regime, rng_masque)
+        repondre, journal_timing = _construit_repondre_humain(fig, axes, regime, rng_masque)
 
         def cleanup() -> None:
             plt.close(fig)
+            timing_path = out_dir / f"session_{regime_nom}_{numero_staircase}.timing.jsonl"
+            ecrit_timing_jsonl(timing_path, journal_timing)
+            print(formate_resume_timing(resume_timing(journal_timing, regime)))
+            print(f"[REPORT timing] -> {timing_path}")
 
         return repondre, cleanup
     return fabrique
@@ -407,7 +420,7 @@ def main() -> None:
         print("[AVERTISSEMENT] --sujet humain : chemin délégué à la coquille interactive, "
               "NON testé par ce build. Aucune session humaine n'est lancée par les tests.")
         taille_px = calcule_taille_affichage_px(args.geometrie, ppd)
-        fabrique_repondre = _fabrique_repondre_humain(taille_px)
+        fabrique_repondre = _fabrique_repondre_humain(taille_px, args.out_dir)
     else:
         if args.theta_sim is None or args.sigma_sim is None:
             parser.error("--sujet synthetique requiert --theta-sim et --sigma-sim.")

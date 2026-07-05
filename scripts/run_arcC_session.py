@@ -27,7 +27,14 @@ manche 1) rendu viridis, vmin=0, vmax=1, origin="lower" (= `render.py`/
 `io_utils.py`, cf. brief). Taille d'affichage calibrée via
 `src/arcC_calibration.py` (§C7) -- PARAMÈTRES DE GÉOMÉTRIE D'ÉCRAN (distance,
 longueur de référence) à fournir en CLI, mesurés physiquement avant la
-session (Task 3, pas improvisés ici)."""
+session (Task 3, pas improvisés ici).
+
+CORRECTIF §C9 pièce 1 (PREREGISTRATION.md, pocCascade2phys `7110e31`,
+reproduit dans `.superpowers/sdd/arcC-task3fix-timing-conditions-brief.md`),
+avant toute donnée humaine : durées d'exposition RÉALISÉES loggées par essai
+(`src/arcC_timing.py`, accumulateur PUR testé -- sidecar `<log>.timing.jsonl`
++ résumé réalisé-vs-nominal imprimé, AVERTISSEMENT si écart >25 %, jamais un
+gate dur)."""
 from __future__ import annotations
 
 import argparse
@@ -50,6 +57,8 @@ from src.arcC_abx import (REGIME_LAXISTE, REGIME_SEVERE, BanqueBancs, EssaiPropo
 from src.arcC_calibration import (C_DEG_CIBLE_DEFAUT, PORTEUSE_CYC_PAR_DOMAINE_DEFAUT,
                                   observation_cellule_pic_csf, pixels_par_degre)
 from src.arcC_stimuli import melange, regenere_budget
+from src.arcC_timing import (JournalTiming, ecrit_timing_jsonl, enregistre_phase,
+                             formate_resume_timing, resume_timing)
 from scripts.run_arcA_revalidate import S_HALF_OP
 # Task 3 (§C8) : ancre budget-32 (D-1) et flag géométrie-plafond (D-4) --
 # IMPORTÉS de l'orchestrateur (source unique de vérité pour ces paramètres
@@ -99,13 +108,26 @@ def _masque_bruite(shape: tuple[int, int], rng: np.random.Generator) -> np.ndarr
 
 
 def _construit_repondre_humain(fig: plt.Figure, axes: list[plt.Axes], regime: Regime,
-                               rng_masque: np.random.Generator) -> "callable":
+                               rng_masque: np.random.Generator
+                               ) -> tuple["callable", JournalTiming]:
     """Fabrique `repondre(essai) -> "A"|"B"` branché sur un humain : affiche
     A/B (+X) selon le régime (simultané côte à côte / séquentiel avec masque
     et délai) et bloque sur une touche 'a'/'b' (`plt.waitforbuttonpress` +
-    callback clavier). AUCUNE logique de mesure ici -- délègue tout le
-    scoring à `run_escalier` (logique pure)."""
+    callback clavier). AUCUNE logique de mesure/scoring ici -- délègue tout
+    le scoring à `run_escalier` (logique pure).
+
+    CORRECTIF §C9 pièce 1 (durées réalisées) : mesure `time.perf_counter()`
+    autour de CHAQUE phase présentée -- sévère : la présentation simultanée
+    (une seule phase `"simultane"`, AUCUNE cible temporelle, inspection
+    libre) ; laxiste : X, masque, A, masque, B, masque (`"exposition_{X,A,B}"`
+    / `"retention_{X,A,B}"`, comparées à `regime.exposition_s`/
+    `retention_s`) -- accumulées via `enregistre_phase` (accumulateur PUR,
+    `src/arcC_timing.py`) dans un `JournalTiming` renvoyé à l'appelant (qui
+    écrit le sidecar + imprime le résumé, cf. `main()` ici et
+    `_fabrique_repondre_humain`, `scripts/run_arcC_orchestration.py` --
+    PARTAGÉ, un seul endroit instrumenté)."""
     reponse_capturee: dict[str, str] = {}
+    journal_timing = JournalTiming()
 
     def on_key(event) -> None:
         if event.key in ("a", "b"):
@@ -116,27 +138,44 @@ def _construit_repondre_humain(fig: plt.Figure, axes: list[plt.Axes], regime: Re
     def repondre(essai: EssaiPropose) -> Reponse:
         a_a, a_b, a_x = _images_essai(essai)
         if regime.simultane:
+            t_debut = time.perf_counter()
             _affiche(axes[0], a_a, "A")
             _affiche(axes[1], a_b, "B")
             _affiche(axes[2], a_x, "X")
             fig.canvas.draw()
-            # Inspection libre, SANS limite de temps (régime sévère, §C0).
+            # Inspection libre, SANS limite de temps (régime sévère, §C0) --
+            # AUCUNE cible temporelle : phase mesurée pour information
+            # seulement (`nominal=None`, cf. `resume_timing`, catégorie
+            # "autre", jamais comparée/alertée).
+            enregistre_phase(journal_timing, indice_essai=essai.indice_essai,
+                             regime_nom=regime.nom, nom_phase="simultane",
+                             t_debut=t_debut, t_fin=time.perf_counter(), nominal=None)
         else:
             for image, titre in ((a_x, "X"), (a_a, "A"), (a_b, "B")):
+                t_debut = time.perf_counter()
                 _affiche(axes[0], image, titre)
                 fig.canvas.draw()
                 plt.pause(regime.exposition_s or 0.0)
+                enregistre_phase(journal_timing, indice_essai=essai.indice_essai,
+                                 regime_nom=regime.nom, nom_phase=f"exposition_{titre}",
+                                 t_debut=t_debut, t_fin=time.perf_counter(),
+                                 nominal=regime.exposition_s)
                 if regime.masque_bruite:
+                    t_debut = time.perf_counter()
                     _affiche(axes[0], _masque_bruite(image.shape, rng_masque), "")
                     fig.canvas.draw()
                     plt.pause(regime.retention_s or 0.0)
+                    enregistre_phase(journal_timing, indice_essai=essai.indice_essai,
+                                     regime_nom=regime.nom, nom_phase=f"retention_{titre}",
+                                     t_debut=t_debut, t_fin=time.perf_counter(),
+                                     nominal=regime.retention_s)
 
         reponse_capturee.clear()
         while "valeur" not in reponse_capturee:
             plt.waitforbuttonpress(timeout=0.1)
         return reponse_capturee["valeur"]  # type: ignore[return-value]
 
-    return repondre
+    return repondre, journal_timing
 
 
 # --- CLI ---------------------------------------------------------------------
@@ -213,7 +252,7 @@ def main() -> None:
 
     fig, axes = _cree_figure(regime, taille_px)
     rng_masque = np.random.default_rng(args.seed_masque)
-    repondre = _construit_repondre_humain(fig, axes, regime, rng_masque)
+    repondre, journal_timing = _construit_repondre_humain(fig, axes, regime, rng_masque)
 
     t0 = time.time()
     resultat: ResultatEscalier = run_escalier(
@@ -226,14 +265,23 @@ def main() -> None:
     out_path = args.out or (OUT_DIR / f"session_{args.numero_staircase}_{regime.nom}.jsonl")
     ecrit_log_jsonl(out_path, resultat.essais)
 
+    # Correctif §C9 pièce 1 : sidecar timing (durées réalisées, hors log
+    # d'essais -- ne touche PAS le déterminisme des logs existants) + résumé
+    # réalisé-vs-nominal (avertissement >25%, jamais un gate dur).
+    timing_path = out_path.parent / f"{out_path.stem}.timing.jsonl"
+    ecrit_timing_jsonl(timing_path, journal_timing)
+    resume = resume_timing(journal_timing, regime)
+
     print("=" * 78)
     print(f"ARC C / TASK 3 -- SESSION staircase={args.numero_staircase} régime={regime.nom}")
     print("=" * 78)
     print(f"n_essais={len(resultat.essais)}  n_reversals={len(resultat.reversals)}  "
           f"complet={resultat.complet}  seuil={resultat.seuil}")
     print(f"validité §C5 : {validite}")
+    print(formate_resume_timing(resume))
     print(f"Temps de session : {time.time() - t0:.1f}s")
     print(f"[REPORT] -> {out_path}")
+    print(f"[REPORT timing] -> {timing_path}")
 
 
 if __name__ == "__main__":
