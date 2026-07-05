@@ -271,3 +271,13 @@ Task 1: complete (commits 19dfa4d..061885a, revue SPEC✅ + QUALITÉ approuvé, 
   travers lui extrapole la saturation-pédestal (ratio natif r_nat = r0·(1+s/2mean), r0=2·RMS/pp le ratio
   scale-invariant petit-contraste). Mesure NON redéfinie (seuil pré-enregistré) ; décision C-1/Romain :
   garder natif, ou ajouter r0=2·RMS/(peak-to-peak) comme mesure compagne ? À nommer au point d'arrêt.
+Task 2: complete (commits 98d30f0..27fdde7 impl + fix contrôleur, revue SPEC✅ + QUALITÉ approuvé, 6/6).
+  Reviewer a vérifié indépendamment : 0 RNG, k* réutilisé (pas de réimpl), sous_jnd_a_jnd fidèle bit-à-bit,
+  2 non-régressions OK (sous_jnd grille bit-exact + k*(80)@5%=400), JND lus runtime, monotonie sur grille∪pins,
+  0 fuite verdict/pente sur 428 clés, double-run octet-identique. Fix contrôleur (renommage endossé par reviewer) :
+  meta.verdict_reutilise → provenance_kstar (garde test STRICT sans exception, scan forme sérialisée) — incohérence
+  de MON brief, pas de la pré-registration ; aucune valeur k* touchée. TABLE k* aux 6 JND réels (mécanique, AUCUN
+  verdict lu — lecture = fork 16L₀ de Romain) : pin sévère 7.33% → k*=256 PLAT sur L∈{10,20,40,80} (< 400 du
+  point-grille 5%, < cap 409.6) ; ic_bas sévère 6.03% → 256,256,400,400 ; pin laxiste 11.5% → 128,256,256,256 ;
+  ic_haut laxiste 13.9% → 128 partout. Aucun k* ∞/>cap/non-discriminant sur ces 6 JND. Écart deux-étages (floats,
+  au pin) : L=10 delta −128 (laxiste ferme à 128<256), L∈{20,40,80} delta 0. Sortie surface_kstar_aux_pins.json.

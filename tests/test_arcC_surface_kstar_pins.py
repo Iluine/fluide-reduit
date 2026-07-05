@@ -16,13 +16,11 @@ Familles de tests (brief) :
   4. Cohérence des drapeaux `sup_cap`/`non_discriminant` avec
      `_non_discriminant`/`CAP_FLOATS` (réutilisés, jamais réimplémentés).
   5. INTERDIT structurel : aucune clé `verdict`/`pente`/`issue`/`cellule`
-     dans le JSON produit — SAUF `meta.verdict_reutilise`, seule exception
-     documentée : ce champ ne PORTE aucun verdict, il NOMME le module dont
-     les fonctions de verdict quadtree ont été réutilisées (provenance,
-     mandatée verbatim par le brief lui-même, cf. son gabarit JSON) ; c'est
-     la seule clé du template qui contient la sous-chaîne "verdict" sans en
-     être un — l'exception est nommée explicitement pour ne rien élargir en
-     silence.
+     dans le JSON produit (forme SÉRIALISÉE, ce qui est réellement écrit sur
+     disque) — scan STRICT, sans aucune exception. La clé de provenance a été
+     renommée `meta.provenance_kstar` (au lieu de `verdict_reutilise`) pour
+     que le garde reste absolu : le module dont les fonctions de verdict
+     quadtree sont réutilisées est NOMMÉ en VALEUR, jamais en clé.
   6. Déterminisme : deux constructions sur les mêmes entrées -> structures
      numériquement identiques (aucune RNG dans tout le pipeline)."""
 from __future__ import annotations
@@ -34,6 +32,7 @@ import pytest
 
 from scripts.run_arcA_measure import JND_LIST, L_LIST, SEEDS
 from scripts.run_arcA_measure_qt import MEASURES_PATH
+from scripts.run_arcA_verdict import _to_jsonable
 from scripts.run_arcA_verdict_qt import (BUDGETS_NON_DISCRIMINANTS, CAP_FLOATS,
                                          _non_discriminant, k_star_groupe_qt)
 from scripts.run_arcC_surface_kstar_pins import (PINS_PATH, charge_pins,
@@ -49,9 +48,6 @@ with np.load(MEASURES_PATH, allow_pickle=False) as _d:
 
 PINS = charge_pins(PINS_PATH)
 
-# Clé meta seule autorisée à contenir la sous-chaîne "verdict" (§ test 5) --
-# provenance documentée, PAS un verdict.
-CLE_META_PROVENANCE_AUTORISEE = "verdict_reutilise"
 SOUS_CHAINES_INTERDITES = ("verdict", "pente", "issue", "cellule")
 
 
@@ -146,10 +142,11 @@ def test_cap_et_non_discriminant_coherents():
 
 
 def test_pas_de_verdict_ni_pente():
-    resultat = construit_resultat()
+    # Scan de la forme SÉRIALISÉE (exactement ce qui est écrit sur disque via
+    # json.dumps) — scan STRICT, aucune exception : la clé de provenance est
+    # nommée `provenance_kstar` (le module réutilisé est en VALEUR, pas en clé).
+    resultat = _to_jsonable(construit_resultat())
     for cle in _cles_recursives(resultat):
-        if cle == CLE_META_PROVENANCE_AUTORISEE:
-            continue
         cle_min = cle.lower()
         for interdite in SOUS_CHAINES_INTERDITES:
             assert interdite not in cle_min, (

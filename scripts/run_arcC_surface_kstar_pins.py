@@ -174,8 +174,8 @@ def construit_meta(pins: dict[str, dict[str, float]], measures_path: Path,
                      "Arc C (C-1a Task 2). Aucun verdict, aucune pente."),
         source_measures=str(Path(measures_path).relative_to(ROOT)),
         source_pins=str(Path(pins_path).relative_to(ROOT)),
-        verdict_reutilise=("scripts/run_arcA_verdict_qt.py (k_star_seed_qt, "
-                           "k_star_groupe_qt) — famille 2"),
+        provenance_kstar=("scripts/run_arcA_verdict_qt.py (k_star_seed_qt, "
+                          "k_star_groupe_qt) — famille 2"),
         budgets=list(BUDGETS),
         cap_floats_10pct=CAP_FLOATS,
         budgets_non_discriminants=list(BUDGETS_NON_DISCRIMINANTS),

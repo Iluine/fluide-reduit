@@ -1,0 +1,701 @@
+{
+  "meta": {
+    "description": "Re-seuillage surface k*(L) famille-2 quadtree aux pins reels Arc C (C-1a Task 2). Aucun verdict, aucune pente.",
+    "source_measures": "outputs/arcA/measures_qt.npz",
+    "source_pins": "outputs/arcC/pins_spatial.json",
+    "provenance_kstar": "scripts/run_arcA_verdict_qt.py (k_star_seed_qt, k_star_groupe_qt) — famille 2",
+    "budgets": [
+      32,
+      64,
+      128,
+      256,
+      400,
+      1024,
+      2048
+    ],
+    "cap_floats_10pct": 409.6,
+    "budgets_non_discriminants": [
+      1024.0,
+      2048.0
+    ],
+    "L": [
+      10,
+      20,
+      40,
+      80
+    ],
+    "seeds": [
+      101,
+      102,
+      103,
+      104,
+      105
+    ],
+    "pins_utilises": {
+      "severe": {
+        "ic_bas": 0.06033229334102097,
+        "pin": 0.07334065957385666,
+        "ic_haut": 0.08673568621862042,
+        "labels_pct": [
+          "6.0",
+          "7.3",
+          "8.7"
+        ]
+      },
+      "laxiste": {
+        "ic_bas": 0.09365491373275102,
+        "pin": 0.11539774590849085,
+        "ic_haut": 0.13873727413266454,
+        "labels_pct": [
+          "9.4",
+          "11.5",
+          "13.9"
+        ]
+      }
+    },
+    "note_exact_vs_arrondi": "JND EXACTS de pins_spatial.json (fait foi §C11) ; les % du plan sont des etiquettes.",
+    "non_regression": {
+      "kstar_L80_a_5pct": 400.0,
+      "sous_jnd_reproduit_aux_4_jnd_grille": true
+    },
+    "convention_serialisation": "float infini -> 'inf'"
+  },
+  "surface_kstar_aux_pins": {
+    "severe": {
+      "ic_bas": {
+        "jnd": 0.06033229334102097,
+        "k_star_par_L": {
+          "10": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 256.0,
+              "105": 400.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                256.0,
+                256.0,
+                400.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          },
+          "20": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 256.0,
+              "105": 400.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                256.0,
+                256.0,
+                400.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          },
+          "40": {
+            "mediane": 400.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 400.0,
+              "103": 400.0,
+              "104": 400.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                400.0,
+                400.0,
+                400.0,
+                256.0
+              ],
+              "mediane_initiale": 400.0,
+              "escalades": [],
+              "k_final": 400.0
+            }
+          },
+          "80": {
+            "mediane": 400.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 400.0,
+              "103": 400.0,
+              "104": 256.0,
+              "105": 400.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                400.0,
+                400.0,
+                256.0,
+                400.0
+              ],
+              "mediane_initiale": 400.0,
+              "escalades": [],
+              "k_final": 400.0
+            }
+          }
+        }
+      },
+      "pin": {
+        "jnd": 0.07334065957385666,
+        "k_star_par_L": {
+          "10": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 256.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                256.0,
+                256.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          },
+          "20": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 256.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                256.0,
+                256.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          },
+          "40": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 400.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                256.0,
+                400.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          },
+          "80": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 400.0,
+              "104": 256.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                400.0,
+                256.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          }
+        }
+      },
+      "ic_haut": {
+        "jnd": 0.08673568621862042,
+        "k_star_par_L": {
+          "10": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 128.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                256.0,
+                128.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          },
+          "20": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 256.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                256.0,
+                256.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          },
+          "40": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 256.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                256.0,
+                256.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          },
+          "80": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 256.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                256.0,
+                256.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          }
+        }
+      }
+    },
+    "laxiste": {
+      "ic_bas": {
+        "jnd": 0.09365491373275102,
+        "k_star_par_L": {
+          "10": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 64.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 128.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                64.0,
+                256.0,
+                256.0,
+                128.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          },
+          "20": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 256.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                256.0,
+                256.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          },
+          "40": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 256.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                256.0,
+                256.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          },
+          "80": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 256.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                256.0,
+                256.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          }
+        }
+      },
+      "pin": {
+        "jnd": 0.11539774590849085,
+        "k_star_par_L": {
+          "10": {
+            "mediane": 128.0,
+            "par_seed": {
+              "101": 64.0,
+              "102": 256.0,
+              "103": 128.0,
+              "104": 128.0,
+              "105": 128.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                64.0,
+                256.0,
+                128.0,
+                128.0,
+                128.0
+              ],
+              "mediane_initiale": 128.0,
+              "escalades": [],
+              "k_final": 128.0
+            }
+          },
+          "20": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 128.0,
+              "103": 256.0,
+              "104": 256.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                128.0,
+                256.0,
+                256.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          },
+          "40": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 128.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 256.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                128.0,
+                256.0,
+                256.0,
+                256.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          },
+          "80": {
+            "mediane": 256.0,
+            "par_seed": {
+              "101": 256.0,
+              "102": 256.0,
+              "103": 256.0,
+              "104": 256.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                256.0,
+                256.0,
+                256.0,
+                256.0,
+                256.0
+              ],
+              "mediane_initiale": 256.0,
+              "escalades": [],
+              "k_final": 256.0
+            }
+          }
+        }
+      },
+      "ic_haut": {
+        "jnd": 0.13873727413266454,
+        "k_star_par_L": {
+          "10": {
+            "mediane": 128.0,
+            "par_seed": {
+              "101": 64.0,
+              "102": 128.0,
+              "103": 64.0,
+              "104": 128.0,
+              "105": 128.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                64.0,
+                128.0,
+                64.0,
+                128.0,
+                128.0
+              ],
+              "mediane_initiale": 128.0,
+              "escalades": [],
+              "k_final": 128.0
+            }
+          },
+          "20": {
+            "mediane": 128.0,
+            "par_seed": {
+              "101": 128.0,
+              "102": 128.0,
+              "103": 256.0,
+              "104": 128.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                128.0,
+                128.0,
+                256.0,
+                128.0,
+                256.0
+              ],
+              "mediane_initiale": 128.0,
+              "escalades": [],
+              "k_final": 128.0
+            }
+          },
+          "40": {
+            "mediane": 128.0,
+            "par_seed": {
+              "101": 128.0,
+              "102": 256.0,
+              "103": 128.0,
+              "104": 256.0,
+              "105": 128.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                128.0,
+                256.0,
+                128.0,
+                256.0,
+                128.0
+              ],
+              "mediane_initiale": 128.0,
+              "escalades": [],
+              "k_final": 128.0
+            }
+          },
+          "80": {
+            "mediane": 128.0,
+            "par_seed": {
+              "101": 128.0,
+              "102": 128.0,
+              "103": 256.0,
+              "104": 128.0,
+              "105": 256.0
+            },
+            "non_discriminant": false,
+            "sup_cap": false,
+            "audit": {
+              "k_par_seed": [
+                128.0,
+                128.0,
+                256.0,
+                128.0,
+                256.0
+              ],
+              "mediane_initiale": 128.0,
+              "escalades": [],
+              "k_final": 128.0
+            }
+          }
+        }
+      }
+    }
+  },
+  "ecart_severe_laxiste_floats_au_pin": {
+    "10": {
+      "k_star_severe": 256.0,
+      "k_star_laxiste": 128.0,
+      "delta_lax_moins_sev": -128.0,
+      "note": null
+    },
+    "20": {
+      "k_star_severe": 256.0,
+      "k_star_laxiste": 256.0,
+      "delta_lax_moins_sev": 0.0,
+      "note": null
+    },
+    "40": {
+      "k_star_severe": 256.0,
+      "k_star_laxiste": 256.0,
+      "delta_lax_moins_sev": 0.0,
+      "note": null
+    },
+    "80": {
+      "k_star_severe": 256.0,
+      "k_star_laxiste": 256.0,
+      "delta_lax_moins_sev": 0.0,
+      "note": null
+    }
+  }
+}
