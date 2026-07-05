@@ -40,7 +40,6 @@ capture humaine)."""
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import time
 from pathlib import Path
@@ -66,7 +65,14 @@ from scripts.run_arcA_revalidate import S_HALF_OP
 # Task 3 (§C8) : ancre budget-32 (D-1) et flag géométrie-plafond (D-4) --
 # IMPORTÉS de l'orchestrateur (source unique de vérité pour ces paramètres
 # gravés), pas redéfinis ici (coquille = mince, cf. docstring module).
-from scripts.run_arcC_orchestration import ANCRE_BUDGET, GEOMETRIES, calcule_taille_affichage_px
+# `ecrit_manifeste_json` réutilisé tel quel (Task 3 CORRECTIF §C9, finding
+# Minor) pour le sidecar `<log>.conditions.json` -- écriture JSON DRY, un
+# seul endroit qui sait écrire un dict en JSON indenté (import module-level
+# sans cycle : `run_arcC_orchestration` n'importe cette coquille QUE
+# paresseusement, dans `_fabrique_repondre_humain`, jamais au chargement du
+# module).
+from scripts.run_arcC_orchestration import (ANCRE_BUDGET, GEOMETRIES, calcule_taille_affichage_px,
+                                             ecrit_manifeste_json)
 
 OUT_DIR = ROOT / "outputs" / "arcC" / "logs"
 
@@ -291,14 +297,15 @@ def main() -> None:
     resume = resume_timing(journal_timing, regime)
 
     # Correctif §C9 pièces 2 & 3 : luminosité + conditions d'environnement,
-    # consignées par écrit (sidecar, même convention que le timing).
+    # consignées par écrit (sidecar, même convention que le timing) --
+    # réutilise `ecrit_manifeste_json` (helper JSON DRY de l'orchestrateur),
+    # schéma inchangé (dict plat, cf. finding Minor structure hors scope).
     conditions_path = out_path.parent / f"{out_path.stem}.conditions.json"
-    conditions_path.write_text(json.dumps(dict(
+    ecrit_manifeste_json(conditions_path, dict(
         luminosite=args.luminosite, conditions=args.conditions,
         long_ref_px=args.long_ref_px, long_ref_mm=args.long_ref_mm,
         distance_mm=args.distance_mm, c_deg_cible=args.c_deg_cible,
-        porteuse_cyc_par_domaine=args.porteuse_cyc_par_domaine),
-        indent=2, ensure_ascii=False), encoding="utf-8")
+        porteuse_cyc_par_domaine=args.porteuse_cyc_par_domaine))
 
     print("=" * 78)
     print(f"ARC C / TASK 3 -- SESSION staircase={args.numero_staircase} régime={regime.nom}")
