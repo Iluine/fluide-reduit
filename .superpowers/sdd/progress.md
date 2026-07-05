@@ -188,3 +188,8 @@ Task CONFORMANCE : dispatché (ab78bad2). run_arcC_pins.py réécrit pour émett
   schéma (fail loud) ; orchestrateur stampe 3 champs provenance ; copie schéma pocPhysicator ; dep
   pyproject ; tests (validation schéma + statut 3-voies + directionnel + exclusions + à-cheval).
   Synthétique seul, jamais outputs/arcC/ commité. Brief arcC-task3conform-schema-brief.md. BASE=9adcfd7.
+Task CONFORMANCE : DONE (commits c31729a schéma+dep, 7756882 provenance, 3f490f6 pins+validation,
+  8d5f781 tests). 467/467 (437+30). jsonschema → requirements.txt (pas de pyproject ici). FRONTIÈRE
+  CONTRAT signalée : campagne arrêtée (≥10 exclusions / régime à 2 staircases <minItems:3) → pins
+  LÈVE (fail-loud), pas d'artefact malformé — le STOP vit au manifeste. À ratifier par Romain. EN
+  REVUE (relecteur a6bda86b).
