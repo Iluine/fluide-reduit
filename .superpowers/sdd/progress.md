@@ -152,3 +152,11 @@ Task 3 (BUILD) : COMPLETE (commits 58acba3..fa2ae7c, review clean). Relecteur : 
   (non atteignable). → triage revue finale de branche (Tasks 4-5 ajoutent du code).
 FRONTIÈRE ATTEINTE : Tasks 0-3 (tout le buildable) closes, 408/408. Protocole de session remis à
   Romain. SEULE étape restante que la machine ne peut pas faire = Romain sujet devant l'écran.
+§C9 gravé (pocCascade2phys 7110e31) : conditions de validité d'exécution Task 3 (Romain, avant
+  données) — durées réalisées loggées par essai (validité laxiste + pré-vol B-bis) ; luminosité
+  fixée+notée manifeste (choix C-1 n°3) ; repère distance + éclairage stable (anti-zoom §C7) ;
+  amorçage θ=0.025 ; posture répondre-au-percept.
+Task 3 CORRECTIF (avant session) : dispatché (a52ae008). (1) logging durées réalisées par essai
+  (accumulateur pur testé + sidecar timing + résumé réalisé-vs-nominal + avertissement >25%),
+  glue matplotlib partagée coquille/orchestrateur ; (2) --luminosite/--conditions REQUIS si humain
+  → manifeste conditions_validite. Brief arcC-task3fix-timing-conditions-brief.md. BASE = 38a02e7.
