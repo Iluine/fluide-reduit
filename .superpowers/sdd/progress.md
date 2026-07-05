@@ -211,3 +211,15 @@ Task FIX fail-loud : dispatché (a9faff30). (1) détection STATUT_STOP_2_INVALID
   aucune voie de complétion) ; "is too short" cryptique rendu inatteignable. (2) message anti-3e-
   session. (3) deux tests e2e : arrêt-2-invalides → lève + aucun fichier ; INDETERMINE n≥3 disp>30%.
   Schéma gravé INTACT. BASE = 5cb2f5f.
+Task FIX fail-loud : COMPLETE (commit e8f9460, vérifié contrôleur). 469/469. Message porte les 4
+  éléments (fait+N, régime, manifeste, conduite remonter) + anti-3e-session ; tire AVANT jsonschema ;
+  cryptique "is too short" INATTEIGNABLE (reproduit en indépendant : False) ; 2 tests e2e (arrêt-2
+  → lève + not pins_path.exists() ; INDETERMINE n=3 disp>30% → statut/motif/jnd/ic + pins valide).
+  Schéma gravé INTACT.
+
+═══ ARC C — BUILD ENTIÈREMENT CLOS CÔTÉ MACHINE ═══
+Contrat §C0-§C10 + schéma gravés. Pipeline complet, revu, testé : Task0 (harnais stimuli/R1) →
+Task1 (générateur) → Task2 (ABX+staircase+calibration) → Task3 (orchestration+pins+timing+conformance
+schéma+fail-loud). 469 tests. 3 issues de campagne fermées et testées (résolue/invalide/arrêtée).
+Contrat de sortie validé-avant-écriture. SEULE CASE VIDE = Romain sujet (3 chiffres règle → A B Bbis C D).
+Après ses logs : je lance run_arcC_pins.py (D) + lecture §C4 (côté 3/4%, contingence géométrie-plafond).
