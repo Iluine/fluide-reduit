@@ -107,3 +107,10 @@ Task 1 : COMPLETE (commits 4f5c1c6..9bef82f, review clean). Re-revue sur pièces
   S_HALF_OP==0.05·RELIEF). Suite complète 327/327 verte, npz catalogue bit-identique.
 Task 2 : dispatché (harnais ABX + staircase 2 régimes + auto-calibration §C7 ; sujet synthétique,
   aucun humain). Brief .superpowers/sdd/arcC-task2-abx-brief.md. BASE = 9bef82f.
+Task 2 : IMPLÉMENTÉ (commits 1300399 calibration, 468d534 ABX). Implémenteur coupé par limite
+  session API après rapport (263 l., complet) avant commit → contrôleur a committé + spot-vérifié +
+  confirmé suite complète 382/382. Findings load-bearing : (1) §C7 pièce 3 cellule pic-CSF =
+  1.73 arcmin (ratio 1.73 > acuité 1.0, quasi-invariant écran) — pin déjà 1.73× au-delà du plafond
+  texture ; DÉCISION ROMAIN. (2) plafond Δχ par-source hétérogène (budget 256 → pire source 2.78%)
+  → budget-par-régime à graver en Task 3. Caveats rapport : format ABX 3-stimuli à relire avant
+  Task 3 ; n_essais_max=200 non testé à la limite. EN REVUE (relecteur dispatché a8e39fa).
