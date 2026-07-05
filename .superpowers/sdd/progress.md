@@ -178,3 +178,13 @@ Task 3 : affichage LIVE durées par essai ajouté (commit ci-après) — formate
   batch n'existait qu'à complétion). 437/437. ARC C BUILD ENTIÈREMENT CLOS (Tasks 0-3 + correctifs
   timing/conditions + live-print, tout revu/vérifié). Prochaine action = Romain sujet (protocole
   A→B→B-bis→C→D remis). Puis lecture §C4 contrôleur sur pins_spatial.json (côté 3/4%, contingence).
+§C10 gravé (pocCascade2phys 416a011) : contrat de sortie pins_spatial.json (JSON Schema draft-07,
+  schemas/arcC-pins-spatial-v1.schema.json) AVANT données humaines. Nouveaux éléments : calibration
+  embarquée + commit_harnais/date_session/sujet (provenance) ; timing_laxiste roll-up ; controle_
+  directionnel JND_lax≥JND_sev (IC disjoints mauvais ordre → STOP) ; branche à-cheval ic_combine
+  mean±2SEM ; statut RESOLU/INDETERMINE/INVALIDE + motif obligatoire ; seuils bruts par staircase.
+  jsonschema 4.26.0 installé (pur Python, n'affecte pas JAX/warp).
+Task CONFORMANCE : dispatché (ab78bad2). run_arcC_pins.py réécrit pour émettre + VALIDER contre le
+  schéma (fail loud) ; orchestrateur stampe 3 champs provenance ; copie schéma pocPhysicator ; dep
+  pyproject ; tests (validation schéma + statut 3-voies + directionnel + exclusions + à-cheval).
+  Synthétique seul, jamais outputs/arcC/ commité. Brief arcC-task3conform-schema-brief.md. BASE=9adcfd7.
