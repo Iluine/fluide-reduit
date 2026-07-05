@@ -137,3 +137,8 @@ Task 3 (BUILD) : dispatché (a01d5d18). Runner orchestré (≥3 staircases × 2 
   mode géométrie-plafond même-ancre (D-4). HAUT_JND_PLAUSIBLE=0.08 → SEUIL_EXCLUSION=0.16 (~1 source).
   Validé SUJET SYNTHÉTIQUE (aucun humain). Brief arcC-task3-runner-brief.md. BASE = 2ce40a0.
   RESTE APRÈS CE BUILD : Romain sujet devant l'écran = seule étape que la machine ne peut pas faire.
+Task 3 (BUILD) : DONE (commits 58acba3 abx+sources rétro-compat, 205e706 orchestration, f2b633a
+  pins, fa2ae7c coquille). 408/408 verts. Catch collision résolue par argmax (preuve : catch ≥ 0.16
+  car argmax ≥ Δχ(t=1)=ancre) ; IC = bornes min/max (bootstrap n=3 rejeté = fausse précision) ;
+  gate e2e retrouve θ=0.10 à ~3% (2 régimes RÉSOLU). Concern : base_seed e2e re-cherché (pool 20→19
+  change RNG). EN REVUE (relecteur a5128d07).
