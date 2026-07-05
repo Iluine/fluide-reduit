@@ -311,7 +311,10 @@ def orchestre_campagne(
         out_dir: Path = LOGS_DIR, params: ParametresEscalier = ParametresEscalier(),
         budget: int = ANCRE_BUDGET, seuil_exclusion: float = SEUIL_EXCLUSION,
         n_exclusions_stop: int = N_EXCLUSIONS_STOP,
-        fraction_sources_fortes: float = FRACTION_SOURCES_FORTES) -> dict:
+        fraction_sources_fortes: float = FRACTION_SOURCES_FORTES,
+        luminosite: str | None = None, conditions: str | None = None,
+        long_ref_px: float | None = None, long_ref_mm: float | None = None,
+        distance_mm: float | None = None) -> dict:
     """Orchestrateur de campagne complet (§C8) : applique D-2 (exclusion
     nommée -- STOP si >= `n_exclusions_stop`), D-3 (catch réserve forte,
     optionnellement restreint aux sources fortes), D-1 (ancre = `budget`,
@@ -321,7 +324,15 @@ def orchestre_campagne(
     Sujet : soit `fabrique_repondre` fourni explicitement (tout sujet,
     y compris `_fabrique_repondre_humain` -- non testé ici), soit
     `theta_sim`/`sigma_sim` (sujet SYNTHÉTIQUE, ce build/tests) ; l'un des
-    deux est requis."""
+    deux est requis.
+
+    CORRECTIF §C9 pièces 2 & 3 : `luminosite`/`conditions` (REQUISES par
+    `main()` quand `--sujet humain`, cf. `valide_conditions_requises_si_
+    humain` -- optionnelles ici, aucune validation à ce niveau, la logique
+    pure ne refuse rien) + rappel des paramètres de calibration
+    (`ppd`/`long_ref_px`/`long_ref_mm`/`distance_mm`) sont consignés au
+    manifeste sous `conditions_validite`, TOUJOURS présent (y compris sur
+    le statut STOP-trop-exclues)."""
     if geometrie not in GEOMETRIES:
         raise ValueError(
             f"orchestre_campagne : geometrie inconnue {geometrie!r} (attendu {GEOMETRIES!r}).")
@@ -344,6 +355,10 @@ def orchestre_campagne(
             catch_sources_fortes=catch_sources_fortes,
             fraction_sources_fortes=(fraction_sources_fortes if catch_sources_fortes else None)),
         config_affichage=dict(geometrie=geometrie, ppd=ppd, taille_domaine_px=taille_px),
+        conditions_validite=dict(
+            luminosite=luminosite, conditions=conditions,
+            calibration=dict(ppd=ppd, long_ref_px=long_ref_px, long_ref_mm=long_ref_mm,
+                             distance_mm=distance_mm)),
         exclusions=manifeste_exclusions,
         base_seed=base_seed)
 
@@ -389,6 +404,21 @@ def lit_manifeste_json(path: str | Path) -> dict:
 # --- CLI ---------------------------------------------------------------------
 
 
+def valide_conditions_requises_si_humain(
+        sujet: str, luminosite: str | None, conditions: str | None,
+        erreur: Callable[[str], None]) -> None:
+    """§C9 (pièces 2 & 3) : luminosité + conditions d'environnement REQUISES
+    *par écrit* dès que `sujet == "humain"` (« pas par habitude ») -- appelle
+    `erreur(message)` (typiquement `parser.error`, qui lève `SystemExit`) si
+    l'une des deux manque. OPTIONNELLES pour `sujet == "synthetique"` (non
+    pertinentes, aucun humain devant l'écran) -- `erreur` n'est alors JAMAIS
+    appelé."""
+    if sujet == "humain" and (luminosite is None or conditions is None):
+        erreur(
+            "--sujet humain requiert --luminosite ET --conditions (§C9 : consignées par "
+            "écrit, pas par habitude, AVANT toute donnée humaine).")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -409,9 +439,21 @@ def main() -> None:
     parser.add_argument("--long-ref-px", type=float, required=True)
     parser.add_argument("--long-ref-mm", type=float, required=True)
     parser.add_argument("--distance-mm", type=float, required=True)
+    # Conditions de validité d'exécution (§C9 pièces 2 & 3) -- REQUISES si
+    # --sujet humain (`valide_conditions_requises_si_humain`), sans objet si
+    # --sujet synthetique (aucun humain devant l'écran).
+    parser.add_argument("--luminosite", type=str, default=None,
+                        help="Luminosité écran NOTÉE (§C9 pièce 2), p. ex. '120 nits'/"
+                             "'OSD 75%%'. REQUISE si --sujet humain.")
+    parser.add_argument("--conditions", type=str, default=None,
+                        help="Conditions d'environnement NOTÉES (§C9 pièce 3) -- repère de "
+                             "distance + éclairage ambiant. REQUISES si --sujet humain.")
     parser.add_argument("--out-dir", type=Path, default=LOGS_DIR)
     parser.add_argument("--manifeste", type=Path, default=OUT_DIR / "manifeste_campagne.json")
     args = parser.parse_args()
+
+    valide_conditions_requises_si_humain(args.sujet, args.luminosite, args.conditions,
+                                         parser.error)
 
     from src.arcC_calibration import pixels_par_degre
     ppd = pixels_par_degre(args.long_ref_px, args.long_ref_mm, args.distance_mm)
@@ -429,7 +471,9 @@ def main() -> None:
     manifeste = orchestre_campagne(
         base_seed=args.base_seed, n_staircases=args.n_staircases, geometrie=args.geometrie,
         catch_sources_fortes=args.catch_sources_fortes, ppd=ppd,
-        fabrique_repondre=fabrique_repondre, out_dir=args.out_dir)
+        fabrique_repondre=fabrique_repondre, out_dir=args.out_dir,
+        luminosite=args.luminosite, conditions=args.conditions,
+        long_ref_px=args.long_ref_px, long_ref_mm=args.long_ref_mm, distance_mm=args.distance_mm)
 
     ecrit_manifeste_json(args.manifeste, manifeste)
 

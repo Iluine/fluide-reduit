@@ -29,15 +29,18 @@ manche 1) rendu viridis, vmin=0, vmax=1, origin="lower" (= `render.py`/
 longueur de référence) à fournir en CLI, mesurés physiquement avant la
 session (Task 3, pas improvisés ici).
 
-CORRECTIF §C9 pièce 1 (PREREGISTRATION.md, pocCascade2phys `7110e31`,
-reproduit dans `.superpowers/sdd/arcC-task3fix-timing-conditions-brief.md`),
-avant toute donnée humaine : durées d'exposition RÉALISÉES loggées par essai
+CORRECTIF (§C9 de PREREGISTRATION.md, pocCascade2phys `7110e31`, reproduit
+dans `.superpowers/sdd/arcC-task3fix-timing-conditions-brief.md`), avant
+toute donnée humaine : (1) durées d'exposition RÉALISÉES loggées par essai
 (`src/arcC_timing.py`, accumulateur PUR testé -- sidecar `<log>.timing.jsonl`
 + résumé réalisé-vs-nominal imprimé, AVERTISSEMENT si écart >25 %, jamais un
-gate dur)."""
+gate dur) ; (2) `--luminosite`/`--conditions` REQUISES en session live
+(sidecar `<log>.conditions.json`) -- absentes seulement en `--replay` (aucune
+capture humaine)."""
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import time
 from pathlib import Path
@@ -223,7 +226,22 @@ def main() -> None:
     parser.add_argument("--c-deg-cible", type=float, default=C_DEG_CIBLE_DEFAUT)
     parser.add_argument("--porteuse-cyc-par-domaine", type=float,
                         default=PORTEUSE_CYC_PAR_DOMAINE_DEFAUT)
+    # Conditions de validité d'exécution (§C9 pièces 2 & 3) -- REQUISES en
+    # session LIVE (un humain devant l'écran) ; sans objet en --replay (aucune
+    # capture humaine, rien à consigner).
+    parser.add_argument("--luminosite", type=str, default=None,
+                        help="Luminosité écran NOTÉE (§C9 pièce 2), p. ex. '120 nits'/"
+                             "'OSD 75%%'. REQUISE en session live.")
+    parser.add_argument("--conditions", type=str, default=None,
+                        help="Conditions d'environnement NOTÉES (§C9 pièce 3) -- repère de "
+                             "distance + éclairage ambiant. REQUISES en session live.")
     args = parser.parse_args()
+
+    if args.replay is None and (args.luminosite is None or args.conditions is None):
+        parser.error(
+            "--luminosite et --conditions sont REQUISES en session live (§C9 : consignées "
+            "par écrit, pas par habitude, AVANT toute donnée humaine) -- absentes seulement "
+            "en --replay (aucune capture humaine, rien à consigner).")
 
     regime = REGIME_SEVERE if args.regime == "severe" else REGIME_LAXISTE
     ppd = pixels_par_degre(args.long_ref_px, args.long_ref_mm, args.distance_mm)
@@ -272,6 +290,16 @@ def main() -> None:
     ecrit_timing_jsonl(timing_path, journal_timing)
     resume = resume_timing(journal_timing, regime)
 
+    # Correctif §C9 pièces 2 & 3 : luminosité + conditions d'environnement,
+    # consignées par écrit (sidecar, même convention que le timing).
+    conditions_path = out_path.parent / f"{out_path.stem}.conditions.json"
+    conditions_path.write_text(json.dumps(dict(
+        luminosite=args.luminosite, conditions=args.conditions,
+        long_ref_px=args.long_ref_px, long_ref_mm=args.long_ref_mm,
+        distance_mm=args.distance_mm, c_deg_cible=args.c_deg_cible,
+        porteuse_cyc_par_domaine=args.porteuse_cyc_par_domaine),
+        indent=2, ensure_ascii=False), encoding="utf-8")
+
     print("=" * 78)
     print(f"ARC C / TASK 3 -- SESSION staircase={args.numero_staircase} régime={regime.nom}")
     print("=" * 78)
@@ -282,6 +310,7 @@ def main() -> None:
     print(f"Temps de session : {time.time() - t0:.1f}s")
     print(f"[REPORT] -> {out_path}")
     print(f"[REPORT timing] -> {timing_path}")
+    print(f"[REPORT conditions] -> {conditions_path}")
 
 
 if __name__ == "__main__":

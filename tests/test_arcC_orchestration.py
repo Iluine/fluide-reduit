@@ -307,3 +307,102 @@ def test_geometrie_defaut_est_pic_csf(tmp_path):
     manifeste = orchestre_campagne(base_seed=7, n_staircases=1, ppd=40.0,
                                    fabrique_repondre=fabrique, out_dir=tmp_path / "logs")
     assert manifeste["parametres_graves"]["geometrie"] == "pic-csf"
+
+
+# =============================================================================
+# Famille 6 : conditions de validité §C9 (CORRECTIF avant session, pièces 2 & 3)
+# =============================================================================
+
+
+def test_conditions_validite_luminosite_et_conditions_dans_le_manifeste(tmp_path):
+    fabrique = lambda k, regime_nom, seed_sujet: (  # noqa: E731
+        fabrique_sujet_synthetique(0.05, 0.015, seed=seed_sujet), lambda: None)
+    manifeste = orchestre_campagne(
+        base_seed=11, n_staircases=1, ppd=40.0, fabrique_repondre=fabrique,
+        out_dir=tmp_path / "logs", luminosite="120 nits", conditions="bureau, jour, stable",
+        long_ref_px=1920.0, long_ref_mm=310.0, distance_mm=600.0)
+    cv = manifeste["conditions_validite"]
+    assert cv["luminosite"] == "120 nits"
+    assert cv["conditions"] == "bureau, jour, stable"
+    assert cv["calibration"]["ppd"] == pytest.approx(40.0)
+    assert cv["calibration"]["long_ref_px"] == pytest.approx(1920.0)
+    assert cv["calibration"]["long_ref_mm"] == pytest.approx(310.0)
+    assert cv["calibration"]["distance_mm"] == pytest.approx(600.0)
+
+
+def test_conditions_validite_absentes_par_defaut_reste_none(tmp_path):
+    """Non-régression : aucun appelant existant ne passe luminosite/conditions
+    -- le manifeste reste construit, avec `None` explicite (jamais fabriqué)."""
+    fabrique = lambda k, regime_nom, seed_sujet: (  # noqa: E731
+        fabrique_sujet_synthetique(0.05, 0.015, seed=seed_sujet), lambda: None)
+    manifeste = orchestre_campagne(base_seed=12, n_staircases=1, ppd=40.0,
+                                   fabrique_repondre=fabrique, out_dir=tmp_path / "logs")
+    cv = manifeste["conditions_validite"]
+    assert cv["luminosite"] is None
+    assert cv["conditions"] is None
+    assert cv["calibration"]["long_ref_px"] is None
+
+
+def test_conditions_validite_presente_meme_sur_statut_stop_trop_exclues(tmp_path):
+    fabrique = lambda k, regime_nom, seed_sujet: (  # noqa: E731
+        fabrique_sujet_synthetique(0.05, 0.015, seed=seed_sujet), lambda: None)
+    manifeste = orchestre_campagne(
+        base_seed=13, n_staircases=1, ppd=40.0, fabrique_repondre=fabrique,
+        out_dir=tmp_path / "logs", seuil_exclusion=0.5,  # seuil artificiel -> STOP (famille 1)
+        luminosite="OSD 75%", conditions="salon, soir, lampe stable")
+    assert manifeste["statut_global"] == STATUT_STOP_TROP_EXCLUES
+    assert manifeste["conditions_validite"]["luminosite"] == "OSD 75%"
+
+
+def test_valide_conditions_requises_leve_erreur_si_humain_sans_luminosite_ni_conditions():
+    from scripts.run_arcC_orchestration import valide_conditions_requises_si_humain
+
+    class _MarqueurErreur(Exception):
+        pass
+
+    def _erreur(message: str) -> None:
+        raise _MarqueurErreur(message)
+
+    with pytest.raises(_MarqueurErreur):
+        valide_conditions_requises_si_humain("humain", None, None, _erreur)
+    with pytest.raises(_MarqueurErreur):
+        valide_conditions_requises_si_humain("humain", "120 nits", None, _erreur)
+    with pytest.raises(_MarqueurErreur):
+        valide_conditions_requises_si_humain("humain", None, "bureau", _erreur)
+
+
+def test_valide_conditions_requises_ok_si_humain_avec_les_deux():
+    from scripts.run_arcC_orchestration import valide_conditions_requises_si_humain
+
+    def _erreur_jamais_appelee(message: str) -> None:
+        raise AssertionError(f"erreur() ne doit PAS être appelé ici : {message}")
+
+    valide_conditions_requises_si_humain("humain", "120 nits", "bureau", _erreur_jamais_appelee)
+
+
+def test_valide_conditions_requises_ok_si_synthetique_sans_rien():
+    """§C9 : OPTIONNELLES pour --sujet synthetique (non pertinentes, aucun
+    humain devant l'écran) -- `erreur` n'est JAMAIS appelé."""
+    from scripts.run_arcC_orchestration import valide_conditions_requises_si_humain
+
+    def _erreur_jamais_appelee(message: str) -> None:
+        raise AssertionError(f"erreur() ne doit PAS être appelé ici : {message}")
+
+    valide_conditions_requises_si_humain("synthetique", None, None, _erreur_jamais_appelee)
+
+
+def test_main_leve_systemexit_si_sujet_humain_sans_luminosite_ni_conditions(monkeypatch):
+    """Intégration CLI : `main()` échoue AVANT tout import matplotlib (le
+    chemin --sujet humain n'importe matplotlib que dans
+    `_fabrique_repondre_humain`, lazy, jamais atteint ici -- la validation
+    est placée juste après `parser.parse_args()`)."""
+    import sys
+
+    from scripts.run_arcC_orchestration import main
+
+    argv = ["run_arcC_orchestration.py",
+           "--base-seed", "1", "--sujet", "humain",
+           "--long-ref-px", "1920", "--long-ref-mm", "310", "--distance-mm", "600"]
+    monkeypatch.setattr(sys, "argv", argv)
+    with pytest.raises(SystemExit):
+        main()
