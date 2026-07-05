@@ -347,3 +347,33 @@ Journal §A12-résultat gravé au contrat (pocCascade2phys, commit dédié). Ver
 ═══ MISSION 16L₀ CLOSE. Verdict = INDETERMINE_JND (gate CONFORME). Cellule 1 NON prononcée définitivement :
   JND-dépendante DANS l'IC sévère = surface k*(L,JND) portée à l'Arc C. Règle dernière famille consommée.
   Point d'arrêt atteint : verdict remonté à Romain. AUCUN enchaînement manche 2 / 3e famille. ═══
+
+═══════════════════════════════════════════════════════════════════════════════
+MISSION : Manche 2 — registre-commis (§A13). Base = 6457301 (branche arc-a-manche2-registre,
+  forkée d'arc-c-pin-jnd après clôture 16L₀). Contrat §A13 gravé : pocCascade2phys 811b11d.
+  Pins lus de outputs/arcC/pins_spatial.json : sev 7.334 % IC [6.033, 8.674] ;
+  lax 11.540 % IC [9.365, 13.874] — identiques à l'en-tête §A13. Substrat gelé vérifié :
+  src/sediment.py blob 88e16e2d / md5 b564723a (== manche 1). Instruments présents :
+  histoires h_s*/h160_s*, run_arcA_measure_qt, run_arcC_surface_kstar_pins.
+  Points d'arrêt OBLIGATOIRES : après sonde (S1/S2), après gate d'achat si > 10 h, après verdict.
+Task 0 (contrat+inventaire) : gravure ✓, inventaire ✓ ; cœur (commit/reconstruire/harnais chaîne
+  + tests É1/É3/ferm-chaîne) → à dispatcher après carte Explore des API gelées.
+Task 0 cœur : DISPATCHÉ (implémenteur sonnet, base 6457301). Brief m2-task0-brief.md. Décisions
+  contrôleur gravées au brief : t0 = s=0 (chaîne-vérité == histoire gelée, ancrage h_s101), commit
+  de l'ÉTAT-MOTEUR (composition possible = l'objet du claim), ordre strict mesurer→committer→
+  ré-ancrer→continuer (Δχ_1 ≡ 0 structurel, documenté), rederiver_emissions(registre,seed,dt,n,arm)
+  = foncteur É2/É3 signature stricte anti-fuite.
+Task 0 : complete (commit 008e770, revue opus Approved — spec ✅ 10/10 tests + 4 fonctions,
+  ordre §A13-1 strict vérifié, commit-du-moteur confirmé ligne à ligne, déviations #1/#2
+  équivalence stricte). 11 tests dédiés + suite 547 passed, gels 3/3 inchangés.
+  Minor (pour revue finale) : RELIEF importé non utilisé (noqa) ; rederiver arm="ferm" non
+  couvert par test ; pas de garde verite trop court (KeyError).
+Task 1 (sonde) : DISPATCHÉ (implémenteur sonnet, base 008e770). Brief m2-task1-brief.md.
+  Lecture S1/S2/AUTRE pré-écrite mécanique ; point d'arrêt OBLIGATOIRE après (remonter la courbe).
+── PAUSE SESSION (2026-07-06 soir) ──
+Task 1 : IN-FLIGHT à la pause. Script scripts/run_arcA_m2_sonde.py + tests/test_arcA_m2_sonde.py
+  écrits (NON commités, non revus) ; run sonde réelle probablement en cours ; outputs/arcA/
+  m2_sonde.json PAS encore produit. REPRISE : vérifier si m2_sonde.json + commit existent ;
+  sinon re-dispatcher Task 1 (brief m2-task1-brief.md intact) — les fichiers non commités
+  peuvent servir de base mais doivent repasser par run réel + tests + revue.
+  RAPPEL points d'arrêt : après sonde → remonter la courbe Δχ_i à Romain AVANT Task 2.
