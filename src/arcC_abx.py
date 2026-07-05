@@ -420,12 +420,17 @@ class ResultatEscalier:
     params: ParametresEscalier
 
 
-def _tire_source(rng: np.random.Generator) -> tuple[int, int]:
-    """Rôdage du champ source (roving, §C3) : tire uniformément l'un des 20
-    (seed, L) via `rng` -- RNG SEEDÉE et CONSIGNÉE (`seed_roving` de
-    `run_escalier`), le sujet ne peut pas mémoriser une texture."""
-    idx = int(rng.integers(0, len(PAIRES_SOURCES)))
-    return PAIRES_SOURCES[idx]
+def _tire_source(rng: np.random.Generator,
+                 sources: tuple[tuple[int, int], ...] = PAIRES_SOURCES) -> tuple[int, int]:
+    """Rôdage du champ source (roving, §C3) : tire uniformément l'un des
+    `sources` (par défaut les 20 (seed, L) de `PAIRES_SOURCES`) via `rng` --
+    RNG SEEDÉE et CONSIGNÉE (`seed_roving` de `run_escalier`), le sujet ne
+    peut pas mémoriser une texture. `sources` PEUT être un sous-ensemble
+    (Arc C Task 3, §C8 D-2 : exclusion nommée par-source AVANT présentation --
+    l'orchestrateur retire les sources sous le seuil d'ancrage de CE pool,
+    jamais en aval)."""
+    idx = int(rng.integers(0, len(sources)))
+    return sources[idx]
 
 
 def _tire_reponse_correcte(rng: np.random.Generator) -> Reponse:
@@ -445,7 +450,10 @@ def run_escalier(*, numero_staircase: int, regime_nom: str,
                  seed_roving: int, seed_catch: int,
                  budget: int = BUDGET_DEFAUT,
                  params: ParametresEscalier = ParametresEscalier(),
-                 banques: BanqueBancs | None = None) -> ResultatEscalier:
+                 banques: BanqueBancs | None = None,
+                 sources: tuple[tuple[int, int], ...] = PAIRES_SOURCES,
+                 sources_catch: tuple[tuple[int, int], ...] | None = None
+                 ) -> ResultatEscalier:
     """Fait tourner UNE staircase 2-down-1-up complète : à chaque essai, tire
     le champ source (roving, `seed_roving`), décide si l'essai est un catch
     (`seed_catch`, blocs de 10, §C5), sélectionne le stimulus (banc fin,
@@ -457,8 +465,21 @@ def run_escalier(*, numero_staircase: int, regime_nom: str,
     échéance atteinte.
 
     `regime_nom` est une PURE MÉTADONNÉE loggée (`EssaiJournal.regime`) --
-    n'affecte JAMAIS la logique d'escalier (cf. tests, famille 8)."""
+    n'affecte JAMAIS la logique d'escalier (cf. tests, famille 8).
+
+    `sources` : pool de roving pour les essais NORMAUX (par défaut les 20
+    `PAIRES_SOURCES`) -- Arc C Task 3 (§C8 D-2) : l'orchestrateur y passe le
+    sous-ensemble déjà filtré (sources exclues retirées AVANT toute
+    présentation, jamais en aval). `sources_catch` : pool de roving pour les
+    essais CATCH -- `None` (défaut) retombe sur `sources` (même pool, cas
+    normal/rétro-compatible) ; l'orchestrateur peut y passer un sous-ensemble
+    plus étroit (§C8 D-3, `--catch-sources-fortes`, option nommée non activée
+    par défaut). Le choix catch/normal (`masque_catch[indice]`, PAS de tirage
+    RNG) est déterminé AVANT le tirage de source : rétro-compatible bit-exact
+    quand `sources`/`sources_catch` valent leurs défauts (même séquence de
+    tirages RNG qu'avant cette extension, cf. tests de replay)."""
     banques = banques if banques is not None else BanqueBancs()
+    sources_catch_eff = sources_catch if sources_catch is not None else sources
     rng_roving = np.random.default_rng(seed_roving)
     rng_catch = np.random.default_rng(seed_catch)
     masque_catch = positions_catch(params.n_essais_max, rng_catch, params.taille_bloc_catch)
@@ -467,9 +488,10 @@ def run_escalier(*, numero_staircase: int, regime_nom: str,
     essais: list[EssaiJournal] = []
     indice = 0
     while len(etat.reversals) < params.n_reversals_cible and indice < params.n_essais_max:
-        seed_src, L_src = _tire_source(rng_roving)
-        reponse_correcte = _tire_reponse_correcte(rng_roving)
         est_catch = bool(masque_catch[indice])
+        pool = sources_catch_eff if est_catch else sources
+        seed_src, L_src = _tire_source(rng_roving, pool)
+        reponse_correcte = _tire_reponse_correcte(rng_roving)
 
         if est_catch:
             banc = banques.banc(seed_src, L_src, BUDGET_CATCH)
@@ -545,14 +567,17 @@ def lit_log_jsonl(path: str | Path) -> list[EssaiJournal]:
 def rejoue_escalier(essais_log: list[EssaiJournal], *, numero_staircase: int, regime_nom: str,
                     seed_roving: int, seed_catch: int, budget: int = BUDGET_DEFAUT,
                     params: ParametresEscalier = ParametresEscalier(),
-                    banques: BanqueBancs | None = None) -> ResultatEscalier:
+                    banques: BanqueBancs | None = None,
+                    sources: tuple[tuple[int, int], ...] = PAIRES_SOURCES,
+                    sources_catch: tuple[tuple[int, int], ...] | None = None
+                    ) -> ResultatEscalier:
     """Rejoue une staircase depuis son LOG : reconstruit la MÊME séquence de
-    stimuli (mêmes `seed_roving`/`seed_catch`/`budget`/`params`) et SUBSTITUE
-    le sujet par un rejeu des réponses enregistrées, dans l'ORDRE. Vérifie à
-    CHAQUE essai que le stimulus reconstruit (source, `t`, type) coïncide
-    avec celui du log -- sinon les seeds/budget fournis sont incohérents avec
-    ce log précis (erreur de protocole, `RuntimeError`, jamais une divergence
-    silencieuse)."""
+    stimuli (mêmes `seed_roving`/`seed_catch`/`budget`/`params`/`sources`/
+    `sources_catch`) et SUBSTITUE le sujet par un rejeu des réponses
+    enregistrées, dans l'ORDRE. Vérifie à CHAQUE essai que le stimulus
+    reconstruit (source, `t`, type) coïncide avec celui du log -- sinon les
+    seeds/budget/pools fournis sont incohérents avec ce log précis (erreur de
+    protocole, `RuntimeError`, jamais une divergence silencieuse)."""
     it = iter(essais_log)
 
     def _sujet_rejeu(essai: EssaiPropose) -> Reponse:
@@ -575,4 +600,5 @@ def rejoue_escalier(essais_log: list[EssaiJournal], *, numero_staircase: int, re
 
     return run_escalier(numero_staircase=numero_staircase, regime_nom=regime_nom,
                         repondre=_sujet_rejeu, seed_roving=seed_roving, seed_catch=seed_catch,
-                        budget=budget, params=params, banques=banques)
+                        budget=budget, params=params, banques=banques,
+                        sources=sources, sources_catch=sources_catch)
