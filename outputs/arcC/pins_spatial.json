@@ -1,0 +1,137 @@
+{
+  "schema": "arcC-pins-spatial-v1",
+  "date_session": "2026-07-05T18:43:14.950682",
+  "sujet": "humain",
+  "base_seed": 20260705,
+  "commit_harnais": "3d2a6ed8f4b993c9e6046c7fce52b834cb6b58fb",
+  "manifeste": "/home/iluin/project/python/pocPhysicator/outputs/arcC/manifeste_campagne.json",
+  "calibration": {
+    "long_ref_px": 1920.0,
+    "long_ref_mm": 597.0,
+    "distance_mm": 750.0,
+    "px_par_degre": 42.09946270918813,
+    "taille_domaine_deg": 1.8290019645118865,
+    "cellule_arcmin": 1.7146893417298936,
+    "luminosite": "OSD 80%",
+    "conditions": "CONDITIONS"
+  },
+  "params": {
+    "unites": "fraction (0.04 = 4 %)",
+    "ancre_budget": 32,
+    "seuil_exclusion": 0.16,
+    "methode_ic_primaire": "min_max_seuils",
+    "methode_ic_combinee": "mean±2SEM — branche à-cheval uniquement",
+    "branche_combinee_active": false
+  },
+  "sources": {
+    "utilisees": 19,
+    "exclues": [
+      {
+        "id": "s103_L10",
+        "chi_ancre": 0.15511273731102393
+      }
+    ]
+  },
+  "regimes": {
+    "severe": {
+      "statut": "RESOLU",
+      "jnd": 0.07334065957385666,
+      "ic": [
+        0.06033229334102097,
+        0.08673568621862042
+      ],
+      "staircases": [
+        {
+          "numero": 0,
+          "seuil": 0.08673568621862042,
+          "n_essais": 26,
+          "n_renversements": 8,
+          "renversements_moyennes": 6,
+          "taux_catch": 1.0,
+          "valide": true
+        },
+        {
+          "numero": 1,
+          "seuil": 0.07295399916192857,
+          "n_essais": 35,
+          "n_renversements": 8,
+          "renversements_moyennes": 6,
+          "taux_catch": 1.0,
+          "valide": true
+        },
+        {
+          "numero": 2,
+          "seuil": 0.06033229334102097,
+          "n_essais": 19,
+          "n_renversements": 8,
+          "renversements_moyennes": 6,
+          "taux_catch": 1.0,
+          "valide": true
+        }
+      ],
+      "dispersion_relative": 0.18006304584975352,
+      "taux_catch_global": 1.0
+    },
+    "laxiste": {
+      "statut": "RESOLU",
+      "jnd": 0.11539774590849085,
+      "ic": [
+        0.09365491373275102,
+        0.13873727413266454
+      ],
+      "staircases": [
+        {
+          "numero": 0,
+          "seuil": 0.09365491373275102,
+          "n_essais": 29,
+          "n_renversements": 8,
+          "renversements_moyennes": 6,
+          "taux_catch": 1.0,
+          "valide": true
+        },
+        {
+          "numero": 1,
+          "seuil": 0.13873727413266454,
+          "n_essais": 31,
+          "n_renversements": 8,
+          "renversements_moyennes": 6,
+          "taux_catch": 1.0,
+          "valide": true
+        },
+        {
+          "numero": 2,
+          "seuil": 0.113801049860057,
+          "n_essais": 30,
+          "n_renversements": 8,
+          "renversements_moyennes": 6,
+          "taux_catch": 1.0,
+          "valide": true
+        }
+      ],
+      "dispersion_relative": 0.19570185888454794,
+      "taux_catch_global": 1.0
+    }
+  },
+  "timing_laxiste": {
+    "exposition_moyenne_s": 2.0304212497628518,
+    "derive_max_pct": 1.5210624881425883
+  },
+  "controle_directionnel": {
+    "attendu": "JND_lax >= JND_sev (portée : violation = IC disjoints dans le mauvais ordre)",
+    "ic_disjoints_mauvais_ordre": false
+  },
+  "artefacts": {
+    "logs": [
+      "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_0.jsonl",
+      "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_1.jsonl",
+      "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_2.jsonl",
+      "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_laxiste_0.jsonl",
+      "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_laxiste_1.jsonl",
+      "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_laxiste_2.jsonl"
+    ],
+    "figures": [
+      "/home/iluin/project/python/pocPhysicator/outputs/arcC/arcC_psychometrique_severe.png",
+      "/home/iluin/project/python/pocPhysicator/outputs/arcC/arcC_psychometrique_laxiste.png"
+    ]
+  }
+}

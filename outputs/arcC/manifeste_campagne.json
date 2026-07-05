@@ -1,0 +1,374 @@
+{
+  "sujet": "humain",
+  "commit_harnais": "3d2a6ed8f4b993c9e6046c7fce52b834cb6b58fb",
+  "date_session": "2026-07-05T18:43:14.950682",
+  "parametres_graves": {
+    "ancre_budget": 32,
+    "haut_jnd_plausible": 0.08,
+    "seuil_exclusion": 0.16,
+    "n_staircases": 3,
+    "budget_catch": 32,
+    "geometrie": "pic-csf",
+    "catch_sources_fortes": false,
+    "fraction_sources_fortes": null
+  },
+  "config_affichage": {
+    "geometrie": "pic-csf",
+    "ppd": 42.09946270918813,
+    "taille_domaine_px": 77
+  },
+  "conditions_validite": {
+    "luminosite": "OSD 80%",
+    "conditions": "CONDITIONS",
+    "calibration": {
+      "ppd": 42.09946270918813,
+      "long_ref_px": 1920.0,
+      "long_ref_mm": 597.0,
+      "distance_mm": 750.0
+    }
+  },
+  "exclusions": {
+    "entrees": [
+      {
+        "seed": 101,
+        "L": 10,
+        "delta_chi_ancre": 0.2547455348961507,
+        "exclu": false
+      },
+      {
+        "seed": 101,
+        "L": 20,
+        "delta_chi_ancre": 0.25730568408310384,
+        "exclu": false
+      },
+      {
+        "seed": 101,
+        "L": 40,
+        "delta_chi_ancre": 0.47709321888183487,
+        "exclu": false
+      },
+      {
+        "seed": 101,
+        "L": 80,
+        "delta_chi_ancre": 0.47729260251257255,
+        "exclu": false
+      },
+      {
+        "seed": 102,
+        "L": 10,
+        "delta_chi_ancre": 0.27108608026719017,
+        "exclu": false
+      },
+      {
+        "seed": 102,
+        "L": 20,
+        "delta_chi_ancre": 0.5249245921050449,
+        "exclu": false
+      },
+      {
+        "seed": 102,
+        "L": 40,
+        "delta_chi_ancre": 0.4654030184534653,
+        "exclu": false
+      },
+      {
+        "seed": 102,
+        "L": 80,
+        "delta_chi_ancre": 0.4225200503230029,
+        "exclu": false
+      },
+      {
+        "seed": 103,
+        "L": 10,
+        "delta_chi_ancre": 0.15511273731102393,
+        "exclu": true
+      },
+      {
+        "seed": 103,
+        "L": 20,
+        "delta_chi_ancre": 0.5099406434095479,
+        "exclu": false
+      },
+      {
+        "seed": 103,
+        "L": 40,
+        "delta_chi_ancre": 0.6225437691586689,
+        "exclu": false
+      },
+      {
+        "seed": 103,
+        "L": 80,
+        "delta_chi_ancre": 0.51118665971454,
+        "exclu": false
+      },
+      {
+        "seed": 104,
+        "L": 10,
+        "delta_chi_ancre": 0.30334147401005807,
+        "exclu": false
+      },
+      {
+        "seed": 104,
+        "L": 20,
+        "delta_chi_ancre": 0.28498065144369533,
+        "exclu": false
+      },
+      {
+        "seed": 104,
+        "L": 40,
+        "delta_chi_ancre": 0.6438646710931325,
+        "exclu": false
+      },
+      {
+        "seed": 104,
+        "L": 80,
+        "delta_chi_ancre": 0.2655754886594677,
+        "exclu": false
+      },
+      {
+        "seed": 105,
+        "L": 10,
+        "delta_chi_ancre": 0.2858252415415674,
+        "exclu": false
+      },
+      {
+        "seed": 105,
+        "L": 20,
+        "delta_chi_ancre": 0.4998581934611843,
+        "exclu": false
+      },
+      {
+        "seed": 105,
+        "L": 40,
+        "delta_chi_ancre": 0.5369995240515106,
+        "exclu": false
+      },
+      {
+        "seed": 105,
+        "L": 80,
+        "delta_chi_ancre": 0.6356332278297562,
+        "exclu": false
+      }
+    ],
+    "sources_exclues": [
+      [
+        103,
+        10
+      ]
+    ],
+    "sources_incluses": [
+      [
+        101,
+        10
+      ],
+      [
+        101,
+        20
+      ],
+      [
+        101,
+        40
+      ],
+      [
+        101,
+        80
+      ],
+      [
+        102,
+        10
+      ],
+      [
+        102,
+        20
+      ],
+      [
+        102,
+        40
+      ],
+      [
+        102,
+        80
+      ],
+      [
+        103,
+        20
+      ],
+      [
+        103,
+        40
+      ],
+      [
+        103,
+        80
+      ],
+      [
+        104,
+        10
+      ],
+      [
+        104,
+        20
+      ],
+      [
+        104,
+        40
+      ],
+      [
+        104,
+        80
+      ],
+      [
+        105,
+        10
+      ],
+      [
+        105,
+        20
+      ],
+      [
+        105,
+        40
+      ],
+      [
+        105,
+        80
+      ]
+    ],
+    "n_exclues": 1,
+    "n_sources": 20,
+    "budget": 32,
+    "seuil_exclusion": 0.16,
+    "n_exclusions_stop": 10,
+    "statut": "CONTINUE"
+  },
+  "base_seed": 20260705,
+  "statut_global": "CONTINUE",
+  "regimes": {
+    "severe": {
+      "sessions": [
+        {
+          "numero_staircase": 0,
+          "regime": "severe",
+          "seed_roving": 20260706,
+          "seed_catch": 20260707,
+          "seed_sujet": 20260708,
+          "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_0.jsonl",
+          "n_essais": 26,
+          "n_reversals": 8,
+          "complet": true,
+          "seuil": 0.08673568621862042,
+          "validite": {
+            "n_catch": 2,
+            "n_catch_ok": 2,
+            "taux_reussite_catch": 1.0,
+            "seuil_reussite_catch": 0.9,
+            "valide": true
+          }
+        },
+        {
+          "numero_staircase": 1,
+          "regime": "severe",
+          "seed_roving": 20268625,
+          "seed_catch": 20268626,
+          "seed_sujet": 20268627,
+          "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_1.jsonl",
+          "n_essais": 35,
+          "n_reversals": 8,
+          "complet": true,
+          "seuil": 0.07295399916192857,
+          "validite": {
+            "n_catch": 3,
+            "n_catch_ok": 3,
+            "taux_reussite_catch": 1.0,
+            "seuil_reussite_catch": 0.9,
+            "valide": true
+          }
+        },
+        {
+          "numero_staircase": 2,
+          "regime": "severe",
+          "seed_roving": 20276544,
+          "seed_catch": 20276545,
+          "seed_sujet": 20276546,
+          "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_2.jsonl",
+          "n_essais": 19,
+          "n_reversals": 8,
+          "complet": true,
+          "seuil": 0.06033229334102097,
+          "validite": {
+            "n_catch": 2,
+            "n_catch_ok": 2,
+            "taux_reussite_catch": 1.0,
+            "seuil_reussite_catch": 0.9,
+            "valide": true
+          }
+        }
+      ],
+      "statut_orchestration": "CONTINUE",
+      "n_staircases_lancees": 3
+    },
+    "laxiste": {
+      "sessions": [
+        {
+          "numero_staircase": 0,
+          "regime": "laxiste",
+          "seed_roving": 28179706,
+          "seed_catch": 28179707,
+          "seed_sujet": 28179708,
+          "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_laxiste_0.jsonl",
+          "n_essais": 29,
+          "n_reversals": 8,
+          "complet": true,
+          "seuil": 0.09365491373275102,
+          "validite": {
+            "n_catch": 3,
+            "n_catch_ok": 3,
+            "taux_reussite_catch": 1.0,
+            "seuil_reussite_catch": 0.9,
+            "valide": true
+          }
+        },
+        {
+          "numero_staircase": 1,
+          "regime": "laxiste",
+          "seed_roving": 28187625,
+          "seed_catch": 28187626,
+          "seed_sujet": 28187627,
+          "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_laxiste_1.jsonl",
+          "n_essais": 31,
+          "n_reversals": 8,
+          "complet": true,
+          "seuil": 0.13873727413266454,
+          "validite": {
+            "n_catch": 3,
+            "n_catch_ok": 3,
+            "taux_reussite_catch": 1.0,
+            "seuil_reussite_catch": 0.9,
+            "valide": true
+          }
+        },
+        {
+          "numero_staircase": 2,
+          "regime": "laxiste",
+          "seed_roving": 28195544,
+          "seed_catch": 28195545,
+          "seed_sujet": 28195546,
+          "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_laxiste_2.jsonl",
+          "n_essais": 30,
+          "n_reversals": 8,
+          "complet": true,
+          "seuil": 0.113801049860057,
+          "validite": {
+            "n_catch": 3,
+            "n_catch_ok": 3,
+            "taux_reussite_catch": 1.0,
+            "seuil_reussite_catch": 0.9,
+            "valide": true
+          }
+        }
+      ],
+      "statut_orchestration": "CONTINUE",
+      "n_staircases_lancees": 3
+    }
+  }
+}

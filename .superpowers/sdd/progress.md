@@ -237,3 +237,13 @@ Re-run B (Romain) : fenêtre s'ouvre (backend OK) mais fermer ne coupe pas + rou
   au lieu de waitforbuttonpress ; suptitle instructions. 484/484. Glue non testable headless →
   re-run B de Romain. Question ouverte : 1re fenêtre montrait-elle A/B/X, ou déjà blanche
   (défaut de rendu séparé) ?
+
+═══ PIN SPATIAL MESURÉ (§C11, 1re donnée humaine) ═══
+Campagne C complète (Romain n=1, base_seed 20260705, commit harnais 3d2a6ed). Catch 12/12=100%,
+disp 0.18/0.196 ≤0.30, timing dérive 1.5%, 1/20 exclue (s103_L10). pins VALIDÉ §C10.
+JND_sev=0.0733 [0.0603,0.0867] ; JND_lax=0.1154 [0.0937,0.1387] ; directionnel conforme.
+LECTURE §C4 (mécanique) : consommateur 1 IC entier ≥4% (≥5%, PASS a fortiori) → CELLULE-1-CANDIDATE,
+prononcé définitif gaté sur extension 16L₀ (L=160, NON lancée) ; contingence géométrie-plafond NE
+s'arme PAS (IC≥4%) ; kx=1@1% moot (JND_sev≥2%) ; consommateurs 2&4 (W1, gate fovéa-z) en attente du
+pin TEMPOREL non mesuré. Blemish : conditions=placeholder (mesure non invalidée). Contrat §C11=6c50345.
+Forks Romain : 16L₀ ? axe temporel (a/a′/d) ? politique zoom §C7-4 ?
