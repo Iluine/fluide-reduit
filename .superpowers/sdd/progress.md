@@ -128,3 +128,12 @@ GATES TASK 3 (toutes = Romain) : (a) décision géométrie §C7 (reco contrôleu
   tension, ré-étiqueter « géométrie la plus sensible comme-prévu ») ; (b) 2 chiffres écran (longueur
   réf + distance mesurée, calibration par session) ; (c) budget-par-régime (marge sous plafond bas
   par-source) + contrainte M2 (BUDGET_CATCH séparé). Task 3 EXIGE Romain comme sujet → frontière SDD.
+§C8 CLÔTURÉ (pocCascade2phys d7c95e3) : (β) ancre = quadtree budget 32 VALIDÉ Romain (81 floats
+  = lapsus inter-famille ; décision 1 même-famille bat le chiffre) ; 3 conséquences opérationnelles
+  → brief Task 3, ne rouvrent pas le contrat.
+Task 3 (BUILD) : dispatché (a01d5d18). Runner orchestré (≥3 staircases × 2 régimes) + post-traitement
+  → pins_spatial.json + IC + figures, câblant §C8 : ancre 32 (D-1), exclusion nommée par-source
+  <0.16 ≥10=STOP (D-2), catch réserve forte t≈1 + validité sans recalibration + fallback OFF (D-3),
+  mode géométrie-plafond même-ancre (D-4). HAUT_JND_PLAUSIBLE=0.08 → SEUIL_EXCLUSION=0.16 (~1 source).
+  Validé SUJET SYNTHÉTIQUE (aucun humain). Brief arcC-task3-runner-brief.md. BASE = 2ce40a0.
+  RESTE APRÈS CE BUILD : Romain sujet devant l'écran = seule étape que la machine ne peut pas faire.
