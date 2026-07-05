@@ -173,3 +173,8 @@ Task 3 CORRECTIF revue : Spec ✅ CONFORME + Qualité Needs-fixes. Relecteur a v
   importable sans écran, parser.error avant figure) → fixeur dispatché (ab851b86) : ajoute le test
   CLI (monkeypatch argv + SystemExit) + dé-duplication ecrit_manifeste_json. 2 Minor structure
   laissés (recordés). BASE fix = 4a80731.
+Task 3 : affichage LIVE durées par essai ajouté (commit ci-après) — formate_timing_essai (pur, 3
+  tests) dans le chemin humain partagé → B-bis exécutable en quelques-essais+Ctrl-C (le sidecar
+  batch n'existait qu'à complétion). 437/437. ARC C BUILD ENTIÈREMENT CLOS (Tasks 0-3 + correctifs
+  timing/conditions + live-print, tout revu/vérifié). Prochaine action = Romain sujet (protocole
+  A→B→B-bis→C→D remis). Puis lecture §C4 contrôleur sur pins_spatial.json (côté 3/4%, contingence).
