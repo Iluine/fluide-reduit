@@ -1,0 +1,141 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "arcC-pins-spatial-v1.schema.json",
+  "title": "Arc C — contrat de sortie pins_spatial.json",
+  "description": "Contrat gravé AVANT toute donnée humaine. Le fichier rapporte des MESURES ; il ne contient AUCUN verdict §C4 (additionalProperties:false l'interdit structurellement — la lecture du consommateur 1 se fait au point d'arrêt, jamais dans l'artefact). Unités : tout Δχ/JND en fraction (0.04 = 4 %).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "date_session", "sujet", "base_seed", "commit_harnais", "manifeste", "calibration", "params", "sources", "regimes", "timing_laxiste", "controle_directionnel", "artefacts"],
+  "properties": {
+    "schema": { "const": "arcC-pins-spatial-v1" },
+    "date_session": { "type": "string", "description": "ISO 8601" },
+    "sujet": { "enum": ["humain", "synthetique"], "description": "Seul 'humain' est un référent ; 'synthetique' = rodage, jamais commité dans outputs/arcC/." },
+    "base_seed": { "type": "integer" },
+    "commit_harnais": { "type": "string", "description": "SHA pocPhysicator du harnais ayant produit la session." },
+    "manifeste": { "type": "string", "description": "Chemin du manifeste de session (sources, exclusions, seeds)." },
+
+    "calibration": {
+      "type": "object", "additionalProperties": false,
+      "required": ["long_ref_px", "long_ref_mm", "distance_mm", "px_par_degre", "taille_domaine_deg", "cellule_arcmin", "luminosite", "conditions"],
+      "properties": {
+        "long_ref_px": { "type": "number", "exclusiveMinimum": 0 },
+        "long_ref_mm": { "type": "number", "exclusiveMinimum": 0 },
+        "distance_mm": { "type": "number", "exclusiveMinimum": 0 },
+        "px_par_degre": { "type": "number", "exclusiveMinimum": 0 },
+        "taille_domaine_deg": { "type": "number", "exclusiveMinimum": 0 },
+        "cellule_arcmin": { "type": "number", "exclusiveMinimum": 0 },
+        "luminosite": { "type": "string", "description": "Valeur fixée et notée (choix nommé n°3 du budget C-1)." },
+        "conditions": { "type": "string", "description": "Repère de distance, éclairage, etc. — conditions de validité §C7/§C9." }
+      }
+    },
+
+    "params": {
+      "type": "object", "additionalProperties": false,
+      "required": ["unites", "ancre_budget", "seuil_exclusion", "methode_ic_primaire", "methode_ic_combinee", "branche_combinee_active"],
+      "properties": {
+        "unites": { "const": "fraction (0.04 = 4 %)" },
+        "ancre_budget": { "const": 32, "description": "Ancre = quadtree le plus cru de la famille jugée (décision β)." },
+        "seuil_exclusion": { "type": "number", "description": "Règle ≥ 2× : plafond d'ancre minimal par source." },
+        "methode_ic_primaire": { "const": "min_max_seuils" },
+        "methode_ic_combinee": { "const": "mean±2SEM — branche à-cheval uniquement" },
+        "branche_combinee_active": { "type": "boolean", "description": "true ssi la session supplémentaire de la cellule à-cheval a tourné." }
+      }
+    },
+
+    "sources": {
+      "type": "object", "additionalProperties": false,
+      "required": ["utilisees", "exclues"],
+      "properties": {
+        "utilisees": { "type": "integer", "minimum": 1 },
+        "exclues": {
+          "type": "array",
+          "description": "JAMAIS d'exclusion silencieuse : chaque source exclue est nommée avec son Δχ d'ancre.",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["id", "chi_ancre"],
+            "properties": { "id": { "type": "string" }, "chi_ancre": { "type": "number" } }
+          }
+        }
+      }
+    },
+
+    "regimes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["severe", "laxiste"],
+      "properties": {
+        "severe": { "$ref": "#/definitions/regime" },
+        "laxiste": { "$ref": "#/definitions/regime" }
+      }
+    },
+
+    "timing_laxiste": {
+      "type": "object", "additionalProperties": false,
+      "required": ["exposition_moyenne_s", "derive_max_pct"],
+      "properties": {
+        "exposition_moyenne_s": { "type": "number" },
+        "derive_max_pct": { "type": "number", "description": "Garde de validité du régime : > 25 % = régime suspect, session à remonter." }
+      }
+    },
+
+    "controle_directionnel": {
+      "type": "object", "additionalProperties": false,
+      "required": ["attendu", "ic_disjoints_mauvais_ordre"],
+      "properties": {
+        "attendu": { "const": "JND_lax >= JND_sev (portée : violation = IC disjoints dans le mauvais ordre)" },
+        "ic_disjoints_mauvais_ordre": { "type": "boolean", "description": "true → STOP-remonter (instrument/protocole suspect), pas une note." }
+      }
+    },
+
+    "artefacts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["logs", "figures"],
+      "properties": {
+        "logs": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "figures": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+
+  "definitions": {
+    "regime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["statut", "jnd", "ic", "staircases", "dispersion_relative", "taux_catch_global"],
+      "properties": {
+        "statut": { "enum": ["RESOLU", "INDETERMINE", "INVALIDE"] },
+        "motif_statut": { "type": "string", "description": "Obligatoire si statut ≠ RESOLU : jamais de statut nu." },
+        "jnd": { "type": ["number", "null"], "description": "null ssi statut = INVALIDE." },
+        "ic": {
+          "type": ["array", "null"], "minItems": 2, "maxItems": 2,
+          "items": { "type": "number" },
+          "description": "IC primaire min/max des seuils. null ssi INVALIDE."
+        },
+        "ic_combine": {
+          "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" },
+          "description": "mean±2SEM sur les 6 seuils — présent UNIQUEMENT si branche_combinee_active."
+        },
+        "staircases": {
+          "type": "array", "minItems": 3,
+          "description": "Seuils BRUTS par staircase — indispensables : la branche à-cheval recalcule dessus.",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["numero", "seuil", "n_essais", "n_renversements", "renversements_moyennes", "taux_catch", "valide"],
+            "properties": {
+              "numero": { "type": "integer" },
+              "seuil": { "type": ["number", "null"] },
+              "n_essais": { "type": "integer" },
+              "n_renversements": { "type": "integer" },
+              "renversements_moyennes": { "const": 6 },
+              "taux_catch": { "type": "number", "minimum": 0, "maximum": 1 },
+              "valide": { "type": "boolean" }
+            }
+          }
+        },
+        "dispersion_relative": { "type": ["number", "null"], "description": "Garde §C5-3 : > 0.30 → INDETERMINE." },
+        "taux_catch_global": { "type": ["number", "null"], "description": "< 0.90 → INVALIDE, jamais recalibré." }
+      },
+      "allOf": [
+        { "if": { "properties": { "statut": { "enum": ["INDETERMINE", "INVALIDE"] } } }, "then": { "required": ["motif_statut"] } }
+      ]
+    }
+  }
+}

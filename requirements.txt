@@ -3,6 +3,11 @@ numpy>=1.26
 scipy>=1.11
 matplotlib>=3.8
 
+# Arc C Task 3 — validation du contrat de sortie pins_spatial.json (§C10,
+# schemas/arcC-pins-spatial-v1.schema.json) ; pur Python, sans C, n'affecte
+# aucune autre dépendance.
+jsonschema>=4.0
+
 # Tests (dev uniquement)
 pytest>=8.0
 
