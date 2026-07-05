@@ -258,3 +258,16 @@ Task 1: ratio chi_rms/Michelson bande 4-7 sur 19 sources incluses (vrai + régé
 Task 2: re-seuillage k*(L) famille-2 quadtree aux 6 JND réels du pin (exacts pins_spatial.json ;
   RÉUTILISE k_star_groupe_qt) ; INTERDIT verdict/pente ; non-régression k*(80)@5%=400 + sous_jnd bit.
   Sortie surface_kstar_aux_pins.json + écart sévère↔laxiste en floats/L.
+Task 1: complete (commits 19dfa4d..061885a, revue SPEC✅ + QUALITÉ approuvé, 9/9 + suite 493/493).
+  Reviewer a vérifié indépendamment : déterminisme (MD5 JSON identique 2 runs), binning R1 réutilisé
+  (pas de réimpl), aucun clip, 19 sources dynamiques (103,10 exclue), sanity 1/√2 <1%, Parseval <1e-9,
+  structure JSON conforme. MESURE : ratio vrai médiane 0.4771 IQR 0.0931 [0.193,0.622] (dispersion x3
+  réelle, héritée par C-1) ; régénéré-32 médiane 0.3856 IQR 0.0744. Débordements <0 signalés (non clippés).
+  Minor pour revue finale : test_sources_incluses_triees faible (tri déjà interne) — sans impact mesure.
+  ⚠️ CAVEAT MATÉRIEL POUR C-1 (à remonter à Romain au point d'arrêt) : c_michelson ∈ [1.90,4.82] méd 2.29
+  pour 19/19 sources — Michelson >1 partout (hors régime valide [0,1]). Cause : mean_albedo ~0.04 (minuscule)
+  + bande 4-7 y portant RMS comparable/sup (χ_rms>1 pour 14/19). La bande 4-7 EST porteuse (≥10% AC) 19/19.
+  Le ratio natif mesuré (0.477) = ce que le plan a défini, MAIS convertir un seuil biblio petit-contraste à
+  travers lui extrapole la saturation-pédestal (ratio natif r_nat = r0·(1+s/2mean), r0=2·RMS/pp le ratio
+  scale-invariant petit-contraste). Mesure NON redéfinie (seuil pré-enregistré) ; décision C-1/Romain :
+  garder natif, ou ajouter r0=2·RMS/(peak-to-peak) comme mesure compagne ? À nommer au point d'arrêt.
