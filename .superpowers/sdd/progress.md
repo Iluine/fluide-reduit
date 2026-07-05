@@ -203,3 +203,11 @@ Task CONFORMANCE : COMPLETE (commits c31729a..8d5f781, review clean). Spec ✅ +
 ⚠️ CONTRAT REMONTÉ À ROMAIN : le schéma (minItems:3) ne représente PAS un régime arrêté à 2
   staircases (STOP_2_INVALIDES §C5) → pins LÈVE, aucun artefact. Fork (a) garder fail-loud + message
   clair vs (b) assouplir le schéma pour un artefact minimal traçable. Reco contrôleur = (a)+message.
+Invariant §C10 gravé (pocCascade2phys 448048f) : pins = campagne complétée par construction ;
+  arrêt protocolaire = fait de manifeste jamais de référent ; fail-loud aiguillage (avant jsonschema,
+  pas de complétion auto), 3 issues campagne testées e2e.
+Task FIX fail-loud : dispatché (a9faff30). (1) détection STATUT_STOP_2_INVALIDES dans construit_pins
+  AVANT jsonschema → RuntimeError clair (fait N staircases + régime + manifeste + conduite remonter,
+  aucune voie de complétion) ; "is too short" cryptique rendu inatteignable. (2) message anti-3e-
+  session. (3) deux tests e2e : arrêt-2-invalides → lève + aucun fichier ; INDETERMINE n≥3 disp>30%.
+  Schéma gravé INTACT. BASE = 5cb2f5f.
