@@ -231,3 +231,9 @@ PRÉ-VOL B (Romain) a révélé 2 défauts de plomberie (mode d'échec prévu, m
   PySide6 dans requirements. jsonschema+PySide6 installés venv. Qt/xcb vérifié sur DISPLAY=:0.
   484/484. Affichage interactif (fenêtre visible + touches a/b) = re-run B de Romain (glue non
   testable headless). B prêt.
+Re-run B (Romain) : fenêtre s'ouvre (backend OK) mais fermer ne coupe pas + rouvre blanche.
+  2e défaut interactif corrigé (commit 52db4eb) : SessionInterrompue sur close_event/Échap,
+  attrapée main()+campagne (arrêt propre, aucune donnée = cohérent §C10) ; boucle plt.pause(0.05)
+  au lieu de waitforbuttonpress ; suptitle instructions. 484/484. Glue non testable headless →
+  re-run B de Romain. Question ouverte : 1re fenêtre montrait-elle A/B/X, ou déjà blanche
+  (défaut de rendu séparé) ?
