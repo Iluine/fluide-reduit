@@ -40,6 +40,7 @@ capture humaine)."""
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -47,8 +48,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+
+from src.arcC_backend import assert_backend_interactif, selectionne_backend_qt
 
 from scripts.run_arcA_measure import _load_history
 from src.albedo import albedo
@@ -153,6 +157,7 @@ def _construit_repondre_humain(fig: plt.Figure, axes: list[plt.Axes], regime: Re
             _affiche(axes[1], a_b, "B")
             _affiche(axes[2], a_x, "X")
             fig.canvas.draw()
+            fig.canvas.flush_events()  # rendu immédiat (sévère : pas de plt.pause pour pomper)
             # Inspection libre, SANS limite de temps (régime sévère, §C0) --
             # AUCUNE cible temporelle : phase mesurée pour information
             # seulement (`nominal=None`, cf. `resume_timing`, catégorie
@@ -282,7 +287,17 @@ def main() -> None:
               f"seuil={resultat.seuil}, complet={resultat.complet} (aucune capture humaine).")
         return
 
+    # Plomberie session live : fenêtre GUI requise (affichage + capture clavier).
+    # Bascule sur un backend Qt interactif si dispo, PUIS garde fail-loud si le
+    # backend reste non-interactif -- sinon `waitforbuttonpress` boucle sans fin
+    # (le mode d'échec du 1er pré-vol B, sur Agg).
+    selectionne_backend_qt()
+    assert_backend_interactif(matplotlib.get_backend(), est_replay=False,
+                              display=os.environ.get("DISPLAY"))
+
     fig, axes = _cree_figure(regime, taille_px)
+    plt.ion()          # mode interactif : la fenêtre s'affiche et pompe les événements
+    fig.show()
     rng_masque = np.random.default_rng(args.seed_masque)
     repondre, journal_timing = _construit_repondre_humain(fig, axes, regime, rng_masque)
 

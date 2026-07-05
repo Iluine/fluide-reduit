@@ -8,6 +8,12 @@ matplotlib>=3.8
 # aucune autre dépendance.
 jsonschema>=4.0
 
+# Arc C session HUMAINE uniquement — backend GUI matplotlib (fenêtre + capture
+# clavier a/b). Sans lui, matplotlib se rabat sur Agg (non-interactif) et la
+# session boucle sans fin (cf. src/arcC_backend.py, garde fail-loud). NON requis
+# pour les tests (Agg suffit). Qt auto-contenu, n'affecte pas la stack JAX/warp.
+PySide6>=6.0
+
 # Tests (dev uniquement)
 pytest>=8.0
 

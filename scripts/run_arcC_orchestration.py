@@ -257,15 +257,28 @@ def _fabrique_repondre_humain(taille_px: int, out_dir: Path) -> FabriqueRepondre
     par `orchestre_regime`, `out_dir` fourni ici pour cette raison) et
     imprime le résumé réalisé-vs-nominal (+ AVERTISSEMENT >25%, jamais un
     gate dur)."""
+    import os
+
+    import matplotlib
     import matplotlib.pyplot as plt
 
     from scripts.run_arcC_session import _cree_figure, _construit_repondre_humain
+    from src.arcC_backend import assert_backend_interactif, selectionne_backend_qt
     from src.arcC_timing import ecrit_timing_jsonl, formate_resume_timing, resume_timing
+
+    # Plomberie session live : backend Qt interactif + garde fail-loud (sinon
+    # `waitforbuttonpress` boucle sans fin sur Agg, mode d'échec du 1er pré-vol).
+    # `plt.ion()` -> fenêtres affichées. Une seule fois pour toute la campagne.
+    selectionne_backend_qt()
+    assert_backend_interactif(matplotlib.get_backend(), est_replay=False,
+                              display=os.environ.get("DISPLAY"))
+    plt.ion()
 
     def fabrique(numero_staircase: int, regime_nom: str, seed_sujet: int
                 ) -> tuple[Callable[[EssaiPropose], Reponse], Callable[[], None]]:
         regime = REGIME_SEVERE if regime_nom == REGIME_SEVERE.nom else REGIME_LAXISTE
         fig, axes = _cree_figure(regime, taille_px)
+        fig.show()  # affiche la fenêtre de CETTE staircase (mode interactif)
         rng_masque = np.random.default_rng(seed_sujet)
         repondre, journal_timing = _construit_repondre_humain(fig, axes, regime, rng_masque)
 
