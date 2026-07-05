@@ -12,8 +12,10 @@ les contrôles aux bornes L∈{10,160} (bras ferm/shuf). Task 3 (verdict 16L₀)
 agrafera ce npz à `measures_qt.npz`.
 
 Instrument famille-2 (quadtree) GELÉ, réutilisé PAR IMPORT, jamais
-réimplémenté : `_measure_cell_qt`/`_field_true_qt`/`BUDGETS`/`BUDGET_FERM`
-(`scripts.run_arcA_measure_qt`) ; `SEEDS`/`JND_LIST`/`CAP_FLOATS_10PCT`/
+réimplémenté : `_measure_cell_qt`/`_field_true_qt`/`BUDGETS`/`BUDGET_FERM`/
+`ARMS` (`scripts.run_arcA_measure_qt` ; `ARMS=("v2","ferm","shuf")` dépaqueté
+dans `main()` -- les 3 bras itérés SONT `ARMS`, pas des littéraux ad hoc) ;
+`SEEDS`/`JND_LIST`/`CAP_FLOATS_10PCT`/
 `_versions` (`scripts.run_arcA_measure`) ; `sous_jnd_a_jnd`
 (`scripts.run_arcC_surface_kstar_pins`, déjà verrouillée bit-à-bit dans
 `tests/test_arcC_surface_kstar_pins.py`) ; `_npz_path` (`scripts.
@@ -65,8 +67,8 @@ import numpy as np
 
 from scripts.run_arcA_histories_16L0 import _npz_path as _npz_path_h160
 from scripts.run_arcA_measure import CAP_FLOATS_10PCT, JND_LIST, SEEDS, _versions
-from scripts.run_arcA_measure_qt import (BUDGET_FERM, BUDGETS, _field_true_qt,
-                                         _measure_cell_qt)
+from scripts.run_arcA_measure_qt import (ARMS, BUDGET_FERM, BUDGETS,
+                                         _field_true_qt, _measure_cell_qt)
 from scripts.run_arcA_revalidate import B0, S_HALF_OP
 from scripts.run_arcC_surface_kstar_pins import sous_jnd_a_jnd
 
@@ -157,6 +159,10 @@ def _construit_sous_jnd(ma1: np.ndarray, ma2: np.ndarray) -> np.ndarray:
 
 def main() -> Path:
     t0 = time.time()
+    # Les 3 bras itérés ci-dessous SONT `ARMS` (`run_arcA_measure_qt`, gelé,
+    # ("v2", "ferm", "shuf")) -- dépaqueté nommément pour tracer la
+    # réutilisation sans changer le comportement (mêmes littéraux, même ordre).
+    arm_v2, arm_ferm, arm_shuf = ARMS
     mesures_v2: dict[tuple[int, int], tuple[dict, dict]] = {}
     mesures_ferm: dict[tuple[int, int], tuple[dict, dict]] = {}
     mesures_shuf: dict[tuple[int, int], tuple[dict, dict]] = {}
@@ -167,18 +173,18 @@ def main() -> Path:
         ts = time.time()
         hist = _load_history_160(seed)
 
-        ma1, ma2, center = _mesurer_cellule("v2", 160, seed, hist)
+        ma1, ma2, center = _mesurer_cellule(arm_v2, 160, seed, hist)
         mesures_v2[(160, seed)] = (ma1, ma2)
         print(f"  seed={seed} v2 L=160  centre={center}  "
               f"ma1={ {b: round(ma1[b], 5) for b in BUDGETS} }")
 
         for L in L_CONTROL:
-            ma1f, ma2f, cf = _mesurer_cellule("ferm", L, seed, hist)
+            ma1f, ma2f, cf = _mesurer_cellule(arm_ferm, L, seed, hist)
             mesures_ferm[(L, seed)] = (ma1f, ma2f)
             print(f"  seed={seed} ferm L={L}  centre={cf}  "
                   f"ma1={ {b: round(ma1f[b], 5) for b in BUDGETS} }")
 
-            ma1s, ma2s, cs = _mesurer_cellule("shuf", L, seed, hist)
+            ma1s, ma2s, cs = _mesurer_cellule(arm_shuf, L, seed, hist)
             mesures_shuf[(L, seed)] = (ma1s, ma2s)
             print(f"  seed={seed} shuf L={L}  centre={cs}  "
                   f"ma1={ {b: round(ma1s[b], 5) for b in BUDGETS} }")

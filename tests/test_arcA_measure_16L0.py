@@ -151,17 +151,30 @@ _DONNEES_PRETES = _H160_SEEDS_PRESENTS and MEASURES_QT_PATH.exists()
            "présents (measures_qt.npz, lui, existe déjà).",
 )
 def test_non_regression_controle_L10():
+    """Bit-à-bit ferm@L=10 ET shuf@L=10 -- les deux bras ont un mécanisme de
+    champ vrai DISTINCT (`_field_true_qt` : ferm = regenerate_qt/summarize_qt,
+    shuf = permutation RNG seedée `9001+1000*L+seed`) donc leur reproductibilité
+    est vérifiée SÉPARÉMENT, en miroir exact l'un de l'autre. `hist` (chargé une
+    fois par seed) est réutilisé pour les deux bras -- pas de second I/O."""
     with np.load(MEASURES_QT_PATH, allow_pickle=False) as d:
         ma1_ferm_stocke = d["ma1_ferm"]
         ma2_ferm_stocke = d["ma2_ferm"]
+        ma1_shuf_stocke = d["ma1_shuf"]
+        ma2_shuf_stocke = d["ma2_shuf"]
     iL10 = L_LIST.index(10)
 
-    mesures = {}
+    mesures_ferm = {}
+    mesures_shuf = {}
     for seed in SEEDS:
         hist = m16._load_history_160(seed)
-        ma1, ma2, _center = m16._mesurer_cellule("ferm", 10, seed, hist)
-        mesures[(10, seed)] = (ma1, ma2)
-    ma1_recalcule, ma2_recalcule = m16._assemble_grille(mesures, (10,))
+        ma1f, ma2f, _cf = m16._mesurer_cellule("ferm", 10, seed, hist)
+        mesures_ferm[(10, seed)] = (ma1f, ma2f)
+        ma1s, ma2s, _cs = m16._mesurer_cellule("shuf", 10, seed, hist)
+        mesures_shuf[(10, seed)] = (ma1s, ma2s)
+    ma1_ferm_recalcule, ma2_ferm_recalcule = m16._assemble_grille(mesures_ferm, (10,))
+    ma1_shuf_recalcule, ma2_shuf_recalcule = m16._assemble_grille(mesures_shuf, (10,))
 
-    assert np.array_equal(ma1_recalcule[0], ma1_ferm_stocke[iL10])
-    assert np.array_equal(ma2_recalcule[0], ma2_ferm_stocke[iL10])
+    assert np.array_equal(ma1_ferm_recalcule[0], ma1_ferm_stocke[iL10])
+    assert np.array_equal(ma2_ferm_recalcule[0], ma2_ferm_stocke[iL10])
+    assert np.array_equal(ma1_shuf_recalcule[0], ma1_shuf_stocke[iL10])
+    assert np.array_equal(ma2_shuf_recalcule[0], ma2_shuf_stocke[iL10])
