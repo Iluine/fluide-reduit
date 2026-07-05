@@ -193,3 +193,13 @@ Task CONFORMANCE : DONE (commits c31729a schéma+dep, 7756882 provenance, 3f490f
   CONTRAT signalée : campagne arrêtée (≥10 exclusions / régime à 2 staircases <minItems:3) → pins
   LÈVE (fail-loud), pas d'artefact malformé — le STOP vit au manifeste. À ratifier par Romain. EN
   REVUE (relecteur a6bda86b).
+Task CONFORMANCE : COMPLETE (commits c31729a..8d5f781, review clean). Spec ✅ + Qualité Approved.
+  Relecteur vérif indépendante : schémas identiques byte-pour-byte ; validation-avant-écriture testée ;
+  statut 3-voies + directionnel + mean±2SEM + cellule_arcmin recalculés ; scénario 2-staircases
+  reconstruit → fail-loud réel. 2 Minor (aucun Critical/Important) : (M1) pas de test e2e du chemin
+  arrêt-2-invalides + message jsonschema cryptique ("is too short") ; (M2) pas de test explicite du
+  statut INDETERMINE n<3-non-2-invalides. Les DEUX Minor sont EN AVAL du ⚠️ contrat (a vs b) → à
+  résoudre avec le choix de Romain, pas avant.
+⚠️ CONTRAT REMONTÉ À ROMAIN : le schéma (minItems:3) ne représente PAS un régime arrêté à 2
+  staircases (STOP_2_INVALIDES §C5) → pins LÈVE, aucun artefact. Fork (a) garder fail-loud + message
+  clair vs (b) assouplir le schéma pour un artefact minimal traçable. Reco contrôleur = (a)+message.
