@@ -114,3 +114,17 @@ Task 2 : IMPLÉMENTÉ (commits 1300399 calibration, 468d534 ABX). Implémenteur 
   texture ; DÉCISION ROMAIN. (2) plafond Δχ par-source hétérogène (budget 256 → pire source 2.78%)
   → budget-par-régime à graver en Task 3. Caveats rapport : format ABX 3-stimuli à relire avant
   Task 3 ; n_essais_max=200 non testé à la limite. EN REVUE (relecteur dispatché a8e39fa).
+Task 2 : COMPLETE (commits 1300399..468d534, review clean). Relecteur : Spec ✅ CONFORME +
+  Qualité Approved ; vérif indépendante poussée (arithmétique escalier tracée main, §C7 + plafonds
+  par-source recalculés, test adversarial règle inversée → tolérance 20% discriminante, zéro fuite
+  ABX, latence_s seul champ hors replay bit-exact). 4 Minor (aucun Critical/Important, pas de fixeur) :
+  (M1) clip dupliqué 2 lignes dans avance_escalier — cosmétique ; (M2) BUDGET_CATCH=32 fixe →
+  CONTRAINTE TASK 3 : si un régime prend budget staircase=32, le catch perd sa marge de séparation
+  → BUDGET_CATCH doit rester strictement plus bas/séparé du budget de staircase ; (M3) dispersion/
+  statut/arret non appelés par la coquille = orchestration Task 3, pas un gap ; (M4) test report §C7
+  faible par conception (§C7 interdit tout gate sur ce chiffre). Minors → triage revue finale de
+  branche (différée : Task 3-4 ajoutent du code).
+GATES TASK 3 (toutes = Romain) : (a) décision géométrie §C7 (reco contrôleur = (i) accepter la
+  tension, ré-étiqueter « géométrie la plus sensible comme-prévu ») ; (b) 2 chiffres écran (longueur
+  réf + distance mesurée, calibration par session) ; (c) budget-par-régime (marge sous plafond bas
+  par-source) + contrainte M2 (BUDGET_CATCH séparé). Task 3 EXIGE Romain comme sujet → frontière SDD.
