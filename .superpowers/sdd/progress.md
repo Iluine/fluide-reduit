@@ -165,3 +165,11 @@ Task 3 CORRECTIF : DONE (commits bcbdfd6 timing, c317f3b conditions). 432/432 ve
   humain partagé ; sidecar timing par staircase + résumé réalisé-vs-nominal + avert >25% (écart
   absolu). --luminosite/--conditions requis si humain → manifeste conditions_validite. EN REVUE
   (relecteur ac589bca) — dernier gate avant données irréversibles.
+Task 3 CORRECTIF revue : Spec ✅ CONFORME + Qualité Needs-fixes. Relecteur a vérifié sur pièces :
+  accumulateur RÉELLEMENT pur (0 matplotlib en sys.modules), seuil 25% recalculé (24→pas d'alerte,
+  26→alerte), écart absolu capte trop-court ET trop-long (correct §C9), parser.error humain prouvé
+  par test CLI réel, analogie coquille live⇒requiert cohérente. IMPORTANT : test manquant côté
+  coquille (garde-fou conditions) esquivé pour raison INVALIDE (relecteur a prouvé matplotlib
+  importable sans écran, parser.error avant figure) → fixeur dispatché (ab851b86) : ajoute le test
+  CLI (monkeypatch argv + SystemExit) + dé-duplication ecrit_manifeste_json. 2 Minor structure
+  laissés (recordés). BASE fix = 4a80731.
