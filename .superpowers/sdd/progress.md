@@ -223,3 +223,11 @@ Task1 (générateur) → Task2 (ABX+staircase+calibration) → Task3 (orchestrat
 schéma+fail-loud). 469 tests. 3 issues de campagne fermées et testées (résolue/invalide/arrêtée).
 Contrat de sortie validé-avant-écriture. SEULE CASE VIDE = Romain sujet (3 chiffres règle → A B Bbis C D).
 Après ses logs : je lance run_arcC_pins.py (D) + lecture §C4 (côté 3/4%, contingence géométrie-plafond).
+PRÉ-VOL B (Romain) a révélé 2 défauts de plomberie (mode d'échec prévu, mien à corriger) :
+  (1) venv sans Qt → matplotlib Agg → pas de fenêtre, waitforbuttonpress boucle ; (2) chemin
+  d'affichage ne montrait jamais la fenêtre (draw() sans ion/show). Correctif commit 21136f3 :
+  src/arcC_backend.py (selectionne_backend_qt + assert_backend_interactif garde PUR 15 tests),
+  QtAgg+garde+ion/show/flush dans les 2 chemins live, conftest force Agg (tests headless-safe),
+  PySide6 dans requirements. jsonschema+PySide6 installés venv. Qt/xcb vérifié sur DISPLAY=:0.
+  484/484. Affichage interactif (fenêtre visible + touches a/b) = re-run B de Romain (glue non
+  testable headless). B prêt.
