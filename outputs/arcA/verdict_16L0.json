@@ -1,0 +1,1517 @@
+{
+  "meta": {
+    "source_measures_qt": "outputs/arcA/measures_qt.npz",
+    "source_measures_160": "outputs/arcA/measures_160.npz",
+    "source_pins": "outputs/arcC/pins_spatial.json",
+    "contrat": "PREREGISTRATION.md (pocCascade2phys) §A12, commit 3fd72aa",
+    "L": [
+      10,
+      20,
+      40,
+      80,
+      160
+    ],
+    "seeds": [
+      101,
+      102,
+      103,
+      104,
+      105
+    ],
+    "budgets": [
+      32,
+      64,
+      128,
+      256,
+      400,
+      1024,
+      2048
+    ],
+    "jnd_grille": [
+      0.02,
+      0.03,
+      0.04,
+      0.05
+    ],
+    "pins_utilises": {
+      "severe": {
+        "ic_bas": 0.06033229334102097,
+        "pin": 0.07334065957385666,
+        "ic_haut": 0.08673568621862042
+      },
+      "laxiste": {
+        "ic_bas": 0.09365491373275102,
+        "pin": 0.11539774590849085,
+        "ic_haut": 0.13873727413266454
+      }
+    },
+    "cap_floats": 409.6,
+    "budgets_non_discriminants": [
+      1024.0,
+      2048.0
+    ],
+    "L_slope": [
+      40,
+      80,
+      160
+    ],
+    "n_bootstrap": 10000,
+    "seed_bootstrap": 20260704,
+    "methode_pente": "pente OLS (moindres carrés) de k*(L) vs L sur L∈{40,80,160} -- généralisation fidèle de la pente 2-points (k*(80)-k*(40))/40 de §A3 (dégénère EXACTEMENT dessus à 2 points, cf. test_pente_ols_3pts) ; méthode NOMMÉE par le contrôleur AVANT la mesure (ledger .superpowers/sdd/progress.md, entrée « DÉCISION MÉTHODE Task3 », 2026-07-05).",
+    "convention_serialisation": "float infini -> chaîne 'inf' ; NaN -> 'nan'"
+  },
+  "gate_controles": {
+    "statut": "CONFORME",
+    "violations": []
+  },
+  "surface_kstar": {
+    "0.02": {
+      "k_star_par_L": {
+        "10": {
+          "mediane": 1024.0,
+          "par_seed": {
+            "101": 1024.0,
+            "102": 1024.0,
+            "103": 2048.0,
+            "104": 1024.0,
+            "105": 1024.0
+          },
+          "non_discriminant": true,
+          "sup_cap": true,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              1024.0,
+              2048.0,
+              1024.0,
+              1024.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [],
+            "k_final": 1024.0
+          }
+        },
+        "20": {
+          "mediane": 1024.0,
+          "par_seed": {
+            "101": 1024.0,
+            "102": 1024.0,
+            "103": 1024.0,
+            "104": 400.0,
+            "105": 2048.0
+          },
+          "non_discriminant": true,
+          "sup_cap": true,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              1024.0,
+              1024.0,
+              400.0,
+              2048.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [],
+            "k_final": 1024.0
+          }
+        },
+        "40": {
+          "mediane": 1024.0,
+          "par_seed": {
+            "101": 1024.0,
+            "102": 1024.0,
+            "103": 1024.0,
+            "104": 2048.0,
+            "105": 1024.0
+          },
+          "non_discriminant": true,
+          "sup_cap": true,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              1024.0,
+              1024.0,
+              2048.0,
+              1024.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [],
+            "k_final": 1024.0
+          }
+        },
+        "80": {
+          "mediane": 2048.0,
+          "par_seed": {
+            "101": 1024.0,
+            "102": 1024.0,
+            "103": 1024.0,
+            "104": 1024.0,
+            "105": 2048.0
+          },
+          "non_discriminant": true,
+          "sup_cap": true,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              1024.0,
+              1024.0,
+              1024.0,
+              2048.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [
+              {
+                "niveau_teste": 1024.0,
+                "n_seeds_offenders": 1
+              }
+            ],
+            "k_final": 2048.0
+          }
+        },
+        "160": {
+          "mediane": 1024.0,
+          "par_seed": {
+            "101": 1024.0,
+            "102": 1024.0,
+            "103": 1024.0,
+            "104": 1024.0,
+            "105": 1024.0
+          },
+          "non_discriminant": true,
+          "sup_cap": true,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              1024.0,
+              1024.0,
+              1024.0,
+              1024.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [],
+            "k_final": 1024.0
+          }
+        }
+      }
+    },
+    "0.03": {
+      "k_star_par_L": {
+        "10": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 400.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 1024.0,
+            "105": 1024.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              400.0,
+              400.0,
+              1024.0,
+              1024.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "20": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 1024.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 400.0,
+            "105": 1024.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              400.0,
+              400.0,
+              400.0,
+              1024.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "40": {
+          "mediane": 1024.0,
+          "par_seed": {
+            "101": 400.0,
+            "102": 1024.0,
+            "103": 1024.0,
+            "104": 2048.0,
+            "105": 400.0
+          },
+          "non_discriminant": true,
+          "sup_cap": true,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              1024.0,
+              1024.0,
+              2048.0,
+              400.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [],
+            "k_final": 1024.0
+          }
+        },
+        "80": {
+          "mediane": 1024.0,
+          "par_seed": {
+            "101": 1024.0,
+            "102": 1024.0,
+            "103": 1024.0,
+            "104": 1024.0,
+            "105": 2048.0
+          },
+          "non_discriminant": true,
+          "sup_cap": true,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              1024.0,
+              1024.0,
+              1024.0,
+              2048.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [],
+            "k_final": 1024.0
+          }
+        },
+        "160": {
+          "mediane": 1024.0,
+          "par_seed": {
+            "101": 1024.0,
+            "102": 1024.0,
+            "103": 1024.0,
+            "104": 1024.0,
+            "105": 1024.0
+          },
+          "non_discriminant": true,
+          "sup_cap": true,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              1024.0,
+              1024.0,
+              1024.0,
+              1024.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [],
+            "k_final": 1024.0
+          }
+        }
+      }
+    },
+    "0.04": {
+      "k_star_par_L": {
+        "10": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 400.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 400.0,
+            "105": 400.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              400.0,
+              400.0,
+              400.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "20": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 400.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 256.0,
+            "105": 1024.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              400.0,
+              400.0,
+              256.0,
+              1024.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "40": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 400.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 400.0,
+            "105": 400.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              400.0,
+              400.0,
+              400.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "80": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 400.0,
+            "102": 400.0,
+            "103": 1024.0,
+            "104": 400.0,
+            "105": 400.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              400.0,
+              1024.0,
+              400.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "160": {
+          "mediane": 1024.0,
+          "par_seed": {
+            "101": 1024.0,
+            "102": 1024.0,
+            "103": 400.0,
+            "104": 1024.0,
+            "105": 1024.0
+          },
+          "non_discriminant": true,
+          "sup_cap": true,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              1024.0,
+              400.0,
+              1024.0,
+              1024.0
+            ],
+            "mediane_initiale": 1024.0,
+            "escalades": [],
+            "k_final": 1024.0
+          }
+        }
+      }
+    },
+    "0.05": {
+      "k_star_par_L": {
+        "10": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 400.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              400.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "20": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 256.0,
+            "105": 400.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              400.0,
+              400.0,
+              256.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "40": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 400.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              400.0,
+              400.0,
+              400.0,
+              256.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "80": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 400.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 400.0,
+            "105": 400.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              400.0,
+              400.0,
+              400.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "160": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 1024.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 400.0,
+            "105": 400.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              1024.0,
+              400.0,
+              400.0,
+              400.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        }
+      }
+    },
+    "0.06033229334102097": {
+      "k_star_par_L": {
+        "10": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 400.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              400.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "20": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 400.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              400.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "40": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 400.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              400.0,
+              400.0,
+              400.0,
+              256.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "80": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 256.0,
+            "105": 400.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              400.0,
+              400.0,
+              256.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        },
+        "160": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 400.0,
+            "102": 400.0,
+            "103": 400.0,
+            "104": 400.0,
+            "105": 400.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              400.0,
+              400.0,
+              400.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        }
+      }
+    },
+    "0.07334065957385666": {
+      "k_star_par_L": {
+        "10": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "20": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "40": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 400.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              400.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "80": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 400.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              400.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "160": {
+          "mediane": 400.0,
+          "par_seed": {
+            "101": 400.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 400.0,
+            "105": 400.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              400.0,
+              256.0,
+              256.0,
+              400.0,
+              400.0
+            ],
+            "mediane_initiale": 400.0,
+            "escalades": [],
+            "k_final": 400.0
+          }
+        }
+      }
+    },
+    "0.08673568621862042": {
+      "k_star_par_L": {
+        "10": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 128.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              128.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "20": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "40": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "80": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "160": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        }
+      }
+    },
+    "0.09365491373275102": {
+      "k_star_par_L": {
+        "10": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 64.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 128.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              64.0,
+              256.0,
+              256.0,
+              128.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "20": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "40": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "80": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "160": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        }
+      }
+    },
+    "0.11539774590849085": {
+      "k_star_par_L": {
+        "10": {
+          "mediane": 128.0,
+          "par_seed": {
+            "101": 64.0,
+            "102": 256.0,
+            "103": 128.0,
+            "104": 128.0,
+            "105": 128.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              64.0,
+              256.0,
+              128.0,
+              128.0,
+              128.0
+            ],
+            "mediane_initiale": 128.0,
+            "escalades": [],
+            "k_final": 128.0
+          }
+        },
+        "20": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 128.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              128.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "40": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 128.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              128.0,
+              256.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "80": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        },
+        "160": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 256.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              256.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        }
+      }
+    },
+    "0.13873727413266454": {
+      "k_star_par_L": {
+        "10": {
+          "mediane": 128.0,
+          "par_seed": {
+            "101": 64.0,
+            "102": 128.0,
+            "103": 64.0,
+            "104": 128.0,
+            "105": 128.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              64.0,
+              128.0,
+              64.0,
+              128.0,
+              128.0
+            ],
+            "mediane_initiale": 128.0,
+            "escalades": [],
+            "k_final": 128.0
+          }
+        },
+        "20": {
+          "mediane": 128.0,
+          "par_seed": {
+            "101": 128.0,
+            "102": 128.0,
+            "103": 256.0,
+            "104": 128.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              128.0,
+              128.0,
+              256.0,
+              128.0,
+              256.0
+            ],
+            "mediane_initiale": 128.0,
+            "escalades": [],
+            "k_final": 128.0
+          }
+        },
+        "40": {
+          "mediane": 128.0,
+          "par_seed": {
+            "101": 128.0,
+            "102": 256.0,
+            "103": 128.0,
+            "104": 256.0,
+            "105": 128.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              128.0,
+              256.0,
+              128.0,
+              256.0,
+              128.0
+            ],
+            "mediane_initiale": 128.0,
+            "escalades": [],
+            "k_final": 128.0
+          }
+        },
+        "80": {
+          "mediane": 128.0,
+          "par_seed": {
+            "101": 128.0,
+            "102": 128.0,
+            "103": 256.0,
+            "104": 128.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              128.0,
+              128.0,
+              256.0,
+              128.0,
+              256.0
+            ],
+            "mediane_initiale": 128.0,
+            "escalades": [],
+            "k_final": 128.0
+          }
+        },
+        "160": {
+          "mediane": 256.0,
+          "par_seed": {
+            "101": 256.0,
+            "102": 256.0,
+            "103": 128.0,
+            "104": 256.0,
+            "105": 256.0
+          },
+          "non_discriminant": false,
+          "sup_cap": false,
+          "audit": {
+            "k_par_seed": [
+              256.0,
+              256.0,
+              128.0,
+              256.0,
+              256.0
+            ],
+            "mediane_initiale": 256.0,
+            "escalades": [],
+            "k_final": 256.0
+          }
+        }
+      }
+    }
+  },
+  "pentes": {
+    "0.02": {
+      "k_star_L40": 1024.0,
+      "k_star_L80": 2048.0,
+      "k_star_L160": 1024.0,
+      "pente": -1.8285714285714285,
+      "ic95": [
+        -9.14285714285714,
+        0.0
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704,
+      "methode_pente": "pente OLS (moindres carrés) de k*(L) vs L sur L∈{40,80,160} -- généralisation fidèle de la pente 2-points (k*(80)-k*(40))/40 de §A3 (dégénère EXACTEMENT dessus à 2 points, cf. test_pente_ols_3pts) ; méthode NOMMÉE par le contrôleur AVANT la mesure (ledger .superpowers/sdd/progress.md, entrée « DÉCISION MÉTHODE Task3 », 2026-07-05)."
+    },
+    "0.03": {
+      "k_star_L40": 1024.0,
+      "k_star_L80": 1024.0,
+      "k_star_L160": 1024.0,
+      "pente": 0.0,
+      "ic95": [
+        -7.314285714285713,
+        4.457142857142857
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704,
+      "methode_pente": "pente OLS (moindres carrés) de k*(L) vs L sur L∈{40,80,160} -- généralisation fidèle de la pente 2-points (k*(80)-k*(40))/40 de §A3 (dégénère EXACTEMENT dessus à 2 points, cf. test_pente_ols_3pts) ; méthode NOMMÉE par le contrôleur AVANT la mesure (ledger .superpowers/sdd/progress.md, entrée « DÉCISION MÉTHODE Task3 », 2026-07-05)."
+    },
+    "0.04": {
+      "k_star_L40": 400.0,
+      "k_star_L80": 400.0,
+      "k_star_L160": 1024.0,
+      "pente": 5.571428571428571,
+      "ic95": [
+        -1.1142857142857143,
+        5.571428571428571
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704,
+      "methode_pente": "pente OLS (moindres carrés) de k*(L) vs L sur L∈{40,80,160} -- généralisation fidèle de la pente 2-points (k*(80)-k*(40))/40 de §A3 (dégénère EXACTEMENT dessus à 2 points, cf. test_pente_ols_3pts) ; méthode NOMMÉE par le contrôleur AVANT la mesure (ledger .superpowers/sdd/progress.md, entrée « DÉCISION MÉTHODE Task3 », 2026-07-05)."
+    },
+    "0.05": {
+      "k_star_L40": 400.0,
+      "k_star_L80": 400.0,
+      "k_star_L160": 400.0,
+      "pente": 0.0,
+      "ic95": [
+        0.0,
+        6.6
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704,
+      "methode_pente": "pente OLS (moindres carrés) de k*(L) vs L sur L∈{40,80,160} -- généralisation fidèle de la pente 2-points (k*(80)-k*(40))/40 de §A3 (dégénère EXACTEMENT dessus à 2 points, cf. test_pente_ols_3pts) ; méthode NOMMÉE par le contrôleur AVANT la mesure (ledger .superpowers/sdd/progress.md, entrée « DÉCISION MÉTHODE Task3 », 2026-07-05)."
+    },
+    "0.06033229334102097": {
+      "k_star_L40": 400.0,
+      "k_star_L80": 400.0,
+      "k_star_L160": 400.0,
+      "pente": 0.0,
+      "ic95": [
+        0.0,
+        1.2857142857142856
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704,
+      "methode_pente": "pente OLS (moindres carrés) de k*(L) vs L sur L∈{40,80,160} -- généralisation fidèle de la pente 2-points (k*(80)-k*(40))/40 de §A3 (dégénère EXACTEMENT dessus à 2 points, cf. test_pente_ols_3pts) ; méthode NOMMÉE par le contrôleur AVANT la mesure (ledger .superpowers/sdd/progress.md, entrée « DÉCISION MÉTHODE Task3 », 2026-07-05)."
+    },
+    "0.07334065957385666": {
+      "k_star_L40": 256.0,
+      "k_star_L80": 256.0,
+      "k_star_L160": 400.0,
+      "pente": 1.2857142857142856,
+      "ic95": [
+        -0.25714285714285706,
+        1.2857142857142856
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704,
+      "methode_pente": "pente OLS (moindres carrés) de k*(L) vs L sur L∈{40,80,160} -- généralisation fidèle de la pente 2-points (k*(80)-k*(40))/40 de §A3 (dégénère EXACTEMENT dessus à 2 points, cf. test_pente_ols_3pts) ; méthode NOMMÉE par le contrôleur AVANT la mesure (ledger .superpowers/sdd/progress.md, entrée « DÉCISION MÉTHODE Task3 », 2026-07-05)."
+    },
+    "0.08673568621862042": {
+      "k_star_L40": 256.0,
+      "k_star_L80": 256.0,
+      "k_star_L160": 256.0,
+      "pente": 0.0,
+      "ic95": [
+        0.0,
+        0.0
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704,
+      "methode_pente": "pente OLS (moindres carrés) de k*(L) vs L sur L∈{40,80,160} -- généralisation fidèle de la pente 2-points (k*(80)-k*(40))/40 de §A3 (dégénère EXACTEMENT dessus à 2 points, cf. test_pente_ols_3pts) ; méthode NOMMÉE par le contrôleur AVANT la mesure (ledger .superpowers/sdd/progress.md, entrée « DÉCISION MÉTHODE Task3 », 2026-07-05)."
+    },
+    "0.09365491373275102": {
+      "k_star_L40": 256.0,
+      "k_star_L80": 256.0,
+      "k_star_L160": 256.0,
+      "pente": 0.0,
+      "ic95": [
+        0.0,
+        0.0
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704,
+      "methode_pente": "pente OLS (moindres carrés) de k*(L) vs L sur L∈{40,80,160} -- généralisation fidèle de la pente 2-points (k*(80)-k*(40))/40 de §A3 (dégénère EXACTEMENT dessus à 2 points, cf. test_pente_ols_3pts) ; méthode NOMMÉE par le contrôleur AVANT la mesure (ledger .superpowers/sdd/progress.md, entrée « DÉCISION MÉTHODE Task3 », 2026-07-05)."
+    },
+    "0.11539774590849085": {
+      "k_star_L40": 256.0,
+      "k_star_L80": 256.0,
+      "k_star_L160": 256.0,
+      "pente": 0.0,
+      "ic95": [
+        0.0,
+        0.9142857142857141
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704,
+      "methode_pente": "pente OLS (moindres carrés) de k*(L) vs L sur L∈{40,80,160} -- généralisation fidèle de la pente 2-points (k*(80)-k*(40))/40 de §A3 (dégénère EXACTEMENT dessus à 2 points, cf. test_pente_ols_3pts) ; méthode NOMMÉE par le contrôleur AVANT la mesure (ledger .superpowers/sdd/progress.md, entrée « DÉCISION MÉTHODE Task3 », 2026-07-05)."
+    },
+    "0.13873727413266454": {
+      "k_star_L40": 128.0,
+      "k_star_L80": 128.0,
+      "k_star_L160": 256.0,
+      "pente": 1.1428571428571426,
+      "ic95": [
+        -0.22857142857142856,
+        1.1428571428571426
+      ],
+      "n_bootstrap": 10000,
+      "n_bootstrap_indefinis": 0,
+      "seed_bootstrap": 20260704,
+      "methode_pente": "pente OLS (moindres carrés) de k*(L) vs L sur L∈{40,80,160} -- généralisation fidèle de la pente 2-points (k*(80)-k*(40))/40 de §A3 (dégénère EXACTEMENT dessus à 2 points, cf. test_pente_ols_3pts) ; méthode NOMMÉE par le contrôleur AVANT la mesure (ledger .superpowers/sdd/progress.md, entrée « DÉCISION MÉTHODE Task3 », 2026-07-05)."
+    }
+  },
+  "verdict_16L0": {
+    "prononce": "INDETERMINE_JND",
+    "par_colonne": {
+      "ic_bas": {
+        "k80": 400.0,
+        "k160": 400.0,
+        "plat": true,
+        "saut": false,
+        "k160_sous_cap": true,
+        "pente_ic": [
+          0.0,
+          1.2857142857142856
+        ],
+        "ic_contient_0": true,
+        "ic_positif": false
+      },
+      "pin": {
+        "k80": 256.0,
+        "k160": 400.0,
+        "plat": false,
+        "saut": true,
+        "k160_sous_cap": true,
+        "pente_ic": [
+          -0.25714285714285706,
+          1.2857142857142856
+        ],
+        "ic_contient_0": true,
+        "ic_positif": false
+      },
+      "ic_haut": {
+        "k80": 256.0,
+        "k160": 256.0,
+        "plat": true,
+        "saut": false,
+        "k160_sous_cap": true,
+        "pente_ic": [
+          0.0,
+          0.0
+        ],
+        "ic_contient_0": true,
+        "ic_positif": false
+      }
+    },
+    "gardes": {
+      "echelle_3_valeurs": "« plat » vit sur l'échelle 3-valeurs {128,256,400} du budget médian -- la grille fine de budgets rend le saut lisible s'il existe ; ne pas sur-lire la platitude comme fermeture forte, c'est la MOITIÉ HAUTE {40,80,160} qui porte le verdict, pas les petits L.",
+      "ic_bas_arme": {
+        "ic_bas_monte": false,
+        "pin_reste_plat": false,
+        "soupcon_confirme": false,
+        "note": "soupçon pré-nommé §C12/§A12 : si ic_bas monte pendant que le pin central reste plat, l'œil est armé mais le verdict reste mécanique (-> INDETERMINE_JND dans ce cas via la priorité ci-dessus, jamais lu à la main)."
+      },
+      "colonnes_fermees": {
+        "ic_bas": true,
+        "pin": false,
+        "ic_haut": true
+      },
+      "diverge_entre_colonnes": true,
+      "fail_mur_colonne_centrale": false
+    },
+    "portee": "substrat v2, pin sévère n=1 Romain, famille qt"
+  }
+}
