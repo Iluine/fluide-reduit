@@ -43,15 +43,18 @@ import numpy as np
 
 from scripts.run_arcA_measure import _load_history
 from src.albedo import albedo
-from src.arcC_abx import (BUDGET_DEFAUT, REGIME_LAXISTE, REGIME_SEVERE, BanqueBancs,
-                          EssaiPropose, ParametresEscalier, Regime, Reponse,
-                          ResultatEscalier, ecrit_log_jsonl, evalue_validite_session,
-                          lit_log_jsonl, rejoue_escalier, run_escalier)
+from src.arcC_abx import (REGIME_LAXISTE, REGIME_SEVERE, BanqueBancs, EssaiPropose,
+                          ParametresEscalier, Regime, Reponse, ResultatEscalier,
+                          ecrit_log_jsonl, evalue_validite_session, lit_log_jsonl,
+                          rejoue_escalier, run_escalier)
 from src.arcC_calibration import (C_DEG_CIBLE_DEFAUT, PORTEUSE_CYC_PAR_DOMAINE_DEFAUT,
-                                  observation_cellule_pic_csf, pixels_par_degre,
-                                  taille_domaine_px)
+                                  observation_cellule_pic_csf, pixels_par_degre)
 from src.arcC_stimuli import melange, regenere_budget
 from scripts.run_arcA_revalidate import S_HALF_OP
+# Task 3 (§C8) : ancre budget-32 (D-1) et flag géométrie-plafond (D-4) --
+# IMPORTÉS de l'orchestrateur (source unique de vérité pour ces paramètres
+# gravés), pas redéfinis ici (coquille = mince, cf. docstring module).
+from scripts.run_arcC_orchestration import ANCRE_BUDGET, GEOMETRIES, calcule_taille_affichage_px
 
 OUT_DIR = ROOT / "outputs" / "arcC" / "logs"
 
@@ -163,7 +166,11 @@ def main() -> None:
                         help="Seed du bruit du masque (régime laxiste) -- consignée pour "
                              "replay (le masque LUI-MÊME n'est pas rejoué à l'identique par "
                              "`--replay`, seul le SCORE/la séquence de stimuli le sont).")
-    parser.add_argument("--budget", type=int, default=BUDGET_DEFAUT)
+    parser.add_argument("--budget", type=int, default=ANCRE_BUDGET,
+                        help=f"Défaut = ANCRE_BUDGET (§C8 D-1) = {ANCRE_BUDGET}.")
+    parser.add_argument("--geometrie", choices=list(GEOMETRIES), default="pic-csf",
+                        help="Contingence géométrie-plafond (§C8 D-4) -- MÊME ancre/famille/"
+                             "sources que 'pic-csf', seule la taille d'affichage change.")
     parser.add_argument("--out", type=Path, default=None,
                         help="Chemin du log JSONL de sortie (défaut : "
                              "outputs/arcC/logs/session_<staircase>_<regime>.jsonl).")
@@ -181,12 +188,14 @@ def main() -> None:
 
     regime = REGIME_SEVERE if args.regime == "severe" else REGIME_LAXISTE
     ppd = pixels_par_degre(args.long_ref_px, args.long_ref_mm, args.distance_mm)
-    taille_px = taille_domaine_px(ppd, args.porteuse_cyc_par_domaine, args.c_deg_cible)
+    taille_px = calcule_taille_affichage_px(
+        args.geometrie, ppd, porteuse_cyc_par_domaine=args.porteuse_cyc_par_domaine,
+        c_deg_cible=args.c_deg_cible)
     obs = observation_cellule_pic_csf(ppd, porteuse_cyc_par_domaine=args.porteuse_cyc_par_domaine,
                                       c_deg_cible=args.c_deg_cible)
-    print(f"[calibration §C7] ppd={ppd:.3f}  taille_domaine_px={taille_px}  "
-          f"cellule_pic_csf={obs['cellule_arcmin_pic_csf']:.3f} arcmin "
-          f"(plafond={obs['seuil_acuite_arcmin']:.3f} arcmin, ratio="
+    print(f"[calibration §C7] geometrie={args.geometrie}  ppd={ppd:.3f}  "
+          f"taille_domaine_px={taille_px}  cellule_pic_csf={obs['cellule_arcmin_pic_csf']:.3f} "
+          f"arcmin (plafond={obs['seuil_acuite_arcmin']:.3f} arcmin, ratio="
           f"{obs['ratio_cellule_sur_seuil']:.3f}) -- observation, aucune décision.")
 
     banques = BanqueBancs()
