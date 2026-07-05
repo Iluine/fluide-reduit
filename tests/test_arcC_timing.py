@@ -16,9 +16,9 @@ from __future__ import annotations
 import pytest
 
 from src.arcC_abx import REGIME_LAXISTE, REGIME_SEVERE
-from src.arcC_timing import (SEUIL_AVERTISSEMENT_ECART, JournalTiming, ecrit_timing_jsonl,
-                             enregistre_phase, formate_resume_timing, lit_timing_jsonl,
-                             resume_timing)
+from src.arcC_timing import (SEUIL_AVERTISSEMENT_ECART, EnregistrementPhase, JournalTiming,
+                             ecrit_timing_jsonl, enregistre_phase, formate_resume_timing,
+                             formate_timing_essai, lit_timing_jsonl, resume_timing)
 
 # =============================================================================
 # Famille 1 : accumulateur timing (enregistre_phase, resume_timing)
@@ -229,3 +229,44 @@ def test_ecrit_timing_jsonl_cree_les_dossiers_parents(tmp_path):
                      t_debut=0.0, t_fin=1.0, nominal=None)
     ecrit_timing_jsonl(path, journal)
     assert path.exists()
+
+
+# =============================================================================
+# Famille 4 : affichage LIVE par essai (formate_timing_essai, pré-vol B-bis)
+# =============================================================================
+
+
+def test_formate_timing_essai_moyenne_par_categorie_avec_nominal_et_ecart():
+    """Un essai laxiste (X seul, pour rester lisible) : la ligne live moyenne
+    exposition et rétention réalisées par catégorie, avec nominal et écart
+    relatif SIGNÉ -- réalisé 2.4s vs nominal 2.0s => +20%, sous le seuil 25%
+    (pas de marque)."""
+    enrs = [
+        EnregistrementPhase(0, "laxiste", "exposition_X", 0.0, 2.4, 2.4, 2.0),
+        EnregistrementPhase(0, "laxiste", "retention_X", 2.4, 7.4, 5.0, 5.0),
+    ]
+    ligne = formate_timing_essai(0, enrs)
+    assert "essai 0" in ligne
+    assert "exposition≈2.400s" in ligne
+    assert "+20%" in ligne
+    assert "retention≈5.000s" in ligne
+    assert ">25%" not in ligne  # +20% et +0% sont sous le seuil
+
+
+def test_formate_timing_essai_marque_l_ecart_au_dela_du_seuil():
+    """Réalisé 2.6s vs nominal 2.0s => +30% > 25% => la ligne CRIE (marque
+    `>25%`), cohérent avec l'avertissement de `resume_timing` (§C9)."""
+    enrs = [EnregistrementPhase(3, "laxiste", "exposition_X", 0.0, 2.6, 2.6, 2.0)]
+    ligne = formate_timing_essai(3, enrs)
+    assert "essai 3" in ligne
+    assert ">25%" in ligne
+
+
+def test_formate_timing_essai_phase_sans_cible_severe_pas_de_comparaison():
+    """Essai sévère (phase `simultane`, `nominal=None`) : la ligne montre la
+    durée d'inspection SANS écart ni marque (aucune cible temporelle)."""
+    enrs = [EnregistrementPhase(0, "severe", "simultane", 0.0, 3.7, 3.7, None)]
+    ligne = formate_timing_essai(0, enrs)
+    assert "autre≈3.700s" in ligne
+    assert "%" not in ligne
+    assert ">25%" not in ligne

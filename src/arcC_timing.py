@@ -169,6 +169,37 @@ def formate_resume_timing(resume: dict) -> str:
     return "\n".join(lignes)
 
 
+def formate_timing_essai(indice_essai: int, enrs: list[EnregistrementPhase]) -> str:
+    """Ligne LIVE imprimable pour UN essai (§C9 pièce 1, pré-vol B-bis) : les
+    durées réalisées des phases temporelles de cet essai, moyennées par
+    catégorie (`exposition`/`retention`), avec leur nominal -- pour que
+    « quelques essais + Ctrl-C » suffise à VÉRIFIER le timing sans attendre
+    la fin d'une staircase (le sidecar, lui, n'est écrit qu'à la complétion).
+    Un essai purement `"autre"` (sévère, inspection libre, sans cible) rend
+    une ligne informative sans comparaison."""
+    par_cat: dict[str, list[float]] = {PREFIXE_EXPOSITION: [], PREFIXE_RETENTION: [], "autre": []}
+    nominal_cat: dict[str, float | None] = {}
+    for enr in enrs:
+        cat = _categorie_phase(enr.phase)
+        par_cat[cat].append(enr.duree)
+        nominal_cat.setdefault(cat, enr.nominal)
+    morceaux: list[str] = []
+    for cat in (PREFIXE_EXPOSITION, PREFIXE_RETENTION, "autre"):
+        durees = par_cat[cat]
+        if not durees:
+            continue
+        moyenne = float(np.mean(durees))
+        nominal = nominal_cat.get(cat)
+        if nominal is not None and nominal > 0.0:
+            ecart = (moyenne - nominal) / nominal
+            marque = " <<< >25%" if abs(ecart) > SEUIL_AVERTISSEMENT_ECART else ""
+            morceaux.append(f"{cat}≈{moyenne:.3f}s (nominal {nominal:.1f}s, {ecart * 100:+.0f}%)"
+                            f"{marque}")
+        else:
+            morceaux.append(f"{cat}≈{moyenne:.3f}s")
+    return f"[timing essai {indice_essai}] " + "  ".join(morceaux)
+
+
 def ecrit_timing_jsonl(path: str | Path, journal: JournalTiming) -> None:
     """Un enregistrement JSON par ligne (JSONL), même convention que
     `ecrit_log_jsonl` (`src/arcC_abx.py`)."""

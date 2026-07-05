@@ -60,7 +60,7 @@ from src.arcC_calibration import (C_DEG_CIBLE_DEFAUT, PORTEUSE_CYC_PAR_DOMAINE_D
                                   observation_cellule_pic_csf, pixels_par_degre)
 from src.arcC_stimuli import melange, regenere_budget
 from src.arcC_timing import (JournalTiming, ecrit_timing_jsonl, enregistre_phase,
-                             formate_resume_timing, resume_timing)
+                             formate_resume_timing, formate_timing_essai, resume_timing)
 from scripts.run_arcA_revalidate import S_HALF_OP
 # Task 3 (§C8) : ancre budget-32 (D-1) et flag géométrie-plafond (D-4) --
 # IMPORTÉS de l'orchestrateur (source unique de vérité pour ces paramètres
@@ -146,6 +146,7 @@ def _construit_repondre_humain(fig: plt.Figure, axes: list[plt.Axes], regime: Re
 
     def repondre(essai: EssaiPropose) -> Reponse:
         a_a, a_b, a_x = _images_essai(essai)
+        n_avant = len(journal_timing.enregistrements)
         if regime.simultane:
             t_debut = time.perf_counter()
             _affiche(axes[0], a_a, "A")
@@ -178,6 +179,13 @@ def _construit_repondre_humain(fig: plt.Figure, axes: list[plt.Axes], regime: Re
                                      regime_nom=regime.nom, nom_phase=f"retention_{titre}",
                                      t_debut=t_debut, t_fin=time.perf_counter(),
                                      nominal=regime.retention_s)
+
+        # Affichage LIVE des durées réalisées de CET essai (§C9 pièce 1,
+        # pré-vol B-bis) : rend « quelques essais + Ctrl-C » suffisant pour
+        # vérifier le timing sans attendre la complétion (le sidecar n'est
+        # écrit qu'à la fin de la staircase).
+        print(formate_timing_essai(essai.indice_essai,
+                                   journal_timing.enregistrements[n_avant:]), flush=True)
 
         reponse_capturee.clear()
         while "valeur" not in reponse_capturee:
