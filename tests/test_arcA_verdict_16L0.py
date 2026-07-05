@@ -15,6 +15,7 @@ dès le départ) -- est prouvé SANS skip, sur synthétique ou sur les données
 gelées existantes, indépendamment de la disponibilité de `measures_160.npz`."""
 from __future__ import annotations
 
+import json
 import math
 
 import numpy as np
@@ -25,9 +26,8 @@ from scripts.run_arcA_measure import JND_LIST, L_LIST, SEEDS
 from scripts.run_arcA_measure_16L0 import MEASURES_160_PATH
 from scripts.run_arcA_measure_qt import BUDGETS
 from scripts.run_arcA_measure_qt import MEASURES_PATH as MEASURES_QT_PATH
-from scripts.run_arcA_verdict_qt import (ATTENDU_FERM_QT, ATTENDU_SHUF_QT,
-                                         CAP_FLOATS, k_star_groupe_qt)
-from scripts.run_arcC_surface_kstar_pins import PINS_PATH, charge_pins
+from scripts.run_arcA_verdict_qt import ATTENDU_FERM_QT, ATTENDU_SHUF_QT
+from scripts.run_arcC_surface_kstar_pins import PINS_PATH, SURFACE_PATH, charge_pins
 
 # =============================================================================
 # Données archivées, chargées une seule fois (réutilisées par plusieurs tests)
@@ -38,6 +38,22 @@ with np.load(MEASURES_QT_PATH, allow_pickle=False) as _d:
     MA2_QT_V2 = np.asarray(_d["ma2_v2"])
 
 PINS = charge_pins(PINS_PATH)
+
+# Artefact C-1a INDÉPENDANT (`run_arcC_surface_kstar_pins.py`, Task 2) --
+# ancre de vérité de la garde d'agrafage (`test_non_regression_surface_C1a`) :
+# ce JSON n'est jamais recalculé ici, seulement chargé et comparé.
+with open(SURFACE_PATH, encoding="utf-8") as _f:
+    SURFACE_C1A = json.load(_f)["surface_kstar_aux_pins"]
+
+
+def _valeur_depuis_jsonable(v: float | str) -> float:
+    """Inverse de la convention de `_to_jsonable` (`scripts.run_arcA_verdict`) :
+    un float sérialisé dans l'artefact JSON redevient un float Python, y
+    compris les cas non-finis (`"inf"`/`"-inf"`/`"nan"` -- k* peut être
+    infini si aucun budget ne ferme). Lecture pure, aucune tolérance."""
+    if isinstance(v, str):
+        return {"inf": math.inf, "-inf": -math.inf, "nan": math.nan}[v]
+    return float(v)
 
 _MEASURES_160_PRETES = MEASURES_160_PATH.exists()
 _SKIP_REASON_160 = (
@@ -99,20 +115,40 @@ def test_agrafe_L_axis_leve_erreur_si_forme_incorrecte():
 
 
 def test_non_regression_surface_C1a():
+    """LA garde d'agrafage : prouve que l'agrafage measures_qt+measures_160
+    n'a PAS corrompu la manche 1, en comparant la surface k*(L) recalculée
+    par `v16.surface_par_L` à l'artefact INDÉPENDANT C-1a
+    (`SURFACE_C1A`, chargé une seule fois depuis `surface_kstar_aux_pins.json`
+    au niveau module -- JAMAIS un re-appel de `k_star_groupe_qt`, ce qui
+    serait tautologique). Couvre les 6 pins (2 régimes x 3 rôles) x les 4 L
+    de la manche 1 (`L_LIST` -- L=160 n'existe PAS dans cet artefact C-1a,
+    jamais comparé ici) -- 24 cellules, `mediane` ET `par_seed`, égalité
+    EXACTE. Si l'agrafage ou `surface_par_L` a corrompu une seule cellule,
+    ce test ÉCHOUE."""
     for regime in ("severe", "laxiste"):
         for role in ("ic_bas", "pin", "ic_haut"):
             jnd = PINS[regime][role]
             surface = v16.surface_par_L(MA1_QT_V2, MA2_QT_V2, L_LIST, jnd)
+            k_par_L_artefact = SURFACE_C1A[regime][role]["k_star_par_L"]
             for L in L_LIST:
-                k_med, audit = k_star_groupe_qt(
-                    v16.sous_jnd_a_jnd(MA1_QT_V2, MA2_QT_V2, jnd)[L_LIST.index(L)],
-                    MA1_QT_V2[L_LIST.index(L)], MA2_QT_V2[L_LIST.index(L)], jnd)
-                assert surface[L]["mediane"] == k_med
-                assert surface[L]["audit"] == audit
+                cellule_artefact = k_par_L_artefact[str(L)]
+
+                mediane_attendue = _valeur_depuis_jsonable(cellule_artefact["mediane"])
+                assert surface[L]["mediane"] == mediane_attendue, (
+                    f"{regime}/{role} L={L} : mediane verdict={surface[L]['mediane']} "
+                    f"!= artefact C-1a={mediane_attendue}")
+
+                par_seed_attendu = {
+                    int(seed_str): _valeur_depuis_jsonable(v)
+                    for seed_str, v in cellule_artefact["par_seed"].items()
+                }
+                assert surface[L]["par_seed"] == par_seed_attendu, (
+                    f"{regime}/{role} L={L} : par_seed verdict={surface[L]['par_seed']} "
+                    f"!= artefact C-1a={par_seed_attendu}")
 
     # Valeurs figées C-1a (`surface_kstar_aux_pins.json`), citées verbatim au
-    # brief -- LA garde d'agrafage : si ça diverge, l'agrafage/la fonction
-    # generalisée surface_par_L a cassé la re-lecture C-1a.
+    # brief -- sanity supplémentaire (déjà couvert par la boucle sur
+    # `SURFACE_C1A` ci-dessus, conservé pour lisibilité directe des nombres).
     jnd_pin_severe = PINS["severe"]["pin"]
     surface_pin = v16.surface_par_L(MA1_QT_V2, MA2_QT_V2, L_LIST, jnd_pin_severe)
     assert [surface_pin[L]["mediane"] for L in L_LIST] == [256.0, 256.0, 256.0, 256.0]
