@@ -406,3 +406,61 @@ def test_main_leve_systemexit_si_sujet_humain_sans_luminosite_ni_conditions(monk
     monkeypatch.setattr(sys, "argv", argv)
     with pytest.raises(SystemExit):
         main()
+
+
+# =============================================================================
+# Coquille interactive (`scripts/run_arcC_session.py`) -- garde-fou §C9
+# pièces 2 & 3, jumeau du test ci-dessus. Placé ici (à côté de son jumeau
+# orchestrateur, choix nommé) plutôt que dans un fichier dédié.
+# =============================================================================
+
+
+def test_run_arcC_session_leve_systemexit_si_session_humaine_sans_luminosite_ni_conditions(
+        monkeypatch):
+    """Intégration CLI (coquille interactive) : `main()` échoue AVANT toute
+    création de figure matplotlib -- `parser.error` (§C9 pièces 2 & 3) est
+    placé juste après `parser.parse_args()`, avant `_cree_figure`/
+    `_construit_repondre_humain` (jamais atteints ici). Toute session SANS
+    `--replay` est une session humaine (cette coquille n'a pas de mode
+    synthétique, cf. docstring module) -- --luminosite/--conditions sont
+    donc REQUISES. Ce garde-fou n'a AUCUNE régression jusqu'ici : `main()`
+    importe `matplotlib.pyplot` au niveau module (headless-safe, aucun
+    écran requis) mais ne crée de figure que plus bas, après ce garde."""
+    import sys
+
+    from scripts.run_arcC_session import main
+
+    argv = ["run_arcC_session.py",
+           "--regime", "severe",
+           "--numero-staircase", "1",
+           "--seed-roving", "1",
+           "--seed-catch", "2",
+           "--long-ref-px", "1920", "--long-ref-mm", "310", "--distance-mm", "600"]
+    monkeypatch.setattr(sys, "argv", argv)
+    with pytest.raises(SystemExit):
+        main()
+
+
+def test_run_arcC_session_replay_sans_luminosite_ni_conditions_ne_leve_pas_systemexit(
+        monkeypatch, tmp_path):
+    """Cas symétrique POSITIF : `--replay` (aucune capture humaine, rien à
+    consigner) n'exige PAS --luminosite/--conditions -- le garde §C9 ne
+    s'applique qu'en session live (`args.replay is None`). Ce test reste
+    focalisé SUR CE GARDE : le chemin --replay échoue ensuite pour une
+    AUTRE raison (log inexistant -- `FileNotFoundError` dans
+    `lit_log_jsonl`), jamais atteinte si le garde luminosité/conditions
+    avait (à tort) déclenché un SystemExit en premier."""
+    import sys
+
+    from scripts.run_arcC_session import main
+
+    argv = ["run_arcC_session.py",
+           "--regime", "severe",
+           "--numero-staircase", "1",
+           "--seed-roving", "1",
+           "--seed-catch", "2",
+           "--long-ref-px", "1920", "--long-ref-mm", "310", "--distance-mm", "600",
+           "--replay", str(tmp_path / "inexistant.jsonl")]
+    monkeypatch.setattr(sys, "argv", argv)
+    with pytest.raises(FileNotFoundError):
+        main()
