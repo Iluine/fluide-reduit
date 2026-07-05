@@ -142,3 +142,13 @@ Task 3 (BUILD) : DONE (commits 58acba3 abx+sources rétro-compat, 205e706 orches
   car argmax ≥ Δχ(t=1)=ancre) ; IC = bornes min/max (bootstrap n=3 rejeté = fausse précision) ;
   gate e2e retrouve θ=0.10 à ~3% (2 régimes RÉSOLU). Concern : base_seed e2e re-cherché (pool 20→19
   change RNG). EN REVUE (relecteur a5128d07).
+Task 3 (BUILD) : COMPLETE (commits 58acba3..fa2ae7c, review clean). Relecteur : Spec ✅ CONFORME +
+  Qualité Approved. Vérif indépendante : ancre (103,10)=0.155 recalculée→exclue (19/20) ; preuve
+  catch≥0.16 revérifiée math ; D-4 change SEULE la taille (73px vs 43px) ; aucun verdict manche ;
+  ANTI-SEED-HACKING : balayage base_seed 0-29, ~7/30 dépassent tol 20% → discrimine, base_seed=4
+  médian typique PAS outlier ; 408/408 relancés. 3 Minor (aucun Critical/Important, pas de fixeur) :
+  (M1) test frontière dégénéré seuil=0.0 (frontière réelle vérifiée OK par relecteur, test trompeur) ;
+  (M2) duplication ecrit/lit JSON manifeste vs pins ; (M3) derive_seeds collision si n-staircases≥1000
+  (non atteignable). → triage revue finale de branche (Tasks 4-5 ajoutent du code).
+FRONTIÈRE ATTEINTE : Tasks 0-3 (tout le buildable) closes, 408/408. Protocole de session remis à
+  Romain. SEULE étape restante que la machine ne peut pas faire = Romain sujet devant l'écran.
