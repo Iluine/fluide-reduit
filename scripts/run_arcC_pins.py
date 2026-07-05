@@ -24,10 +24,13 @@ une campagne arrêtée avant le lancement des régimes (ancien statut
 explicitement ce cas (`RuntimeError`, avant même la validation JSON Schema).
 De même, si un régime s'arrête après seulement 2 staircases (§C5, 2 sessions
 invalides consécutives, `STATUT_STOP_2_INVALIDES`), le tableau `staircases`
-qui en résulte a `minItems=2 < 3` -- la validation du schéma refusera
-d'écrire (fail loud, PAS de contournement : le contrat exige >= 3 staircases
-BRUTES par régime, y compris sur un régime INVALIDE, la branche à-cheval
-recalculant dessus).
+qui en résulterait aurait `minItems=2 < 3` -- `construit_pins` INTERCEPTE ce
+cas explicitement (`RuntimeError` nommant le fait, le régime et le manifeste,
+AVANT toute construction/validation), pour que le « ... is too short »
+cryptique de `jsonschema` ne soit JAMAIS ce que voit l'appelant. Le STOP
+reste un STOP -- aucun contournement, aucune 3ᵉ staircase de complaisance :
+`pins` = campagne complétée par construction (invariant §C10), la reprise
+passe par un arbitrage humain du point d'arrêt.
 
 Principe d'architecture : ORCHESTRE les primitives PURES déjà livrées et
 testées de `src/arcC_abx.py` (`evalue_dispersion`, `lit_log_jsonl`), `src/
@@ -364,10 +367,16 @@ def construit_pins(manifeste: dict, *, manifeste_path: str | Path,
     depuis un manifeste de campagne (`scripts.run_arcC_orchestration.
     orchestre_campagne`). NE VALIDE PAS lui-même (cf. `ecrit_pins_json`, qui
     appelle `valide_pins` avant d'écrire) -- mais REFUSE explicitement
-    (`RuntimeError`) le cas structurel sans représentation dans le schéma :
-    campagne arrêtée AVANT le lancement des régimes (`statut_global !=
-    CONTINUE`, `regimes` vide/absent -- ancien `STOP_TROP_DE_SOURCES_
-    EXCLUES`) ou régime manquant."""
+    (`RuntimeError`) les DEUX cas structurels sans représentation dans le
+    schéma, chacun AVANT même la validation JSON Schema (aiguillage, pas le
+    « ... is too short » cryptique de jsonschema) :
+      - campagne arrêtée AVANT le lancement des régimes (`statut_global !=
+        CONTINUE`, `regimes` vide/absent -- ancien `STOP_TROP_DE_SOURCES_
+        EXCLUES`) ou régime manquant ;
+      - régime arrêté à 2 staircases par le garde 2-invalides (§C5,
+        `STATUT_STOP_2_INVALIDES`) -- le tableau `staircases` qui en
+        résulterait a `minItems=2 < 3` (schéma), donc DOIT être intercepté
+        ICI, jamais laissé tomber sur `jsonschema`."""
     if manifeste.get("statut_global") != STATUT_CONTINUE or not manifeste.get("regimes"):
         raise RuntimeError(
             "construit_pins : campagne sans régimes exploitables "
@@ -378,6 +387,21 @@ def construit_pins(manifeste: dict, *, manifeste_path: str | Path,
     for regime_nom in ("severe", "laxiste"):
         if regime_nom not in manifeste["regimes"]:
             raise RuntimeError(f"construit_pins : régime {regime_nom!r} absent du manifeste.")
+
+    for regime_nom, regime_data in manifeste["regimes"].items():
+        if regime_data.get("statut_orchestration") == STATUT_STOP_2_INVALIDES:
+            n_sessions = len(regime_data.get("sessions", []))
+            raise RuntimeError(
+                f"construit_pins : campagne arrêtée à {n_sessions} staircases par le garde "
+                f"2-invalides (§C5, 2 sessions consécutives invalides, catch < 90 %) sur le "
+                f"régime {regime_nom!r} -- STOP consigné dans le manifeste ({manifeste_path}). "
+                "Le contrat §C10 (schemas/arcC-pins-spatial-v1.schema.json, `staircases` "
+                "minItems=3) n'a AUCUNE représentation pour un régime à 2 staircases : refus "
+                "explicite, AUCUN pins_spatial.json ne peut être émis pour cet état (aucun "
+                "fichier écrit). Le STOP reste un STOP : ceci n'est PAS une invite à relancer "
+                "une 3e staircase de complaisance pour débloquer pins -- la seule voie est un "
+                "arbitrage HUMAIN du point d'arrêt (fatigue du sujet ? défaut de protocole ? "
+                "conditions d'affichage ?) -- remonter avant de reprendre quoi que ce soit.")
 
     branche_active = calcule_branche_combinee_active(manifeste["regimes"])
     regimes_pins = {

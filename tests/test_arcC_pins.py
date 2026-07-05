@@ -365,6 +365,69 @@ def test_construit_pins_refuse_campagne_stop_trop_exclues(tmp_path):
         construit_pins(manifeste, manifeste_path=tmp_path / "manifeste.json")
 
 
+def test_construit_pins_refuse_regime_stop_2_invalides_aiguillage_avant_jsonschema(tmp_path):
+    """Le trou (revue) : un régime arrêté à 2 staircases par le garde
+    2-invalides (§C5, `STATUT_STOP_2_INVALIDES`) ne doit JAMAIS atteindre la
+    validation `jsonschema` (« ... is too short » cryptique, `staircases`
+    minItems=3) -- `construit_pins` intercepte AVANT, avec un message qui
+    porte le FAIT (N=2 staircases), le RÉGIME, le CHEMIN DU MANIFESTE et la
+    CONDUITE (arbitrage humain, "remonter"). AUCUNE voie de complétion
+    automatique suggérée -- le STOP reste un STOP. `ecrit_pins_json` n'est
+    JAMAIS atteint : aucun fichier n'est écrit, même partiel."""
+    sessions_severe_stop = [_session(0, "severe", 0.05, valide=False, n_catch_ok=2),
+                           _session(1, "severe", 0.05, valide=False, n_catch_ok=1)]
+    sessions_laxiste = [_session(i, "laxiste", 0.040 + 0.001 * i) for i in range(3)]
+    manifeste_path = tmp_path / "manifeste_campagne.json"
+    manifeste = _manifeste(dict(
+        severe=dict(sessions=sessions_severe_stop, statut_orchestration=STATUT_STOP_2_INVALIDES),
+        laxiste=dict(sessions=sessions_laxiste, statut_orchestration=STATUT_CONTINUE)))
+    pins_path = tmp_path / "pins_spatial.json"
+
+    with pytest.raises(RuntimeError) as exc_info:
+        pins = construit_pins(manifeste, manifeste_path=manifeste_path)
+        ecrit_pins_json(pins_path, pins)  # jamais atteint -- construit_pins lève avant
+
+    message = str(exc_info.value)
+    assert "2 staircases" in message  # le FAIT (N réel de sessions du régime)
+    assert "2-invalides" in message and "§C5" in message
+    assert "severe" in message  # le RÉGIME concerné
+    assert str(manifeste_path) in message  # le CHEMIN DU MANIFESTE
+    assert "remonter" in message.lower()  # la CONDUITE : arbitrage humain, remonter
+    # AUCUNE voie de complétion automatique suggérée : le message doit DISCLAIMER
+    # explicitement la 3e staircase de complaisance, jamais la suggérer sans réserve.
+    assert "n'est pas une invite" in message.lower() or "pas de contournement" in message.lower()
+    assert not pins_path.exists()  # rien n'est écrit, pas même un référent partiel
+
+
+def test_construit_pins_indetermine_n3_dispersion_haute_pins_valide_contre_schema(tmp_path):
+    """Ferme la 3ᵉ branche (les 3 issues : complétée-résolue / complétée mais
+    INDETERMINE (dispersion trop haute) / arrêtée ont chacune leur test) :
+    3 staircases COMPLÈTES et VALIDES (catch >= 90 %) mais seuils très
+    dispersés (CV > 30 %, §C5-3) -> `statut == INDETERMINE`, `motif_statut`
+    présent, `jnd`/`ic` NON null (valeur centrale rapportée, non fiable --
+    `null` réservé à INVALIDE), ET le pins produit est VALIDE contre le
+    schéma §C10 (n'est PAS un cas de refus -- `construit_pins` produit un
+    document, `ecrit_pins_json` l'écrit sans lever)."""
+    sessions_severe_disperse = [_session(0, "severe", 0.010), _session(1, "severe", 0.030),
+                                _session(2, "severe", 0.080)]  # CV ~90% >> 30%
+    sessions_laxiste = [_session(i, "laxiste", 0.040 + 0.001 * i) for i in range(3)]
+    manifeste = _manifeste(dict(
+        severe=dict(sessions=sessions_severe_disperse, statut_orchestration=STATUT_CONTINUE),
+        laxiste=dict(sessions=sessions_laxiste, statut_orchestration=STATUT_CONTINUE)))
+
+    pins = construit_pins(manifeste, manifeste_path=tmp_path / "manifeste.json")
+    resultat_severe = pins["regimes"]["severe"]
+    assert resultat_severe["statut"] == STATUT_INDETERMINE
+    assert "motif_statut" in resultat_severe and resultat_severe["motif_statut"]
+    assert resultat_severe["jnd"] is not None
+    assert resultat_severe["ic"] is not None
+
+    pins_path = tmp_path / "pins_spatial.json"
+    ecrit_pins_json(pins_path, pins)  # valide §C10 avant écriture -- ne lève PAS
+    relu = lit_pins_json(pins_path)
+    Draft7Validator(SCHEMA).validate(relu)  # LE GATE : conforme malgré INDETERMINE
+
+
 # =============================================================================
 # Famille 1 : validation schéma -- conforme accepté, non conforme LÈVE
 # =============================================================================
