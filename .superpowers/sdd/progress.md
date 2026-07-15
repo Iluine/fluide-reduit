@@ -416,3 +416,24 @@ Tasks 2/3 BUILD (cloud, base b0e4723) : scripts/run_arcA_m2_grille.py (gate d'ac
 RESTE À FAIRE : revue des choix (i)-(vi) par Romain AVANT exécution (comme le 1.5 de la sonde) ;
   transfert branche vers la machine Romain (pont desktop ou patch) ; --gate puis --tout sur
   iluin-tworings3 ; verdict = point d'arrêt OBLIGATOIRE, remonter, pas d'enchaînement.
+
+── REPRISE SESSION (2026-07-15, tâche locale « sur votre ordinateur », VM Cowork sur iluin-tworings3) ──
+TRANSFERT : les 2 commits appliqués par patch (git am) sur base b0e4723 — bit-exactitude PROUVÉE
+  par les hashes de blobs (0fa5874 / 9055098 / e871af5 / 9348056 / c86b8c1 = index des patchs
+  d'origine). Nouveaux SHA locaux f5be907 + c542548 (committer différent, contenu identique).
+FAIT D'INSTRUMENT (mesuré, pas supposé) : la VM locale EST l'instrument gelé —
+  test_replay_prefixe_bit_identique PASS (30.6 s) avec Python 3.12.3 exact (debs noble extraits
+  + loader glibc, sans root) + site-packages de la .venv du dépôt (numpy 2.4.6, binaires natifs).
+  Contraste cloud (FAIL 2×) → cause CPU/BLAS confirmée par un 3e point : même CPU ⇒ bit-identité.
+  Les 24 tests grille+verdict PASS aussi (31.7 s).
+LIMITE D'INFRA (mesurée) : chaque commande de la VM tourne dans un bwrap jetable
+  (--die-with-parent, --unshare-pid), plafond DUR 45 s, aucun processus ne survit entre appels →
+  aucune phase de grille exécutable ici (vérité ~4.5 min/seed, cellule Δt=16 ~13 min). Gate NON
+  lancé dans la VM (choix (vi) : le gate se chronomètre sur LA machine qui exécute la grille,
+  et cette VM ne peut pas l'exécuter) → repli chemin 1 : gate → --tout → verdict dans le
+  terminal natif (.venv/bin/python, hors VM). Le PASS bit-identité de la VM reste porté : si
+  l'infra lève un jour le plafond 45 s, la VM locale est un instrument valide.
+RESTE À FAIRE : (natif, terminal Romain) pytest de vérification (~1 min) ; --gate (~40 s) ;
+  --tout (~2 h, résumable) ; run_arcA_m2_verdict.py ; verdict = point d'arrêt OBLIGATOIRE —
+  remonter à Romain, graver §A13-résultat au journal de pocCascade2phys AVEC lui, pousser les
+  branches GitHub ensuite. Lecture d'innovation (ressaut-puis-relaxation) : APRÈS le verdict.
