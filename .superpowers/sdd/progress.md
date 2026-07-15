@@ -384,3 +384,35 @@ Task 1 : implémenteur DONE avant fermeture session (commit fceddf5 — sonde + 
   RESTE À FAIRE : revue Task 1 (non revue !) ; courbe REMONTÉE à Romain (fait, séance du 06/07
   soir) ; décision Romain sur l'achat de la grille ATTENDUE (lecture AUTRE = pas de branchement
   automatique) ; puis Task 2 gate d'achat.
+
+── REPRISE SESSION (2026-07-15, Claude Cowork cloud) ──
+Revue Task 1 (la dette « revue à faire ») : FAITE — sonde CONFORME §A13-3 (verbatim cité, lecture
+  pure mécanique, chrono séparé vérité/moteur, aucun verdict). UN choix d'implémentation nommé :
+  facteur 1.5 du critère S2 (pas dans le verbatim « borné/contractant ») — LOAD-BEARING (ratio
+  observé 1.90 : avec facteur 2.0 la lecture aurait été S2→achat auto). Le protocole a bien remonté
+  la forme au lieu de l'absorber. Minor Task 0 reconduits (rederiver ferm non couvert ; garde
+  verite courte absente) — non bloquants.
+DÉCISION ROMAIN (2026-07-15, point d'arrêt sonde levé) : GRILLE COMPLÈTE ACHETÉE (option
+  pré-enregistrée §A13-3) ; exécution SUR LA MACHINE ROMAIN.
+FAIT D'INSTRUMENT (mesuré, pas supposé) : le conteneur cloud N'EST PAS l'instrument gelé —
+  run_history(101,10) vs h_s101.npz : bit-identité FAIL, écart max 2.7 % à 10 épisodes ;
+  hypothèse logicielle ÉLIMINÉE (numpy 2.4.6 + python 3.12.3 épinglés = mêmes versions que le
+  npz : FAIL identique) → cause CPU/BLAS (dispatch SIMD), amplifiée par la path-dependence.
+  Conséquence gravée : toute mesure verdict-grade manche 2 tourne sur iluin-tworings3 ; le cloud
+  sert de sandbox de dev (573 tests OK hors les 2 gels inter-machine, qui échouent PAR CONSTRUCTION
+  ailleurs que sur l'instrument).
+Tasks 2/3 BUILD (cloud, base b0e4723) : scripts/run_arcA_m2_grille.py (gate d'achat réel +
+  phases résumables vérité/cellules/ferm/contrôles/assemble) + scripts/run_arcA_m2_verdict.py
+  (combinateur §A13-2 pur, else=INDETERMINE sortie sûre) + 24 tests dédiés (test_arcA_m2_grille,
+  test_arcA_m2_verdict) — suite locale PASS, ruff clean. SIX choix d'implémentation PRÉ-ENREGISTRÉS
+  dans les docstrings ((i) vérité partagée préfixe-stable bit-exacte ; (ii) contrôles shuf/corruption
+  POST-HOC via rederiver_emissions, cœur Task 0 INTOUCHÉ ; (iii) shuf = permutation des moyennes par
+  commit, rng 9001+1000*dt+seed ; (iv) corruption = +10·S_HALF_OP sur la feuille de plus grande aire
+  du commit émission 3, localisation mesurée au ré-ancrage ≥50 % ; (v) spot-check É2/É3 sur cellule
+  (101,4,256) ; (vi) gate = benchmark réel cellule Δt=1 extrapolé comptabilité exacte 2640 épisodes).
+  Comptabilité : vérité 480 + moteur 1890 + ferm 126 + rederive 24 + shuf 72 + corruption 48.
+  Plomberie gate vérifiée cloud (7.6 s/ép → 5.58 h PASS) puis JSON SUPPRIMÉ (le vrai gate sortira
+  de la machine d'exécution). Chrono sonde Romain (2.8 s/ép) → projection ~2 h.
+RESTE À FAIRE : revue des choix (i)-(vi) par Romain AVANT exécution (comme le 1.5 de la sonde) ;
+  transfert branche vers la machine Romain (pont desktop ou patch) ; --gate puis --tout sur
+  iluin-tworings3 ; verdict = point d'arrêt OBLIGATOIRE, remonter, pas d'enchaînement.
