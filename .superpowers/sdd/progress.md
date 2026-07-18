@@ -437,3 +437,19 @@ RESTE À FAIRE : (natif, terminal Romain) pytest de vérification (~1 min) ; --g
   --tout (~2 h, résumable) ; run_arcA_m2_verdict.py ; verdict = point d'arrêt OBLIGATOIRE —
   remonter à Romain, graver §A13-résultat au journal de pocCascade2phys AVEC lui, pousser les
   branches GitHub ensuite. Lecture d'innovation (ressaut-puis-relaxation) : APRÈS le verdict.
+
+── CLÔTURE MANCHE 2 (2026-07-18) ──
+EXÉCUTION NATIVE (terminal Romain) : 25 tests PASS (53.96 s) ; gate MESURÉ PASS (2.569 s/ép ×
+  2640 = 1.88 h ≤ 10 h) ; grille lancée le 15, interrompue, REPRISE par parts le 18 (SKIPs
+  corrects, design résumable exercé) ; anomalie chrono seed 103 (2×) = temps horloge seulement.
+CONTRÔLES §A13-4 : 0 violation (ferm 0.0 exact ×3Δt ; shuf Δχ₂=1.028/0.752/0.693 ≫ JND ;
+  corruption 0.3905 supra-JND, préfixe bit-identique, localisation 100 % ; É2/É3 bit-exacts).
+VERDICT §A13-2 (combinateur mécanique) : **REGISTRE_FERME** — trois colonnes IC sévère fermées,
+  k*_chaîne ≤ 256 floats tous Δt ; détail {ic_bas: 256/256/256, pin: 256/256/128,
+  ic_haut: 128/256/128}. Chiffres inconfortables consignés au journal ((16,400,ic_bas) clause
+  2·JND seed 102 ém.4 0.1369 non-monotone en k ; (4,128) médiane 0.0963 > pin).
+POINT D'ARRÊT HONORÉ : verdict remonté, texte endossé par Romain, §A13-résultat GRAVÉ au journal
+  de pocCascade2phys (commit 5633986, branche t1-spring-config). Lecture d'innovation portée
+  (ressaut-puis-relaxation généralisé, k*(16)<k*(4) au pin) = décision neuve, PAS un enchaînement.
+RESTE À FAIRE : push des deux branches par Romain (clés SSH hors VM) ; puis décisions neuves à
+  ouvrir avec lui (consommateurs du verdict : gate fovéa-z ; cadencement-relaxation).
