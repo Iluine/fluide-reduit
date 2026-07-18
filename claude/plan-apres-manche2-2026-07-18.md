@@ -16,7 +16,17 @@ backup abandonné (décision Romain 2026-07-18) → fork temporel (a/a′/a″/d
 - Cœur Task 0 manche 2 (`run_arcA_m2_registre.py`, revu Approved) : INTOUCHÉ. Toute
   extension passe par de nouveaux scripts qui le consomment.
 
-## Task S0 — FAIT (2026-07-18) : §A14 GRAVÉ (pocCascade2phys f08c340)
+## Tasks S0+S1+S2 — FAITS (2026-07-18) : sonde exécutée, §A14-lecture GRAVÉE
+
+S1 build revu (conforme §A14, 13 tests PASS vérifiés indépendamment en VM bit-identique) ;
+choix (v)-(viii) ENDOSSÉS ; S2 run natif — lecture AUTRE, bornée loin sous le pin
+(max 0.046 = 63 % du pin), escalade deux-étages NON déclenchée, trois faits gravés
+(§A14-lecture, pocCascade2phys) : budget aire-proportionnel préserve la tenue ;
+contamination dehors→dedans sous plancher ; ressaut-relaxation vu 2×.
+PROCHAIN PAS : spec fovéa-z PAPER GRADE (gate ouvert), sections obligatoires (budget VRAM
+épinglé, GPU-déterminisme), cette lecture comme premier appui du mariage registre×fovéa.
+
+## Task S0 (détail archivé) — §A14 GRAVÉ (pocCascade2phys f08c340)
 
 Décisions Romain consignées : fenêtre fixe 32×32 alignée quadtree ; BRAS NU UNIQUE (un
 seul étage) ; deux-étages rétrogradé en escalade PRÉ-ÉCRITE (k_out=64, figé). S1 débloqué :
