@@ -16,7 +16,14 @@ backup abandonné (décision Romain 2026-07-18) → fork temporel (a/a′/a″/d
 - Cœur Task 0 manche 2 (`run_arcA_m2_registre.py`, revu Approved) : INTOUCHÉ. Toute
   extension passe par de nouveaux scripts qui le consomment.
 
-## Task S0 — Pré-enregistrement sonde fenêtrage-fovéa [PAPER GRADE, avec Romain]
+## Task S0 — FAIT (2026-07-18) : §A14 GRAVÉ (pocCascade2phys f08c340)
+
+Décisions Romain consignées : fenêtre fixe 32×32 alignée quadtree ; BRAS NU UNIQUE (un
+seul étage) ; deux-étages rétrogradé en escalade PRÉ-ÉCRITE (k_out=64, figé). S1 débloqué :
+implémenter EXACTEMENT §A14 — la vérification d'instrument (bandes max_carrier définies
+sur 32×32) est DUE avant tout run, remonter si muette.
+
+## Task S0 (archive) — Pré-enregistrement sonde fenêtrage-fovéa [PAPER GRADE, avec Romain]
 
 Objet : falsificateur le moins cher du mariage registre×fovéa (le cœur de la future spec
 fovéa-z ; exclusion §A13-5 « fenêtrage spatial » attaquée de front, AVANT que la spec fige).
