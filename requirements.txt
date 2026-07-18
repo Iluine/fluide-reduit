@@ -22,3 +22,10 @@ pytest>=8.0
 
 # M4/M5 uniquement (déféré, GPU CUDA RTX 3050 Ti <=4 Go, AMP). NE PAS installer avant M4.
 # torch>=2.2
+
+# F1 tranche-moteur (E2/T6, §A15-complément) — stack GPU du chemin vivant jetable.
+# numpy ÉPINGLÉ : le chemin rederive CPU f64 est gelé dessus (vérif #3 due après
+# toute modification de cet environnement). L'extra [ctk] fournit les en-têtes
+# CUDA par wheels (venv autonome, pas de dépendance au toolkit système).
+numpy==2.4.6
+cupy-cuda12x[ctk]==14.1.1
