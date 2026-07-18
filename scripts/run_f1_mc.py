@@ -129,6 +129,28 @@ def main() -> None:
             "seuil_instrument_ratio": SEUIL_FUITE_RATIO,
             "fuite_detectee": bool(ratio_echelle >= SEUIL_FUITE_RATIO),
         },
+        # Consigne 1 (§A15-complément-2) : le dense-équivalent EN ÉVIDENCE
+        # -- ce que la remontée coûterait si TOUT coefficient remontait ;
+        # EPS_DETAIL achète l'écart et rien en tranche-1 ne mesure son
+        # coût perceptuel (chiffre inconfortable, reporté en premier).
+        "dense_equivalent_en_evidence": {
+            "octets_par_frame": enveloppe[
+                "octets_dense_equivalent_par_frame"],
+            "ratio_diff_mesure_sur_dense": octets_env / max(
+                enveloppe["octets_dense_equivalent_par_frame"], 1),
+            "eps_detail": EPS_DETAIL,
+            "statut_eps_detail": "NON-ANCRÉ perceptuellement — hérité par "
+                                 "le prereg tranche-2 comme SUSPECT NOMMÉ "
+                                 "si M-b lit AUTRE (consigne 1)",
+        },
+        # Consigne 2 (§A15-complément-2) : portée de la lecture.
+        "portee": [
+            "trafic de déplacement = MINORANT nommé : fenêtres d'énergie "
+            "FIGÉES, seule la fovéale de chaque niveau translate "
+            "(consigne 2 §A15-complément-2)",
+            "octets remontés dépendants de EPS_DETAIL=1e-4, paramètre "
+            "d'instrument non-ancré perceptuellement (consigne 1)",
+        ],
     }
     document = {
         "meta": {
@@ -157,6 +179,13 @@ def main() -> None:
     print(f"  octets/frame médiane : diff={octets_env / 1e6:.3f} Mo  "
           f"plein={plein_total / 1e6:.3f} Mo  "
           f"diff<plein={lecture['plein_reference']['diff_bat_le_plein']}")
+    dense = lecture["dense_equivalent_en_evidence"]
+    print(f"  DENSE-ÉQUIVALENT (consigne 1, en évidence) : "
+          f"{dense['octets_par_frame'] / 1e6:.3f} Mo/frame  "
+          f"(diff mesuré = {dense['ratio_diff_mesure_sur_dense']:.3f} du "
+          f"dense ; EPS_DETAIL={dense['eps_detail']} NON-ANCRÉ)")
+    for portee in lecture["portee"]:
+        print(f"  PORTÉE : {portee}")
     print(f"  échelle N_niv 10->11 : ratio={ratio_echelle:.3f}  "
           f"(structurel ~{lecture['fuite_echelle']['attendu_structurel']:.2f},"
           f" seuil instrument {SEUIL_FUITE_RATIO})  "

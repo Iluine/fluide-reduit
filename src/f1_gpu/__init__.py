@@ -44,11 +44,15 @@ pas en mécanique ; le détail vit dans la docstring du module porteur) :
       stencil passent par le mempool CuPy (recyclage à shapes constantes,
       régime atteint pendant le warmup 30, exclu de la série).
   B3  géométrie pyramide : niveau 0 = CPU (§5), N0 = 256 par côté ; niveaux
-      GPU j = 1..N_niv−1, γ₂ = 3 fenêtres n_fov² par niveau (fovéale du
-      niveau + 2 fenêtres d'énergie à offsets y figés ±n_fov, clampées au
-      monde — chevauchement possible aux niveaux grossiers, coût identique) ;
-      alignement dyadique : l'origine au niveau j suit ⌊centre_fin/2^(J−j)⌋
-      (elle bouge d'1 cellule toutes les 2^(J−j) frames).
+      GPU j = 1..N_niv−1, γ₂ = 3 fenêtres n_fov² par niveau : la fovéale
+      du niveau + 2 fenêtres d'énergie FIGÉES au centre initial (offsets y
+      ±n_fov, clampées au monde — chevauchement possible aux niveaux
+      grossiers, coût identique). SEULE la fovéale suit le balayage
+      (consigne 2, §A15-complément-2 gravé) : le trafic de déplacement est
+      un MINORANT nommé, porté dans la portée de la lecture M-c ;
+      alignement dyadique : l'origine fovéale au niveau j suit
+      ⌊centre_fin/2^(J−j)⌋ (elle bouge d'1 cellule toutes les 2^(J−j)
+      frames). F s'applique chaque frame aux γ₂ fenêtres (E4a inchangé).
   B4  schéma diff opérationnalisé (E4d) : descente H2D = les seules cellules
       ENTRANTES des fenêtres déplacées cette frame, prédites CPU depuis le
       niveau 0 (prédiction voisin, motif M6 du dépôt), une descente batchée
@@ -59,6 +63,10 @@ pas en mécanique ; le détail vit dans la docstring du module porteur) :
       incrémental : le CPU « sait » ce qui est remonté). Remonter les
       coefficients DENSES de toutes les fenêtres ferait ×γ₂·(N_niv−1) le
       plein que le diff doit battre — ce ne serait pas le schéma §5.
+      EPS_DETAIL est NON-ANCRÉ perceptuellement (consigne 1,
+      §A15-complément-2) : hérité par le pré-enregistrement tranche-2
+      comme SUSPECT NOMMÉ si M-b lit AUTRE ; la lecture M-c reporte le
+      dense-équivalent EN ÉVIDENCE.
   B5  F jetable : motif de coût du stencil wetdry O2 RÉEL (padding
       réfléchissant, pentes minmod x/y, états d'interface, flux HLL,
       corrections de pression, divergence, 2 étages SSP-RK2, plancher sec,

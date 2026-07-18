@@ -55,7 +55,8 @@ def test_pyramide_frame_sur_device(cp):
     assert diag["niveaux_deplaces"] == [2]
     for j in geo.niveaux_gpu:
         assert np.all(np.isfinite(vers_cpu(pyramide.fenetres[j])))
-    assert transferts.bilans[-1]["h2d_octets"] == 3 * 2 * 4 * 8 * 4
+    # Consigne 2 : seule la fovéale descend sa colonne entrante.
+    assert transferts.bilans[-1]["h2d_octets"] == 2 * 4 * 8 * 4
 
 
 def test_substrat_cupy_coincide_avec_numpy_en_tolerance(cp):
