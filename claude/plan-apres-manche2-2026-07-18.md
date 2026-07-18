@@ -42,17 +42,27 @@ fovéa-z ; exclusion §A13-5 « fenêtrage spatial » attaquée de front, AVANT 
 - Run court (ordre de grandeur sonde manche 2 : minutes). Lecture pure mécanique,
   remontée à Romain. POINT D'ARRÊT.
 
-## Front temporel — SUSPENDU à la décision du fork (a/a′/a″/d) [Romain]
+## Front temporel — TRANCHÉ : (d), gravé au journal (2026-07-18)
 
-- **Si (d)** : graver au journal (décision + W1 mort-par-défaut + σ_ω = dette nommée
-  réveillable) → gate fovéa-z OUVERT → la spec commence PAPER GRADE (structure, invariants
-  éphémère/persistant — le registre §A13 est la colonne persistante —, pins requis dont
-  r_fovea, incertitude σ_ω portée explicitement). Aucun code de spec avant le paper grade.
-- **Si (a″) ou (a′)** : Task T0 = passe de vérification in-repo (ce qui existe du solveur
-  W / rendu luminance / harnais ABX Arc C réutilisable) → chiffrage honnête remonté AVANT
-  achat ; puis T1 build harnais temporel, sessions Romain, pin σ_ω, décision W1.
-- **Si (a)** : idem T0 d'abord — le coût de (a) a changé de catégorie depuis la perte
-  d'Arc V ; aucun engagement sans re-chiffrage.
+- Décision (d) GRAVÉE (pocCascade2phys, section « Décision fork temporel ») : W1
+  mort-par-défaut ; σ_ω = dette nommée avec condition de réveil écrite ; **gate fovéa-z
+  OUVERT**. La spec commence PAPER GRADE (structure, invariants éphémère/persistant — le
+  registre §A13 est la colonne persistante —, pins requis dont r_fovea, incertitude σ_ω
+  portée explicitement). Aucun code de spec avant le paper grade.
+- **Sections OBLIGATOIRES de la spec (ajout 2026-07-18)** : (1) budget mémoire — épingler
+  (c, b, N_niv, n_fov^d) contre l'enveloppe de `claude/note-budget-vram-2026-07-18.md`
+  (Harten×fovéa : monde en log, budget dominé par n_fov^d ; 3D/4 Go ⇒ fine-fovéa ~64³ aux
+  hypothèses par défaut) ; (2) GPU-déterminisme — la bit-identité est non-défaut sur GPU ;
+  la frontière éphémère/persistant doit dire qui a droit au non-déterminisme et où vivent
+  les commits.
+
+## Piste nommée — TRANCHE-MOTEUR (à chiffrer après S0, pas avant)
+
+- Falsificateur le moins cher du mot « moteur » : F sur grille vivante + fenêtre fovéa
+  mobile, sur la 3050 Ti, mesure frame-time vs L_eff dans l'enveloppe VRAM ci-dessus.
+- Discipline : critères de mort PRÉ-ÉCRITS avant tout run (ex. « < N fps à L_eff minimal
+  viable ⇒ la fenêtre §C3 est morte en pratique ») ; c'est une MESURE, pas un prototype ;
+  chiffrage du build remonté à Romain avant achat.
 
 ## Interdits explicites
 
