@@ -43,16 +43,20 @@ pas en mécanique ; le détail vit dans la docstring du module porteur) :
       construction — zéro allocation d'état par frame ; les TEMPORAIRES du
       stencil passent par le mempool CuPy (recyclage à shapes constantes,
       régime atteint pendant le warmup 30, exclu de la série).
-  B3  géométrie pyramide : niveau 0 = CPU (§5), N0 = 256 par côté ; niveaux
-      GPU j = 1..N_niv−1, γ₂ = 3 fenêtres n_fov² par niveau : la fovéale
-      du niveau + 2 fenêtres d'énergie FIGÉES au centre initial (offsets y
-      ±n_fov, clampées au monde — chevauchement possible aux niveaux
-      grossiers, coût identique). SEULE la fovéale suit le balayage
-      (consigne 2, §A15-complément-2 gravé) : le trafic de déplacement est
-      un MINORANT nommé, porté dans la portée de la lecture M-c ;
-      alignement dyadique : l'origine fovéale au niveau j suit
-      ⌊centre_fin/2^(J−j)⌋ (elle bouge d'1 cellule toutes les 2^(J−j)
-      frames). F s'applique chaque frame aux γ₂ fenêtres (E4a inchangé).
+  B3  géométrie pyramide (rétablie §A15-complément-3, décision Romain :
+      « les 3 fenêtres bougent ») : niveau 0 = CPU (§5), N0 = 256 par
+      côté ; niveaux GPU j = 1..N_niv−1, γ₂ = 3 fenêtres n_fov² par
+      niveau — la fovéale du niveau + 2 fenêtres d'énergie à offsets y
+      RELATIFS figés ±n_fov (offsets de POSITION, pas fenêtres statiques),
+      clampées au monde (chevauchement possible aux niveaux grossiers,
+      coût identique). Les 3 fenêtres translatent en LOCKSTEP avec le
+      balayage E4c — majorant honnête de la descente, cohérent E4a (pour
+      un critère de mort, on mesure la borne haute). PORTÉE gravée : le
+      trafic de déplacement mesuré est un MAJORANT DE CADENCE (lockstep
+      avec le regard) ; la géométrie de production (fenêtres d'énergie
+      pilotées par l'énergie, cadence irrégulière) n'est PAS mesurée.
+      Alignement dyadique : l'origine au niveau j suit ⌊centre_fin/2^(J−j)⌋
+      (elle bouge d'1 cellule toutes les 2^(J−j) frames).
   B4  schéma diff opérationnalisé (E4d) : descente H2D = les seules cellules
       ENTRANTES des fenêtres déplacées cette frame, prédites CPU depuis le
       niveau 0 (prédiction voisin, motif M6 du dépôt), une descente batchée

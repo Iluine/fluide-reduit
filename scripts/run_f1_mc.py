@@ -143,11 +143,12 @@ def main() -> None:
                                  "le prereg tranche-2 comme SUSPECT NOMMÉ "
                                  "si M-b lit AUTRE (consigne 1)",
         },
-        # Consigne 2 (§A15-complément-2) : portée de la lecture.
+        # Portée de la lecture (consigne 2 RÉ-SCOPÉE, §A15-complément-3).
         "portee": [
-            "trafic de déplacement = MINORANT nommé : fenêtres d'énergie "
-            "FIGÉES, seule la fovéale de chaque niveau translate "
-            "(consigne 2 §A15-complément-2)",
+            "trafic de déplacement = MAJORANT DE CADENCE (lockstep avec "
+            "le regard) ; la géométrie de production (fenêtres d'énergie "
+            "pilotées par l'énergie, cadence irrégulière) n'est PAS "
+            "mesurée (§A15-complément-3)",
             "octets remontés dépendants de EPS_DETAIL=1e-4, paramètre "
             "d'instrument non-ancré perceptuellement (consigne 1)",
         ],

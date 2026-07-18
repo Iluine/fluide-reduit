@@ -9,22 +9,22 @@ fovéa fixe ne paie pas). » Topologie §5 (spec) : niveau 0 CPU (vivant),
 fenêtres actives GPU, descente = prédiction, remontée = coefficients de
 détail — « l'interface CPU<->GPU est la transformée elle-même ».
 
-B3 — géométrie : niveau 0 CPU de côté N0 = 256 (matérialisé numpy) ;
+B3 — géométrie (rétablie §A15-complément-3, décision Romain : « les 3
+fenêtres bougent ») : niveau 0 CPU de côté N0 = 256 (matérialisé numpy) ;
 niveau j ∈ [1, N_niv−1] : monde virtuel de côté N0·2^j (JAMAIS
 matérialisé), γ₂ = 3 fenêtres n_fov² par niveau — la fenêtre fovéale du
-niveau + 2 fenêtres d'énergie FIGÉES (consigne 2, §A15-complément-2
-gravé 2026-07-18) : position calculée UNE FOIS depuis le centre initial
-(offsets y ±n_fov, clampées au monde — chevauchement possible aux
-niveaux grossiers, coût de calcul identique, jetable). SEULE la fenêtre
-fovéale de chaque niveau suit le balayage : le trafic de déplacement
-mesuré est un MINORANT nommé (un moteur réel déplacerait aussi ses
-fenêtres d'énergie, indépendamment) — porté dans la PORTÉE de la lecture
-M-c. Alignement dyadique de la fovéale : son origine x au niveau j suit
-⌊centre_fin/2^(J−j)⌋ − n_fov/2 (clampée) — elle avance d'1 cellule
-toutes les 2^(J−j) frames quand la fovéa balaie à 1 cellule fine/frame
-(E4c). F s'applique chaque frame aux γ₂ fenêtres (fovéale ET énergie —
-E4a/E4d inchangés : le compte de cellules actives et la remontée ne
-changent pas, seul le déplacement est fovéale-seule).
+niveau + 2 fenêtres d'énergie à offsets y RELATIFS figés ±n_fov (offsets
+de POSITION, pas fenêtres statiques), clampées au monde (chevauchement
+possible aux niveaux grossiers : coût de calcul identique, jetable).
+Les 3 fenêtres d'un niveau translatent en LOCKSTEP avec le balayage E4c
+(x commun) — majorant honnête de la descente, cohérent E4a (pour un
+critère de mort, on mesure la borne haute). PORTÉE gravée
+(§A15-complément-3) : le trafic de déplacement mesuré est un MAJORANT DE
+CADENCE (lockstep avec le regard) ; la géométrie de production (fenêtres
+d'énergie pilotées par l'énergie, cadence irrégulière) n'est PAS mesurée.
+Alignement dyadique : l'origine x au niveau j suit ⌊centre_fin/2^(J−j)⌋
+− n_fov/2 (clampée) — elle avance d'1 cellule toutes les 2^(J−j) frames
+quand la fovéa balaie à 1 cellule fine/frame (E4c).
 
 B4 — schéma diff (E4d) : à chaque déplacement d'un niveau, les cellules
 ENTRANTES seulement sont prédites côté CPU depuis le niveau 0 (prédiction
@@ -100,21 +100,18 @@ class GeometriePyramide:
         return max(0, min(o, max(self.cote_monde(j) - self.n_fov, 0)))
 
     def origines(self, j: int, centre_fin: int) -> list[tuple[int, int]]:
-        """Origines (oy, ox) des γ₂ fenêtres du niveau j : fenêtre 0 =
-        FOVÉALE du niveau (suit `centre_fin`) ; fenêtres 1/2 = ÉNERGIE,
-        FIGÉES au centre initial du balayage, offsets y = ±n_fov (B3,
-        consigne 2 §A15-complément-2 : seule la fovéale bouge)."""
+        """Origines (oy, ox) des γ₂ fenêtres du niveau j pour un centre
+        fovéal fin donné : fenêtre 0 = fovéale du niveau, fenêtres 1/2 =
+        énergie, offsets y RELATIFS = ±n_fov (B3). Le x est COMMUN aux γ₂
+        fenêtres — elles translatent en LOCKSTEP avec le balayage
+        (géométrie rétablie §A15-complément-3 : majorant de cadence)."""
         centre_j = centre_fin // (2 ** (self.niveau_fin - j))
-        ox_fovea = self._clamp_origine(centre_j - self.n_fov // 2, j)
-        centre_fige = (self.centre_fin_initial()
-                       // (2 ** (self.niveau_fin - j)))
-        ox_fige = self._clamp_origine(centre_fige - self.n_fov // 2, j)
+        ox = self._clamp_origine(centre_j - self.n_fov // 2, j)
         oy_base = self._clamp_origine(
             self.cote_monde(j) // 2 - self.n_fov // 2, j)
-        origines = [(oy_base, ox_fovea)]
-        for decalage in (self.n_fov, -self.n_fov):
-            origines.append(
-                (self._clamp_origine(oy_base + decalage, j), ox_fige))
+        origines = []
+        for decalage in (0, self.n_fov, -self.n_fov):
+            origines.append((self._clamp_origine(oy_base + decalage, j), ox))
         return origines[: self.gamma2]
 
 
@@ -207,25 +204,24 @@ class PyramideFovea:
                     f"frame : recul d'origine au niveau {j} (dx={dx}) — "
                     "balayage E4c strictement +x.")
             if dx > 0:
-                # Consigne 2 (§A15-complément-2) : SEULE la fenêtre
-                # fovéale (indice 0) se déplace — les fenêtres d'énergie
-                # sont figées ; le trafic de déplacement est un MINORANT.
+                # Géométrie §A15-complément-3 : les 3 fenêtres du niveau
+                # translatent en LOCKSTEP (majorant de cadence) — la
+                # descente entrante est batchée pour le niveau entier (B4).
                 niveaux_deplaces.append(j)
-                oy0, ox0 = nouvelles[0]
                 if dx >= geo.n_fov:
                     # Saut de fenêtre (diagnostic E4c) : re-prédiction pleine.
-                    bloc = self._predire_fenetre_cpu(j, oy0, ox0, 0, geo.n_fov)
+                    bloc = self._predire_niveau_cpu(j, nouvelles, 0, geo.n_fov)
                     entrant = self.transferts.descendre(bloc)
-                    fen[0] = entrant
-                    ref[0] = entrant
+                    fen[...] = entrant
+                    ref[...] = entrant
                 else:
-                    fen[0] = xp.roll(fen[0], -dx, axis=-1)
-                    ref[0] = xp.roll(ref[0], -dx, axis=-1)
-                    bloc = self._predire_fenetre_cpu(
-                        j, oy0, ox0, geo.n_fov - dx, geo.n_fov)
+                    fen[...] = xp.roll(fen, -dx, axis=-1)
+                    ref[...] = xp.roll(ref, -dx, axis=-1)
+                    bloc = self._predire_niveau_cpu(
+                        j, nouvelles, geo.n_fov - dx, geo.n_fov)
                     entrant = self.transferts.descendre(bloc)
-                    fen[0, ..., geo.n_fov - dx:] = entrant
-                    ref[0, ..., geo.n_fov - dx:] = entrant
+                    fen[..., geo.n_fov - dx:] = entrant
+                    ref[..., geo.n_fov - dx:] = entrant
             self._origines[j] = nouvelles
 
             # 2. F jetable (batch γ₂ fenêtres du niveau, E4a/B5).

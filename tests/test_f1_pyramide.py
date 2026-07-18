@@ -8,11 +8,10 @@ from src.f1_gpu.transferts import TransfertComptable
 
 # Géométrie de test : n0=16, n_fov=8, 3 niveaux (0 CPU + 2 GPU), γ₂=3.
 GEO = GeometriePyramide(n_fov=8, n_niv=3, n0=16)
-OCTETS_FENETRE_NIVEAU = 3 * 2 * 4 * 8 * 8 * 4   # init : bloc (3,2,4,8,8) f32
-# Consigne 2 (§A15-complément-2) : seule la FOVÉALE se déplace — la
-# descente de régime est la colonne d'UNE fenêtre, pas des trois.
-OCTETS_FOVEALE = 2 * 4 * 8 * 8 * 4              # fenêtre fovéale pleine
-OCTETS_COLONNE_FOVEALE = 2 * 4 * 8 * 1 * 4      # colonne entrante fovéale
+OCTETS_FENETRE_NIVEAU = 3 * 2 * 4 * 8 * 8 * 4   # bloc (3,2,4,8,8) f32
+# Géométrie §A15-complément-3 (« les 3 fenêtres bougent ») : la descente
+# de régime est la colonne des TROIS fenêtres du niveau (lockstep).
+OCTETS_COLONNE_NIVEAU = 3 * 2 * 4 * 8 * 1 * 4   # bloc (3,2,4,8,1) f32
 
 
 def _pyramide(eps_detail: float):
@@ -42,17 +41,19 @@ def test_origines_alignement_dyadique():
     assert GEO.origines(1, centre + 2)[0][1] == 13
 
 
-def test_fenetres_energie_figees():
-    """Consigne 2 (§A15-complément-2) : les fenêtres d'énergie (indices
-    1 et 2) sont FIGÉES au centre initial — seule la fovéale suit le
-    balayage. Le trafic de déplacement est un MINORANT nommé."""
+def test_fenetres_lockstep_avec_le_balayage():
+    """Géométrie rétablie §A15-complément-3 (décision Romain : « les 3
+    fenêtres bougent ») : les γ₂ fenêtres d'un niveau partagent le même x
+    et translatent en LOCKSTEP avec le balayage — majorant de cadence."""
     c0 = GEO.centre_fin_initial()
     for j in GEO.niveaux_gpu:
         init = GEO.origines(j, c0)
         apres = GEO.origines(j, c0 + 7)
-        assert apres[1] == init[1]
-        assert apres[2] == init[2]
-        assert apres[0][1] > init[0][1]  # la fovéale, elle, a avancé
+        assert len({ox for _, ox in apres}) == 1     # x commun aux 3
+        assert apres[0][1] > init[0][1]              # ... qui a avancé
+        for avant, maintenant in zip(init, apres):
+            assert maintenant[0] == avant[0]         # offsets y inchangés
+            assert maintenant[1] - avant[1] == apres[0][1] - init[0][1]
 
 
 def test_n_niv_minimal_fail_loud():
@@ -74,11 +75,11 @@ def test_frame_descente_colonnes_entrantes_seules():
     diag = pyramide.frame(delta_x=1)
     transferts.frame_suivante()
     assert diag["niveaux_deplaces"] == [2]
-    assert transferts.bilans[-1]["h2d_octets"] == OCTETS_COLONNE_FOVEALE
+    assert transferts.bilans[-1]["h2d_octets"] == OCTETS_COLONNE_NIVEAU
     diag = pyramide.frame(delta_x=1)
     transferts.frame_suivante()
     assert diag["niveaux_deplaces"] == [1, 2]
-    assert transferts.bilans[-1]["h2d_octets"] == 2 * OCTETS_COLONNE_FOVEALE
+    assert transferts.bilans[-1]["h2d_octets"] == 2 * OCTETS_COLONNE_NIVEAU
 
 
 def test_remontee_seuil_infini_vide_et_seuil_zero_dense():
@@ -126,9 +127,9 @@ def test_saut_de_fenetre_re_prediction_pleine():
     diag = pyramide.frame(delta_x=GEO.n_fov)
     transferts.frame_suivante()
     assert 2 in diag["niveaux_deplaces"]
-    # Niveau fin : saut plein de la FOVÉALE (8 >= n_fov) ; niveau 1 :
-    # dx = 4 colonnes fovéales (consigne 2 : l'énergie ne bouge pas).
-    attendu = OCTETS_FOVEALE + 4 * OCTETS_COLONNE_FOVEALE
+    # Niveau fin : saut plein des 3 fenêtres (8 >= n_fov) ; niveau 1 :
+    # dx = 4 colonnes du niveau (lockstep §A15-complément-3).
+    attendu = OCTETS_FENETRE_NIVEAU + 4 * OCTETS_COLONNE_NIVEAU
     assert transferts.bilans[-1]["h2d_octets"] == attendu
 
 
