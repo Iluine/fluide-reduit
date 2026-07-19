@@ -115,17 +115,32 @@ def test_le_balayage_grave_est_reproduit():
 # ----- le balayage a-t-il seulement DISCRIMINÉ ? -----
 
 def test_signale_un_balayage_qui_ne_discrimine_pas():
-    """Le cas mesuré au build : le trafic varie d'un facteur énorme, mais
-    Δχ ne bouge pas — l'observable est alors gouverné par la PÉREMPTION
-    L1, pas par EPS. Un AUTRE ne voudrait alors PAS dire « EPS trop
-    grand », et la lecture doit pouvoir le voir."""
+    """Le trafic varie d'un facteur énorme mais Δχ ne bouge pas :
+    l'observable ne VOIT pas EPS. La note ne doit PLUS attribuer cela à
+    la péremption L1 — le bras k=1 l'a FALSIFIÉ (Δχ identique à trois
+    décimales entre k=1 et k=4) : c'est un plancher STRUCTUREL, que
+    D-1/D-2 tranchent."""
     mesures = [_mesure(1e-5, 0.0806, octets=200000.0),
                _mesure(1e-2, 0.0805, octets=100.0)]
     diagnostic = discrimination_du_balayage(mesures)
     assert diagnostic["a_discrimine"] is False
     assert diagnostic["amplitude_relative"] < 0.01
     assert diagnostic["rapport_octets"] == pytest.approx(2000.0)
-    assert "PÉREMPTION L1" in diagnostic["note"]
+    assert "PLANCHER STRUCTUREL" in diagnostic["note"]
+    assert "FALSIFIÉE" in diagnostic["note"]
+    assert "DOMAINE DE COMPARAISON" in diagnostic["note"]
+
+
+def test_lhypothese_peremption_nest_plus_portee_comme_vraie():
+    """Garde anti-régression : l'explication réfutée ne doit revenir dans
+    aucune note. Elle n'apparaît que dans le docstring, en CITATION de ce
+    qui a été falsifié."""
+    import scripts.run_f1_sonde_eps as sonde
+    diagnostic = discrimination_du_balayage([
+        _mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)])
+    assert "gouverné par la PÉREMPTION" not in diagnostic["note"]
+    assert "FALSIFIÉE" in sonde.__doc__
+    assert "PLANCHER STRUCTUREL" in sonde.__doc__
 
 
 def test_signale_un_balayage_qui_discrimine():

@@ -84,35 +84,26 @@ explicite à prendre. Ce driver la REPORTE au JSON ; il ne la déclenche
 pas et ne réveille rien.
 
 ────────────────────────────────────────────────────────────────────────
-FAIT MESURÉ AU BUILD, REMONTÉ AVANT LE RUN : la péremption L1 pourrait
-DOMINER le seuil EPS — auquel cas cette sonde ne discriminerait pas
+NOTE FALSIFIÉE PAR LA MESURE — CORRIGÉE ICI (§A19-lecture-sonde-EPS)
 ────────────────────────────────────────────────────────────────────────
-Sur une configuration RÉDUITE (n_fov=64, n0=8, 12 frames — PAS la cellule
-de mesure), le balayage complet a été exercé au build. Résultat : le
-nombre de coefficients remontés varie d'un facteur ~2000 entre EPS=1e-5
-et EPS=1e-2, mais le Δχ max ne bouge que de **0.07 %** (0.0806 → 0.0805),
-et reste AU-DESSUS du seuil 0.0603 pour TOUS les EPS.
+Ce module portait, avant le run, l'hypothèse suivante : « l'observable
+est gouverné par la PÉREMPTION L1, pas par EPS ». Le bras de vérification
+k=1 l'a FALSIFIÉE — Δχ est identique à TROIS DÉCIMALES entre k=1 et k=4.
+Ni EPS ni k ne bougent l'aiguille, et le Δχ non décimé est tout aussi plat
+(≈0.069).
 
-Mécanisme, structurel et non accidentel : avec L1 k=4, une fenêtre ne
-remonte qu'une frame sur quatre. Entre deux remontées, F fait avancer
-l'état sans que le CPU en sache rien, et cette DÉRIVE domine largement la
-troncature du seuil. Autrement dit l'observable mesure surtout la
-péremption — dont le paramètre, k, est FIGÉ et dont le balayage est
-INTERDIT ici.
+Ce n'est donc PAS la péremption : c'est un **PLANCHER STRUCTUREL**
+(signature §A14, « muette par construction »). L'hypothèse est retirée et
+n'est plus portée comme vraie nulle part — la garder aurait fait lire les
+chiffres à travers une explication réfutée. Le suspect principal, nommé au
+journal : le DOMAINE DE COMPARAISON — les cellules du niveau 0 que nulle
+fenêtre active ne remonte jamais donnent un écart constant, indépendant de
+tout réglage.
 
-Ce que cela implique pour la lecture, dit AVANT le run : si le
-comportement persiste à la cellule réelle, la règle Q2 remontera
-vraisemblablement AUTRE — mais cet AUTRE ne signifiera PAS « EPS est trop
-grand ». Il signifiera « à k=4, le niveau 0 vivant est infidèle
-indépendamment d'EPS ». Confondre les deux conduirait à resserrer EPS
-sans effet, en payant du trafic pour rien.
-
-Ces chiffres viennent d'une config réduite et ne préjugent pas de la
-cellule de mesure — ils ne sont PAS reportés comme résultat. Le driver
-instrumente le fait : `discrimination_du_balayage` mesure, sur la vraie
-série, l'amplitude de Δχ entre le plus petit et le plus grand EPS, et
-lève un drapeau si elle est négligeable. La lecture verra donc d'elle-même
-si le balayage a discriminé quoi que ce soit.
+C'est ce que le DIAGNOSTIC D'INSTRUMENT (D-1/D-2,
+`run_f1_diagnostic_instrument.py`) va trancher. La branche (ii) est
+appliquée en attendant : **rien n'est réglé**, EPS reste 1e-4 et k reste
+figé.
 
 Kernels F et L3, chrono, substrats : INTOUCHÉS. Sortie JSON SANS
 timestamp.
@@ -349,11 +340,13 @@ def discrimination_du_balayage(mesures: list[dict]) -> dict:
         "rapport_octets": (float(octets_max / octets_min)
                            if octets_min > 0 else None),
         "note": ("si le trafic varie fortement mais que Δχ ne bouge pas, "
-                 "l'observable est gouverné par la PÉREMPTION L1 (k figé), "
-                 "pas par EPS. Un AUTRE voudrait alors dire « à ce k, le "
-                 "niveau 0 vivant est infidèle quel que soit EPS » — et "
-                 "NON « EPS est trop grand ». Diagnostic reporté, aucune "
-                 "conclusion tirée ici ; k n'est pas balayé (§A19)."),
+                 "l'observable ne VOIT pas EPS. L'explication « c'est la "
+                 "péremption L1 » a été FALSIFIÉE par le bras k=1 (Δχ "
+                 "identique à 3 décimales entre k=1 et k=4) : c'est un "
+                 "PLANCHER STRUCTUREL, dont le suspect nommé est le "
+                 "DOMAINE DE COMPARAISON (cellules jamais remontées). "
+                 "Diagnostic reporté, aucune conclusion tirée ici ; k "
+                 "n'est pas balayé (§A19). D-1/D-2 tranchent."),
     }
 
 
@@ -718,9 +711,10 @@ def main() -> None:
           f"{discrimination['rapport_octets'] or float('nan'):.0f}  -> "
           f"a discriminé = {discrimination['a_discrimine']}")
     if not discrimination["a_discrimine"]:
-        print("     (Δχ insensible à EPS : l'observable est gouverné par la "
-              "PÉREMPTION L1, pas par le seuil — un AUTRE ne dirait PAS "
-              "« EPS trop grand ».)")
+        print("     (Δχ insensible à EPS : l'observable ne VOIT pas le "
+              "seuil — un AUTRE ne dirait PAS « EPS trop grand ». "
+              "L'explication « péremption L1 » est FALSIFIÉE par k=1 ; "
+              "plancher structurel, D-1/D-2 tranchent.)")
     branche = lecture["branche_preecrite_decision_k"]
     if branche["applicable"]:
         print("  BRANCHE PRÉ-ÉCRITE (D) APPLICABLE — REPORTÉE, non "
