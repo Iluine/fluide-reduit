@@ -24,11 +24,22 @@ RÈGLE DE DÉCISION PRÉ-ENREGISTRÉE (Q2), appliquée SANS interprétation :
 balayage ne satisfait, 1e-5 compris : **AUTRE remonté, aucun EPS retenu
 par défaut**. Jamais de choix après courbe.
 
-**k RESTE FIGÉ À 4 — le balayage de k est INTERDIT ici** (§A19) : balayer
-k perceptuellement reviendrait à décider le cadencement avec la question
-perceptuelle en main, c'est-à-dire à ATTEINDRE la condition de réveil
-σ_ω (R4). Bouger k sera une décision explicite de Romain, jamais un effet
-de bord de sonde. Le driver refuse fail-loud tout autre k.
+**VÉRIFICATION D'INSTRUMENT (A), DUE AVANT TOUTE LECTURE** — le même
+balayage EPS est d'abord joué à **k=1**, et `lecture_mecanique` REFUSE de
+produire la lecture k=4 sans son PASS/FAIL enregistré (câblage « muette ⇒
+remonter », B9). Une sonde muette se détecte AVANT, pas après (§A14).
+Lectures pré-écrites : k=1 DISCRIMINE (Δχ répond à EPS **et** au moins un
+EPS passe) ⇒ **instrument VALIDE**, et l'AUTRE éventuel à k=4 est
+attribuable à la PÉREMPTION ; k=1 ne discrimine pas non plus ⇒ **sonde
+MUETTE sur EPS, AUTRE D'INSTRUMENT — ne rien régler, remonter**.
+NOTA : à k=1 subsiste la frame de retard du compteur (choix 6 de la borne
+L3) — la vérification teste la discrimination sous péremption MINIMALE,
+PAS NULLE.
+
+**CE N'EST PAS UN BALAYAGE DE k** : deux valeurs seulement existent ici,
+k=4 (mesure, figée) et k=1 (vérification), et ce driver ne prononce RIEN
+sur le cadencement. Toute DÉCISION sur k reste gatée σ_ω (R4) et
+appartient à Romain — le driver refuse fail-loud toute autre valeur.
 
 DEUX PASSES PAR EPS, et c'est délibéré : reconstruire le vivant exige de
 rapatrier des coefficients et la vérité, ce qui fausserait un chrono. La
@@ -37,24 +48,26 @@ médiane ET p99) ; la passe Δχ rejoue la MÊME trajectoire (même graine,
 même géométrie, même k) en évaluant l'observable hors de toute mesure de
 temps. Les deux passes ne partagent aucun chiffre.
 
-CHOIX D'IMPLÉMENTATION NON COUVERT PAR LE GRAVÉ, REMONTÉ — l'échelle de
-lecture. « Niveau 0 » désigne sans ambiguïté la grille CPU du harnais
-(côté N0), mais une fenêtre de n_fov² au niveau le plus fin, décimée
-jusqu'à l'ÉCHELLE du monde au niveau 0, se réduirait à une seule cellule :
-illisible pour un readout spectral. La sonde décime donc à la TAILLE du
-niveau 0 (facteur n_fov/N0), ce qui donne une grille carrée exploitable,
-et reporte EN PLUS le Δχ SANS décimation. La RÈGLE porte sur le décimé —
-c'est le niveau 0 qui est l'observable du joueur hors fovéa.
+**ÉCHELLE DE LECTURE ÉPINGLÉE (B)** : la règle Q2 lit le Δχ **DÉCIMÉ à
+l'échelle du niveau 0** — le grossier comparé à ce que le grossier
+devrait être, à sa propre résolution : c'est l'objet qui existe et qui
+sera consommé. Le Δχ NON décimé est reporté en **DIAGNOSTIC SEUL**, et
+n'entre dans aucune décision. La relation entre les deux n'est pas
+monotone : la décimation ne fait pas qu'atténuer, elle DÉPLACE les bandes
+porteuses que `delta_chi` est seul à lire (vérifié au build : 0.038
+décimé contre 0.022 à pleine résolution sur un cas).
 
-Sur le rapport entre les deux, ce driver n'affirme RIEN. On croirait
-volontiers que décimer lisse et rend la lecture plus permissive : une
-vérification au build montre le contraire sur au moins un cas (Δχ décimé
-0.038 contre 0.022 à pleine résolution). C'est cohérent — la décimation
-n'atténue pas seulement, elle DÉPLACE les bandes porteuses du spectre, et
-`delta_chi` ne lit que les porteuses. Aucun des deux n'est donc un
-majorant de l'autre par construction. Les deux sont reportés côte à côte
-et l'écart se lit tel quel ; le driver rend l'ambiguïté lisible, il ne la
-tranche pas.
+**LOGIQUE DU CRITÈRE (C)**, fait de logique et non préférence : le joueur
+ne voit JAMAIS la référence. Donc Δχ < 0.0603 ⇒ **innocuité ÉTABLIE** ;
+Δχ > 0.0603 ⇒ **innocuité NON ÉTABLIE** — et JAMAIS « nocivité établie ».
+Un AUTRE ne justifie donc PAS de resserrer EPS ; le seul indice interne
+dont le joueur disposerait est la cohérence proche/lointain, et c'est une
+MESURE DIFFÉRENTE, nommée et NON armée.
+
+**BRANCHE PRÉ-ÉCRITE (D), REPORTÉE** : instrument VALIDÉ + aucun EPS ne
+passe à k=4 ⇒ la décision passe à k, et le RÉVEIL σ_ω devient LA décision
+explicite à prendre. Ce driver la REPORTE au JSON ; il ne la déclenche
+pas et ne réveille rien.
 
 ────────────────────────────────────────────────────────────────────────
 FAIT MESURÉ AU BUILD, REMONTÉ AVANT LE RUN : la péremption L1 pourrait
@@ -137,22 +150,43 @@ EPS_EN_VIGUEUR: float = 1e-4
 # Seuil de la règle Q2 : borne BASSE de l'IC du JND (discipline §A13).
 SEUIL_IC_BAS: float = 0.0603
 
-# k est FIGÉ — son balayage est INTERDIT (réveil σ_ω, §A19).
-CADENCE_FIGEE: int = CADENCE_L1
+# k de MESURE (§A19, figé) et k de VÉRIFICATION D'INSTRUMENT (§A19-complément
+# A). DEUX valeurs, et deux seulement : ce n'est PAS un balayage de k, et ce
+# driver ne prononce RIEN sur le cadencement — toute décision sur k reste
+# gatée σ_ω (R4).
+CADENCE_MESURE: int = CADENCE_L1          # 4
+CADENCE_VERIFICATION: int = 1
+CADENCES_ADMISES: tuple[int, ...] = (CADENCE_VERIFICATION, CADENCE_MESURE)
+CADENCE_FIGEE: int = CADENCE_MESURE        # nom historique, conservé
 
 CHAMP_SEDIMENT: int = 3          # (h, hu, hv, s) — s porte le readout
 
 
-def exiger_cadence_figee(k: int) -> None:
-    """Garde d'intégrité : balayer k perceptuellement reviendrait à
-    décider le cadencement avec la question perceptuelle en main, donc à
-    atteindre la condition de réveil σ_ω (R4). Interdit ici."""
-    if k != CADENCE_FIGEE:
+def exiger_cadence_admise(k: int) -> None:
+    """Garde d'intégrité : SEULES deux cadences existent ici — celle de
+    la mesure (4, figée) et celle de la VÉRIFICATION D'INSTRUMENT (1).
+    Toute autre valeur serait un balayage de k, c'est-à-dire décider le
+    cadencement avec la question perceptuelle en main : la condition de
+    réveil σ_ω (R4) serait ATTEINTE. Refusé."""
+    if k not in CADENCES_ADMISES:
         raise RuntimeError(
-            f"sonde EPS : k={k} != {CADENCE_FIGEE}. Le balayage de k est "
-            "INTERDIT (§A19) — le faire perceptuellement ATTEINDRAIT la "
-            "condition de réveil σ_ω (R4). Bouger k est une décision "
+            f"sonde EPS : k={k} hors des cadences admises "
+            f"{CADENCES_ADMISES} — {CADENCE_MESURE} pour la MESURE, "
+            f"{CADENCE_VERIFICATION} pour la VÉRIFICATION D'INSTRUMENT. "
+            "Toute autre valeur serait un balayage de k, donc une "
+            "décision de cadencement prise avec la question perceptuelle "
+            "en main : réveil σ_ω (R4) ATTEINT. Bouger k est une décision "
             "explicite de Romain, jamais un effet de bord de sonde.")
+
+
+def exiger_cadence_figee(k: int) -> None:
+    """Alias historique — la cadence de MESURE, elle, reste figée à 4."""
+    if k != CADENCE_MESURE:
+        raise RuntimeError(
+            f"sonde EPS : k={k} != {CADENCE_MESURE}. Le balayage de k est "
+            "INTERDIT (§A19) pour la MESURE ; seule la vérification "
+            f"d'instrument emploie k={CADENCE_VERIFICATION} "
+            "(§A19-complément A).")
 
 
 class ReconstructeurNiveau0:
@@ -309,30 +343,172 @@ def discrimination_du_balayage(mesures: list[dict]) -> dict:
     }
 
 
-def lecture_mecanique(mesures: list[dict]) -> dict:
+def verifier_instrument(mesures_k1: list[dict]) -> tuple[bool, dict]:
+    """VÉRIFICATION D'INSTRUMENT (§A19-complément A) — bras k=1, même
+    balayage EPS, DUE AVANT toute lecture. Précédent §A14 : une sonde
+    muette se détecte AVANT, pas après.
+
+    Elle répond à une seule question : l'observable RÉPOND-IL à EPS quand
+    la péremption est minimale ? Deux lectures PRÉ-ÉCRITES :
+      (i) k=1 DISCRIMINE — Δχ répond à EPS **et** au moins un EPS passe
+          sous le seuil ⇒ **instrument VALIDE**, et l'AUTRE éventuel à
+          k=4 est alors attribuable à la PÉREMPTION ;
+      (ii) k=1 ne discrimine pas non plus ⇒ **sonde MUETTE sur EPS,
+          AUTRE D'INSTRUMENT — ne rien régler, remonter.**
+
+    NOTA gravé : à k=1 subsiste la frame de retard du compteur (choix 6
+    de la borne L3, endossé). La vérification teste donc la
+    discrimination sous péremption MINIMALE, PAS NULLE — c'est une borne
+    inférieure de péremption, pas son absence.
+
+    Ce bras n'est PAS un balayage de k et ne décide aucun cadencement."""
+    discrimination = discrimination_du_balayage(mesures_k1)
+    passants = [m["eps"] for m in mesures_k1
+                if m["delta_chi"]["delta_chi_max"] < SEUIL_IC_BAS]
+    repond = discrimination["a_discrimine"]
+    valide = bool(repond and passants)
+    details = {
+        "cadence_verification": CADENCE_VERIFICATION,
+        "discrimination": discrimination,
+        "eps_passants_a_k1": passants,
+        "instrument_valide": valide,
+        "lecture_preecrite": (
+            "instrument VALIDE : l'observable répond à EPS sous "
+            "péremption minimale — un AUTRE à k=4 est attribuable à la "
+            "PÉREMPTION, pas au seuil"
+            if valide else
+            "sonde MUETTE sur EPS : AUTRE D'INSTRUMENT — ne rien régler, "
+            "remonter. L'observable ne répond pas à EPS même sous "
+            "péremption minimale"),
+        "nota_peremption_minimale": (
+            f"à k={CADENCE_VERIFICATION} subsiste la frame de retard du "
+            "compteur (choix 6 de la borne L3, endossé) : la "
+            "vérification teste la discrimination sous péremption "
+            "MINIMALE, PAS NULLE"),
+        "portee": (
+            "ce bras n'est PAS un balayage de k et ne décide aucun "
+            "cadencement ; toute DÉCISION sur k reste gatée σ_ω (R4)"),
+    }
+    return valide, details
+
+
+def exiger_verification_instrument(verification: dict | None) -> None:
+    """Câblage « tranche muette => remonter » (B9) : AUCUNE lecture k=4
+    n'est produite sans le PASS/FAIL de la vérification d'instrument
+    ENREGISTRÉ. Une lecture sans instrument vérifié serait un chiffre
+    dont on ne saurait pas s'il mesure EPS ou la péremption."""
+    if not verification or "instrument_valide" not in verification:
+        raise RuntimeError(
+            "SONDE MUETTE (§A19-complément A) : la vérification "
+            "d'instrument (bras k=1) est DUE AVANT toute lecture, et son "
+            "PASS/FAIL n'est pas enregistré. Aucune lecture k=4 n'est "
+            "produite — remonter.")
+
+
+def lecture_innocuite(delta_chi_max: float) -> dict:
+    """LOGIQUE DU CRITÈRE, gravée (§A19-complément C) — c'est un fait de
+    logique, pas une préférence : le joueur ne voit JAMAIS la référence.
+
+    Δχ < 0.0603 ⇒ **innocuité ÉTABLIE**. Δχ > 0.0603 ⇒ **innocuité NON
+    ÉTABLIE** — et JAMAIS « nocivité établie ». Un AUTRE ne justifie donc
+    pas de resserrer EPS : le seul indice interne dont le joueur dispose
+    est la cohérence proche/lointain, et c'est une MESURE DIFFÉRENTE,
+    nommée et NON armée."""
+    etablie = bool(delta_chi_max < SEUIL_IC_BAS)
+    return {
+        "delta_chi_max_decime": delta_chi_max,
+        "seuil": SEUIL_IC_BAS,
+        "innocuite_etablie": etablie,
+        "formulation": ("innocuité ÉTABLIE" if etablie
+                        else "innocuité NON ÉTABLIE"),
+        "jamais_nocivite": (
+            "au-dessus du seuil on ne conclut JAMAIS à une « nocivité "
+            "établie » : le joueur ne voit jamais la référence. Le seul "
+            "indice interne serait la cohérence proche/lointain — mesure "
+            "DIFFÉRENTE, nommée, NON armée."),
+    }
+
+
+def branche_decision_k(instrument_valide: bool, eps_retenu: float | None
+                       ) -> dict:
+    """BRANCHE PRÉ-ÉCRITE (§A19-complément D) — REPORTÉE, jamais
+    déclenchée par ce driver.
+
+    Si l'instrument est VALIDÉ mais qu'aucun EPS ne passe à k=4, alors la
+    décision passe à k, et le RÉVEIL σ_ω devient LA décision explicite à
+    prendre (R4 : le cadencement se déciderait avec une question
+    perceptuelle en main). L'EPS retenu serait alors celui que k=1
+    valide ; le budget transferts se traite ensuite."""
+    applicable = bool(instrument_valide and eps_retenu is None)
+    return {
+        "applicable": applicable,
+        "enonce": (
+            "instrument VALIDÉ + aucun EPS ne passe à k=4 ⇒ la décision "
+            "passe à k, et le RÉVEIL σ_ω devient LA décision explicite à "
+            "prendre (R4). L'EPS retenu serait celui que k=1 valide ; le "
+            "budget transferts se traite ensuite."),
+        "statut": (
+            "REPORTÉE — ce driver ne la déclenche pas et ne réveille "
+            "rien. Aucun réveil silencieux, aucune reformulation après "
+            "lecture : la décision appartient à Romain."),
+    }
+
+
+def lecture_mecanique(mesures: list[dict],
+                      verification: dict | None = None) -> dict:
     """Règle Q2 appliquée SANS interprétation : le PLUS GRAND EPS dont le
-    Δχ max de série reste < 0.0603. Si aucun ne satisfait, AUTRE — et
-    aucun EPS retenu par défaut."""
+    Δχ **DÉCIMÉ** max de série reste < 0.0603. Si aucun ne satisfait,
+    AUTRE — et aucun EPS retenu par défaut.
+
+    La vérification d'instrument (bras k=1) est DUE : sans son PASS/FAIL
+    enregistré, aucune lecture n'est produite (§A19-complément A)."""
+    exiger_verification_instrument(verification)
     satisfaisants = [m for m in mesures
                      if m["delta_chi"]["delta_chi_max"] < SEUIL_IC_BAS]
     retenu = max((m["eps"] for m in satisfaisants), default=None)
+    instrument_valide = bool(verification["instrument_valide"])
+    pire = max((m["delta_chi"]["delta_chi_max"] for m in mesures),
+               default=0.0)
     return {
         "seuil_ic_bas": SEUIL_IC_BAS,
-        "regle": ("EPS retenu = le PLUS GRAND EPS dont le Δχ max de série "
-                  "reste < 0.0603 (ic_bas) — lecture sur l'IC entier"),
+        "regle": ("EPS retenu = le PLUS GRAND EPS dont le Δχ DÉCIMÉ max "
+                  "de série reste < 0.0603 (ic_bas) — lecture sur l'IC "
+                  "entier"),
+        # (B) — l'échelle de lecture est ÉPINGLÉE, et dite ici.
+        "echelle_de_lecture": {
+            "grandeur_de_la_regle": "delta_chi_max (DÉCIMÉ, échelle du "
+                                    "niveau 0)",
+            "motif": ("le grossier comparé à ce que le grossier devrait "
+                      "être, à sa propre résolution — c'est l'objet qui "
+                      "existe et sera consommé"),
+            "non_decime": ("delta_chi_max_sans_decimation — DIAGNOSTIC "
+                           "SEUL, jamais la règle : la décimation déplace "
+                           "les bandes porteuses que delta_chi lit, la "
+                           "relation n'est pas monotone"),
+        },
         "eps_retenu": retenu,
         "eps_satisfaisants": [m["eps"] for m in satisfaisants],
         "autre_remonte": bool(retenu is None),
         "branche_preecrite_si_aucun": (
             "AUTRE remonté, AUCUN EPS retenu par défaut — jamais de choix "
             "après courbe"),
+        # (A) — la vérification d'instrument, DUE avant cette lecture.
+        "verification_instrument": verification,
         "discrimination_du_balayage": discrimination_du_balayage(mesures),
+        # (C) — logique du critère : innocuité, jamais nocivité.
+        "innocuite": lecture_innocuite(pire),
+        # (D) — branche pré-écrite, REPORTÉE et non déclenchée.
+        "branche_preecrite_decision_k": branche_decision_k(
+            instrument_valide, retenu),
         "eps_en_vigueur": EPS_EN_VIGUEUR,
-        "cadence_figee": CADENCE_FIGEE,
+        "cadence_mesure": CADENCE_MESURE,
+        "cadence_verification": CADENCE_VERIFICATION,
         "exclusion_k": (
-            "balayage de k INTERDIT (§A19) : le faire perceptuellement "
-            "atteindrait la condition de réveil σ_ω (R4). k reste FIGÉ, "
-            "[NON-ANCRÉ, par budget]"),
+            "balayage de k INTERDIT (§A19) : SEULES deux cadences "
+            f"existent ici — {CADENCE_MESURE} pour la mesure (figée, "
+            f"[NON-ANCRÉ, par budget]) et {CADENCE_VERIFICATION} pour la "
+            "VÉRIFICATION D'INSTRUMENT. Ce driver ne prononce RIEN sur le "
+            "cadencement ; toute décision sur k reste gatée σ_ω (R4)."),
         "rappel_portee": (
             "sonde N1 : elle mesure la fidélité du niveau 0 vivant, rien "
             "d'autre. N2 (M-b) N'EST PAS achetée — elle vient après cette "
@@ -347,23 +523,34 @@ def main() -> None:
 
     geo = geometrie_v4()
     facteur = max(geo.n_fov // N0_DEFAUT, 1)
-    print(f"sonde EPS : {len(EPS_BALAYAGE)} valeurs, k={CADENCE_FIGEE} FIGÉ, "
-          f"décimation ×{facteur} (fenêtre {geo.n_fov}² -> {N0_DEFAUT}²)",
-          flush=True)
+    print(f"sonde EPS : {len(EPS_BALAYAGE)} valeurs, décimation ×{facteur} "
+          f"(fenêtre {geo.n_fov}² -> {N0_DEFAUT}²)", flush=True)
 
-    mesures: list[dict] = []
-    for eps in EPS_BALAYAGE:
-        print(f"  EPS={eps:g} : passe chrono ...", flush=True)
-        chrono = mesurer_chrono(cp, eps, CADENCE_FIGEE)
-        liberer_vram(cp)
-        print(f"  EPS={eps:g} : passe Δχ ...", flush=True)
-        observable = mesurer_delta_chi(cp, eps, CADENCE_FIGEE, SERIE_FRAMES,
-                                       facteur)
-        liberer_vram(cp)
-        mesures.append({"eps": eps, "chrono": chrono,
-                        "delta_chi": observable})
+    def balayer(k: int, etiquette: str) -> list[dict]:
+        exiger_cadence_admise(k)
+        resultats: list[dict] = []
+        for eps in EPS_BALAYAGE:
+            print(f"  [{etiquette} k={k}] EPS={eps:g} : chrono ...",
+                  flush=True)
+            chrono = mesurer_chrono(cp, eps, k)
+            liberer_vram(cp)
+            print(f"  [{etiquette} k={k}] EPS={eps:g} : Δχ ...", flush=True)
+            observable = mesurer_delta_chi(cp, eps, k, SERIE_FRAMES, facteur)
+            liberer_vram(cp)
+            resultats.append({"eps": eps, "chrono": chrono,
+                              "delta_chi": observable})
+        return resultats
 
-    lecture = lecture_mecanique(mesures)
+    # (A) La VÉRIFICATION D'INSTRUMENT est DUE AVANT toute lecture : sans
+    # son PASS/FAIL, `lecture_mecanique` refuse de produire quoi que ce
+    # soit. Une sonde muette se détecte AVANT, pas après (§A14).
+    mesures_k1 = balayer(CADENCE_VERIFICATION, "VÉRIF")
+    instrument_valide, verification = verifier_instrument(mesures_k1)
+    print(f"  vérification d'instrument (k={CADENCE_VERIFICATION}) : "
+          f"{'VALIDE' if instrument_valide else 'SONDE MUETTE'}", flush=True)
+
+    mesures = balayer(CADENCE_MESURE, "MESURE")
+    lecture = lecture_mecanique(mesures, verification)
     mempool = cp.get_default_memory_pool()
 
     document = {
@@ -386,9 +573,16 @@ def main() -> None:
                                 "des rapatriements qui fausseraient le "
                                 "temps ; aucun chiffre partagé"),
                 "echelle_de_lecture": (
-                    f"décimation ×{facteur} vers la TAILLE du niveau 0 "
-                    f"({N0_DEFAUT}²) ; le Δχ SANS décimation est reporté "
-                    "en majorant — choix d'échelle REMONTÉ, non tranché"),
+                    f"ÉPINGLÉE (§A19-complément B) : la RÈGLE lit le Δχ "
+                    f"DÉCIMÉ ×{facteur} à l'échelle du niveau 0 "
+                    f"({N0_DEFAUT}²) — le grossier comparé à ce que le "
+                    "grossier devrait être. Le Δχ SANS décimation est "
+                    "reporté en DIAGNOSTIC SEUL"),
+                "verification_instrument": (
+                    f"bras k={CADENCE_VERIFICATION} sur le MÊME balayage, "
+                    "DUE avant toute lecture (§A19-complément A) ; k=1 "
+                    "conserve la frame de retard du compteur — péremption "
+                    "MINIMALE, pas nulle. Ce n'est PAS un balayage de k"),
                 "chrono": "B6 (warmup exclu, médiane ET p99)",
                 "kernels": "F fusionné et L3 INTOUCHÉS",
             },
@@ -399,6 +593,7 @@ def main() -> None:
             "verifs_exigees": list(VERIFS_EXIGEES),
         },
         "mesures": mesures,
+        "mesures_verification_k1": mesures_k1,
         "residence": {
             "mempool_total_octets": int(mempool.total_bytes()),
             "nvidia_smi_octets": vram_nvidia_smi_octets(),
@@ -423,8 +618,21 @@ def main() -> None:
               f"{chrono['octets_par_frame_median']:>10.0f} "
               f"{chrono['temps_transfert_median_ms']:>7.3f}  "
               f"{stats['mediane_ms']:>8.3f} {stats['p99_ms']:>8.3f}")
+    verif = lecture["verification_instrument"]
+    print("-" * 78)
+    print(f"  VÉRIFICATION D'INSTRUMENT (k={CADENCE_VERIFICATION}, DUE) : "
+          f"{'VALIDE' if verif['instrument_valide'] else 'SONDE MUETTE'}")
+    print(f"    {verif['lecture_preecrite']}")
+    print(f"    nota : {verif['nota_peremption_minimale']}")
     print(f"  seuil ic_bas = {SEUIL_IC_BAS}  (règle : le PLUS GRAND EPS "
-          f"dont Δχ max < seuil)")
+          f"dont Δχ DÉCIMÉ max < seuil ; le non décimé est un "
+          f"DIAGNOSTIC)")
+    innocuite = lecture["innocuite"]
+    print(f"  LOGIQUE (C) : Δχ max décimé = "
+          f"{innocuite['delta_chi_max_decime']:.4f} -> "
+          f"{innocuite['formulation']}")
+    print("    (au-dessus du seuil on ne conclut JAMAIS à une nocivité : "
+          "le joueur ne voit jamais la référence)")
     if lecture["autre_remonte"]:
         print("  -> AUCUN EPS ne satisfait : AUTRE remonté, aucun EPS "
               "retenu par défaut.")
@@ -440,7 +648,14 @@ def main() -> None:
         print("     (Δχ insensible à EPS : l'observable est gouverné par la "
               "PÉREMPTION L1, pas par le seuil — un AUTRE ne dirait PAS "
               "« EPS trop grand ».)")
-    print(f"  k = {CADENCE_FIGEE} FIGÉ — balayage de k INTERDIT (§A19).")
+    branche = lecture["branche_preecrite_decision_k"]
+    if branche["applicable"]:
+        print("  BRANCHE PRÉ-ÉCRITE (D) APPLICABLE — REPORTÉE, non "
+              "déclenchée :")
+        print(f"    {branche['enonce']}")
+    print(f"  cadences : mesure k={CADENCE_MESURE} (figée), vérification "
+          f"k={CADENCE_VERIFICATION} — PAS un balayage de k ; aucune "
+          "décision de cadencement prononcée ici (§A19).")
     print(f"[REPORT] -> {OUT_JSON_PATH}")
     print("POINT D'ARRÊT OBLIGATOIRE : lecture remontée à Romain. N2 (M-b) "
           "n'est PAS achetée — chiffrage propre à venir.")

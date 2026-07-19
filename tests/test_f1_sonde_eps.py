@@ -18,6 +18,9 @@ import pytest
 from scripts.run_f1_ma_quater import PipelineMaQuater, slots_v4
 from scripts.run_f1_sonde_eps import (
     CADENCE_FIGEE,
+    CADENCE_MESURE,
+    CADENCE_VERIFICATION,
+    CADENCES_ADMISES,
     CHAMP_SEDIMENT,
     EPS_BALAYAGE,
     EPS_EN_VIGUEUR,
@@ -25,10 +28,15 @@ from scripts.run_f1_sonde_eps import (
     ReconstructeurNiveau0,
     _slot_observe,
     champ_verite,
+    branche_decision_k,
     delta_chi_readout,
     discrimination_du_balayage,
+    exiger_cadence_admise,
     exiger_cadence_figee,
+    exiger_verification_instrument,
+    lecture_innocuite,
     lecture_mecanique,
+    verifier_instrument,
 )
 from src.albedo import albedo, delta_chi
 from src.f1_gpu.backend import cupy_disponible
@@ -55,10 +63,22 @@ def _mesure(eps: float, dchi_max: float, octets: float = 1000.0) -> dict:
             "chrono": {"octets_par_frame_median": octets}}
 
 
+def _verification(valide: bool = True) -> dict:
+    """Vérification d'instrument factice — DUE avant toute lecture."""
+    return {"instrument_valide": valide, "cadence_verification": 1,
+            "eps_passants_a_k1": [1e-5] if valide else [],
+            "lecture_preecrite": "x", "nota_peremption_minimale": "y",
+            "discrimination": {"a_discrimine": valide}, "portee": "z"}
+
+
+def _lire(mesures: list[dict], valide: bool = True) -> dict:
+    return lecture_mecanique(mesures, _verification(valide))
+
+
 def test_retient_le_plus_grand_eps_sous_le_seuil():
     """La règle ne dit pas « le meilleur Δχ » mais « le PLUS GRAND EPS »
     qui passe : c'est le plus économique en trafic."""
-    lecture = lecture_mecanique([
+    lecture = _lire([
         _mesure(1e-5, 0.001), _mesure(1e-4, 0.010),
         _mesure(3e-4, 0.030), _mesure(1e-3, 0.070)])
     assert lecture["eps_retenu"] == 3e-4
@@ -69,7 +89,7 @@ def test_retient_le_plus_grand_eps_sous_le_seuil():
 def test_aucun_eps_retenu_par_defaut_si_aucun_ne_passe():
     """Y compris 1e-5 : AUTRE remonté, et surtout AUCUN repli — « jamais
     de choix après courbe »."""
-    lecture = lecture_mecanique([
+    lecture = _lire([
         _mesure(1e-5, 0.08), _mesure(1e-4, 0.12)])
     assert lecture["eps_retenu"] is None
     assert lecture["autre_remonte"] is True
@@ -80,10 +100,8 @@ def test_aucun_eps_retenu_par_defaut_si_aucun_ne_passe():
 def test_le_seuil_est_strict_et_vaut_ic_bas():
     """< 0.0603, pas <=. La lecture porte sur l'IC entier (§A13)."""
     assert SEUIL_IC_BAS == 0.0603
-    assert lecture_mecanique([_mesure(1e-4, SEUIL_IC_BAS)])[
-        "eps_retenu"] is None
-    assert lecture_mecanique([_mesure(1e-4, SEUIL_IC_BAS - 1e-9)])[
-        "eps_retenu"] == 1e-4
+    assert _lire([_mesure(1e-4, SEUIL_IC_BAS)])["eps_retenu"] is None
+    assert _lire([_mesure(1e-4, SEUIL_IC_BAS - 1e-9)])["eps_retenu"] == 1e-4
 
 
 def test_le_balayage_grave_est_reproduit():
@@ -117,10 +135,142 @@ def test_signale_un_balayage_qui_discrimine():
 
 
 def test_la_lecture_porte_le_diagnostic_de_discrimination():
-    lecture = lecture_mecanique([_mesure(1e-5, 0.0806),
-                                 _mesure(1e-2, 0.0805)])
+    lecture = _lire([_mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)])
     assert lecture["discrimination_du_balayage"]["a_discrimine"] is False
     assert lecture["autre_remonte"] is True     # les deux dépassent
+
+
+# ----- (A) la vérification d'instrument, DUE avant toute lecture -----
+
+def test_aucune_lecture_sans_verification_enregistree():
+    """Câblage « muette => remonter » (B9) : sans le PASS/FAIL de la
+    vérification, aucune lecture k=4 n'est produite. Une lecture sans
+    instrument vérifié serait un chiffre dont on ne saurait pas s'il
+    mesure EPS ou la péremption."""
+    for absente in (None, {}, {"autre_chose": 1}):
+        with pytest.raises(RuntimeError, match="SONDE MUETTE"):
+            lecture_mecanique([_mesure(1e-4, 0.01)], absente)
+    with pytest.raises(RuntimeError, match="SONDE MUETTE"):
+        exiger_verification_instrument(None)
+
+
+def test_instrument_valide_si_k1_discrimine_et_un_eps_passe():
+    """Lecture pré-écrite (i) : Δχ répond à EPS ET au moins un EPS passe."""
+    valide, details = verifier_instrument([
+        _mesure(1e-5, 0.010), _mesure(1e-2, 0.090)])
+    assert valide is True
+    assert details["instrument_valide"] is True
+    assert details["eps_passants_a_k1"] == [1e-5]
+    assert "VALIDE" in details["lecture_preecrite"]
+    assert "PÉREMPTION" in details["lecture_preecrite"]
+
+
+def test_sonde_muette_si_k1_ne_discrimine_pas():
+    """Lecture pré-écrite (ii) : AUTRE D'INSTRUMENT — ne rien régler."""
+    valide, details = verifier_instrument([
+        _mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)])
+    assert valide is False
+    assert "MUETTE" in details["lecture_preecrite"]
+    assert "ne rien régler" in details["lecture_preecrite"]
+
+
+def test_instrument_invalide_si_discrimine_mais_aucun_eps_ne_passe():
+    """Les DEUX conditions sont exigées : discriminer ne suffit pas s'il
+    n'existe aucun EPS acceptable même à péremption minimale."""
+    valide, details = verifier_instrument([
+        _mesure(1e-5, 0.070), _mesure(1e-2, 0.200)])
+    assert details["discrimination"]["a_discrimine"] is True
+    assert details["eps_passants_a_k1"] == []
+    assert valide is False
+
+
+def test_la_verification_nomme_la_frame_de_retard():
+    """k=1 conserve la frame de retard du compteur : péremption MINIMALE,
+    pas nulle — et c'est dit au JSON."""
+    _, details = verifier_instrument([_mesure(1e-5, 0.01)])
+    assert "frame de retard" in details["nota_peremption_minimale"]
+    assert "PAS NULLE" in details["nota_peremption_minimale"]
+    assert "n'est PAS un balayage de k" in details["portee"]
+
+
+def test_les_deux_cadences_sont_admises_et_pas_une_de_plus():
+    """k ∈ {1 (vérif), 4 (mesure)} — toute autre valeur serait un
+    balayage de k, donc le réveil σ_ω."""
+    assert CADENCES_ADMISES == (CADENCE_VERIFICATION, CADENCE_MESURE)
+    assert (CADENCE_VERIFICATION, CADENCE_MESURE) == (1, 4)
+    exiger_cadence_admise(1)
+    exiger_cadence_admise(4)
+    for k in (0, 2, 3, 8):
+        with pytest.raises(RuntimeError, match="σ_ω"):
+            exiger_cadence_admise(k)
+
+
+def test_la_lecture_porte_la_verification():
+    lecture = _lire([_mesure(1e-4, 0.01)])
+    assert lecture["verification_instrument"]["instrument_valide"] is True
+
+
+# ----- (B) l'échelle de lecture est ÉPINGLÉE -----
+
+def test_la_regle_lit_le_decime_et_le_non_decime_est_diagnostic():
+    lecture = _lire([_mesure(1e-4, 0.01)])
+    echelle = lecture["echelle_de_lecture"]
+    assert "DÉCIMÉ" in echelle["grandeur_de_la_regle"]
+    assert "DIAGNOSTIC SEUL" in echelle["non_decime"]
+    assert "pas monotone" in echelle["non_decime"]
+
+
+# ----- (C) innocuité établie / non établie, jamais nocivité -----
+
+def test_innocuite_etablie_sous_le_seuil():
+    innocuite = lecture_innocuite(0.010)
+    assert innocuite["innocuite_etablie"] is True
+    assert innocuite["formulation"] == "innocuité ÉTABLIE"
+
+
+def test_innocuite_non_etablie_au_dessus_et_jamais_nocivite():
+    """Fait de logique : le joueur ne voit jamais la référence."""
+    innocuite = lecture_innocuite(0.090)
+    assert innocuite["innocuite_etablie"] is False
+    assert innocuite["formulation"] == "innocuité NON ÉTABLIE"
+    assert "nocivité" not in innocuite["formulation"]
+    assert "JAMAIS" in innocuite["jamais_nocivite"]
+    assert "cohérence proche/lointain" in innocuite["jamais_nocivite"]
+
+
+def test_la_lecture_porte_linnocuite_sur_le_pire_eps():
+    """L'innocuité se lit sur le Δχ le PLUS grand du balayage."""
+    lecture = _lire([_mesure(1e-5, 0.010), _mesure(1e-2, 0.090)])
+    assert lecture["innocuite"]["delta_chi_max_decime"] == 0.090
+    assert lecture["innocuite"]["innocuite_etablie"] is False
+
+
+# ----- (D) la branche pré-écrite, REPORTÉE -----
+
+def test_branche_applicable_si_instrument_valide_et_aucun_eps():
+    branche = branche_decision_k(instrument_valide=True, eps_retenu=None)
+    assert branche["applicable"] is True
+    assert "la décision passe à k" in branche["enonce"]
+    assert "RÉVEIL σ_ω" in branche["enonce"]
+
+
+def test_branche_non_applicable_si_un_eps_passe_ou_instrument_muet():
+    assert branche_decision_k(True, 1e-4)["applicable"] is False
+    assert branche_decision_k(False, None)["applicable"] is False
+
+
+def test_la_branche_est_reportee_jamais_declenchee():
+    """Le driver ne réveille rien : la décision appartient à Romain."""
+    branche = branche_decision_k(True, None)
+    assert "REPORTÉE" in branche["statut"]
+    assert "ne la déclenche pas" in branche["statut"]
+    assert "appartient à Romain" in branche["statut"]
+
+
+def test_la_lecture_porte_la_branche():
+    lecture = _lire([_mesure(1e-5, 0.08), _mesure(1e-2, 0.09)])
+    assert lecture["autre_remonte"] is True
+    assert lecture["branche_preecrite_decision_k"]["applicable"] is True
 
 
 # ----- 2. k reste FIGÉ (réveil σ_ω) -----
@@ -136,8 +286,8 @@ def test_k_est_fige_et_son_balayage_refuse():
 
 
 def test_la_lecture_porte_lexclusion_de_k():
-    lecture = lecture_mecanique([_mesure(1e-4, 0.01)])
-    assert lecture["cadence_figee"] == 4
+    lecture = _lire([_mesure(1e-4, 0.01)])
+    assert lecture["cadence_mesure"] == 4
     assert "σ_ω" in lecture["exclusion_k"]
     assert "INTERDIT" in lecture["exclusion_k"]
 
@@ -267,7 +417,7 @@ def test_lobservable_lit_le_champ_sediment():
 # ----- portée -----
 
 def test_la_sonde_ne_prononce_rien_et_nachete_pas_n2():
-    lecture = lecture_mecanique([_mesure(1e-4, 0.01)])
+    lecture = _lire([_mesure(1e-4, 0.01)])
     texte = json.dumps(lecture, ensure_ascii=False)
     for interdit in ("MORT", "PASS", "VERDICT"):
         assert interdit not in texte
