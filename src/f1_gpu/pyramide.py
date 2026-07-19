@@ -76,9 +76,22 @@ CHAMPS_PAR_SYSTEME: int = 4          # (h, hu, hv, s) — E4a
 SYSTEMES_PAR_C: dict[int, int] = {4: 1, 8: 2}   # c (champs) -> systèmes
 C_DEFAUT: int = 8                    # enveloppe tranche-1 (§6 avant §A16)
 ROLES_SLOT: tuple[str, ...] = ("fovea", "energie")
-# Offsets y des fenêtres d'un niveau, en multiples de n_fov (B3) : le slot
-# d'indice 0 est la fenêtre FOVÉALE (offset 0), les suivants l'énergie.
+# Offsets y des fenêtres d'un niveau : le slot d'indice 0 est la fenêtre
+# FOVÉALE (offset nul), les suivants l'énergie. Le PAS dépend du mode :
+#   - B3 (historique, harnais)  : pas = n_fov   -> ±n_fov
+#   - EMBOÎTÉ (propriété E, V4) : pas = n_fov/2 -> ±n_fov/2
 OFFSETS_B3: tuple[int, ...] = (0, 1, -1)
+
+# PROPRIÉTÉ E (§A18 P1, SPEC-FOVEA-Z §2-rev1) : l'ensemble actif est un
+# ARBRE — toute fenêtre de niveau j >= 1 déclare une parente au niveau
+# j−1 couvrant INTÉGRALEMENT son empreinte (l'empreinte valant un quart
+# de la fenêtre parente). Les offsets ±n_fov de B3 plaçaient les fenêtres
+# d'énergie HORS de toute fenêtre parente — c'est le trou surfacé par s3.
+# Le pas emboîté ±n_fov/2 tombe EXACTEMENT aux bornes de la couverture :
+# l'identité oy_j − 2·oy_parent = n_fov/2 étant exacte à tous les niveaux,
+# les deux fenêtres d'énergie occupent les quarts adjacents de la parente
+# fovéale — donc ZÉRO tour d'ancêtres à compter au cap.
+DIVISEUR_PAS_EMBOITE: int = 2
 
 
 @dataclass(frozen=True)
@@ -131,6 +144,7 @@ class GeometriePyramide:
     n0: int = N0_DEFAUT
     gamma2: int = GAMMA2
     slots: tuple[Slot, ...] = field(default=())
+    emboitee: bool = False
 
     def __post_init__(self):
         if self.n_niv < 2:
@@ -251,11 +265,53 @@ class GeometriePyramide:
         ox = self._clamp_origine(centre_j - self.n_fov // 2, j)
         oy_base = self._clamp_origine(
             self.cote_monde(j) // 2 - self.n_fov // 2, j)
+        pas = (self.n_fov // DIVISEUR_PAS_EMBOITE if self.emboitee
+               else self.n_fov)
         origines = []
         for multiple in OFFSETS_B3[: self.n_slots(j)]:
-            oy = oy_base + multiple * self.n_fov
+            oy = oy_base + multiple * pas
             origines.append((self._clamp_origine(oy, j), ox))
         return origines
+
+    # ----- propriété E : l'ensemble actif est un ARBRE -----
+
+    def empreinte_parente(self, oy: int, ox: int) -> tuple[int, int, int, int]:
+        """Bornes INCLUSIVES (y0, y1, x0, x1) des cellules du niveau
+        parent que la fenêtre (oy, ox) réclame — facteur 2 exactement."""
+        return oy // 2, (oy + self.n_fov - 1) // 2, ox // 2, (
+            ox + self.n_fov - 1) // 2
+
+    def parente_couvrante(self, j: int, indice_slot: int,
+                          centre_fin: int) -> int | None:
+        """Index du slot parent dont la fenêtre contient TOUTE l'empreinte
+        du slot (j, indice_slot), ou None. Une couverture partielle ne
+        compte pas : lire à cheval sur deux fenêtres n'est pas la descente
+        que la spec décrit."""
+        if j <= 1:
+            return None                      # le parent du niveau 1 est le
+        oy, ox = self.origines(j, centre_fin)[indice_slot]  # monde 0 (CPU)
+        y0, y1, x0, x1 = self.empreinte_parente(oy, ox)
+        for index, (poy, pox) in enumerate(self.origines(j - 1, centre_fin)):
+            if (poy <= y0 and y1 < poy + self.n_fov
+                    and pox <= x0 and x1 < pox + self.n_fov):
+                return index
+        return None
+
+    def slots_sans_parente(self, centre_fin: int | None = None
+                           ) -> list[tuple[int, int]]:
+        """Slots de niveau >= 2 qui violent la PROPRIÉTÉ E — liste VIDE si
+        la géométrie est un arbre. C'est la preuve exigée : en B3 les
+        fenêtres d'énergie y figurent, en emboîté elle est vide."""
+        if centre_fin is None:
+            centre_fin = self.centre_fin_initial()
+        manquants = []
+        for j in self.niveaux_gpu:
+            if j <= 1:
+                continue
+            for i in range(self.n_slots(j)):
+                if self.parente_couvrante(j, i, centre_fin) is None:
+                    manquants.append((j, i))
+        return manquants
 
     # ----- compte rendu de la configuration (JSON des drivers) -----
 
