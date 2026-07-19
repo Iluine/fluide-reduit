@@ -84,6 +84,8 @@ import json
 import sys
 from pathlib import Path
 
+import numpy as np
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
@@ -284,7 +286,14 @@ class PipelineMaQuater:
 
     def __init__(self, cp, geo: GeometriePyramide,
                  transferts: TransfertComptable, k: int = CADENCE_L1,
-                 graine: int = GRAINE_MONDE, eps: float = EPS_DETAIL):
+                 graine: int = GRAINE_MONDE, eps: float = EPS_DETAIL,
+                 capturer_coefficients: bool = False):
+        # `capturer_coefficients` (sonde EPS §A19) : conserve les
+        # coefficients remontés de chaque frame pour qu'un consommateur
+        # reconstruise le niveau 0 VIVANT. Coûteux (rapatriement retenu
+        # en mémoire) — JAMAIS activé dans une passe chronométrée.
+        self.capturer_coefficients = bool(capturer_coefficients)
+        self.coefficients_frame: list = []
         self.cp = cp
         self.geo = geo
         self.transferts = transferts
@@ -412,6 +421,14 @@ class PipelineMaQuater:
             reference = self.references[indice]
             taille = compacteur.taille_precedente()
             compacteur.noter_taille(taille)
+            # Les indices émis par le kernel sont relatifs au tableau
+            # qu'on lui PASSE — donc à la tranche du tour, pas au groupe.
+            # Tout consommateur qui reconstruit depuis ces indices doit
+            # ajouter l'offset du segment émetteur, sinon il écrit dans
+            # le mauvais slot (le premier) sans que rien ne le signale.
+            elements_par_slot = int(fen.shape[1] * 4 * fen.shape[-1]
+                                    * fen.shape[-2])
+            offset_emission = int(debut * elements_par_slot)
             for segment_debut, segment_fin, emet in (
                     (0, debut, False), (debut, fin, True),
                     (fin, fen.shape[0], False)):
@@ -429,12 +446,17 @@ class PipelineMaQuater:
                 lancements += 2          # deux étages RK2 par appel
             if taille:
                 valeurs, indices = compacteur.vues_a_transferer(taille)
-                self.transferts.remonter(valeurs)
-                self.transferts.remonter(indices)
+                valeurs_cpu = self.transferts.remonter(valeurs)
+                indices_cpu = self.transferts.remonter(indices)
+                if self.capturer_coefficients:
+                    self.coefficients_frame.append(
+                        (indice, valeurs_cpu,
+                         indices_cpu.astype(np.int64) + offset_emission))
             compacteur.cloturer_frame()
         return lancements
 
     def frame(self, delta_x: int = DELTA_X_MOBILE) -> dict:
+        self.coefficients_frame = []
         diagnostic = self._deplacer(delta_x)
         self.lancements_derniere_frame = self._appliquer_f()
         self.frame_courante += 1
