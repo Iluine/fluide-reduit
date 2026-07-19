@@ -125,8 +125,16 @@ C'est le résultat le plus inconfortable de cette veille.
    aire-proportionnel*. Aucun des travaux trouvés ne fait les deux.
 3. **Emprunter au lieu de redériver** : `r_fovea` et le cadencement ont des modèles
    perceptuels publiés. Cela peut alléger une campagne gatée sur le chemin critique.
-4. **Vérifier les brevets** (US 10740951 / 10339692) avant d'aller plus loin sur le
-   pilier fovéa — portée réelle, pas panique.
+4. **Brevets — point RÉDUIT (Romain, 2026-07-19)** : les deux références trouvées sont
+   des brevets **US**, donc territoriaux — sans effet en France. Vérification résiduelle,
+   dix minutes le jour où ça compte : la famille a-t-elle des membres **EP** ? Nuance à
+   ne pas perdre : l'art. 52 CBE exclut les programmes d'ordinateur *« en tant que
+   tels »*, mais l'OEB délivre des brevets d'inventions mises en œuvre par ordinateur
+   dès qu'un effet technique est établi, et **G 1/19** (Grande Chambre, 2021, simulation
+   de foule piétonne) a jugé que les **simulations par ordinateur** ne sont pas exclues
+   par nature. Information, pas conseil juridique. **Ce point n'est pas le sujet** : le
+   vrai enjeu de §2 est que le pilier est *publié* — ce qu'aucune juridiction n'efface,
+   et qui déplace la nouveauté vers le **couplage**, pas vers la fovéa.
 5. **Le son a un champ** : quand il sera appelé, ce sera de l'intégration, pas de
    l'invention.
 
