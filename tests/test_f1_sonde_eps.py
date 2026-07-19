@@ -21,6 +21,8 @@ from scripts.run_f1_sonde_eps import (
     CADENCE_MESURE,
     CADENCE_VERIFICATION,
     CADENCES_ADMISES,
+    LABEL_MECANISME_EN_QUESTION,
+    TABLE_BRANCHES,
     CHAMP_SEDIMENT,
     EPS_BALAYAGE,
     EPS_EN_VIGUEUR,
@@ -171,17 +173,83 @@ def test_sonde_muette_si_k1_ne_discrimine_pas():
         _mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)])
     assert valide is False
     assert "MUETTE" in details["lecture_preecrite"]
-    assert "ne rien régler" in details["lecture_preecrite"]
+    assert "ne rien régler" in details["lecture_preecrite"].lower()
+    assert details["branche"] == "ii"
 
 
-def test_instrument_invalide_si_discrimine_mais_aucun_eps_ne_passe():
-    """Les DEUX conditions sont exigées : discriminer ne suffit pas s'il
-    n'existe aucun EPS acceptable même à péremption minimale."""
+def test_branche_iii_mecanisme_de_remontee_en_question():
+    """Lecture pré-écrite (iii), §A19-complément-2 : k=1 DISCRIMINE mais
+    aucun EPS ne passe. Ni sonde muette (elle discrimine), ni k coupable
+    (péremption minimale) — le résidu pointe AILLEURS, et le label le
+    dit. Les DEUX conditions restent exigées pour (i)."""
     valide, details = verifier_instrument([
         _mesure(1e-5, 0.070), _mesure(1e-2, 0.200)])
+    assert valide is False
     assert details["discrimination"]["a_discrimine"] is True
     assert details["eps_passants_a_k1"] == []
-    assert valide is False
+    assert details["branche"] == "iii"
+    assert details["label"] == LABEL_MECANISME_EN_QUESTION
+    assert "MÉCANISME DE REMONTÉE EN QUESTION" in details["label"]
+    assert "pointe AILLEURS" in details["lecture_preecrite"]
+
+
+def test_les_deux_attributions_de_la_branche_iii_sont_nommees_non_armees():
+    """Elles sont NOMMÉES avec leur falsificateur, et NON ARMÉES : les
+    armer est une décision de Romain, jamais un enchaînement."""
+    _, details = verifier_instrument([
+        _mesure(1e-5, 0.070), _mesure(1e-2, 0.200)])
+    attributions = details["attributions_branche_iii"]
+    assert attributions is not None
+    retard = attributions["a_retard_dune_frame"]
+    derive = attributions["b_derive_reference_incrementale"]
+    assert "retard d'une frame" in retard["enonce"]
+    assert "DÉCALÉE d'une frame" in retard["falsificateur"]
+    assert "incrémentale DÉRIVE" in derive["enonce"]
+    assert "PLEINE" in derive["falsificateur"]
+    assert retard["arme"] is False and derive["arme"] is False
+    assert "NON ARMÉES" in attributions["statut"]
+    assert "décision de Romain" in attributions["statut"]
+
+
+def test_les_attributions_nexistent_que_pour_la_branche_iii():
+    """(i) et (ii) ne portent aucune attribution — elles ont leur propre
+    lecture."""
+    for mesures in ([_mesure(1e-5, 0.010), _mesure(1e-2, 0.090)],
+                    [_mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)]):
+        _, details = verifier_instrument(mesures)
+        assert details["attributions_branche_iii"] is None
+
+
+def test_la_table_de_branches_est_close():
+    """Les trois branches couvrent TOUS les cas : discriminer ou non,
+    croisé avec au moins un EPS passant ou aucun. Aucune lecture ne peut
+    tomber hors table."""
+    cas = {
+        # (discrimine, un EPS passe) -> branche attendue
+        (True, True): "i",
+        (False, False): "ii",
+        (True, False): "iii",
+        # (False, True) : ne discrimine pas mais un EPS passe -> (ii),
+        # la muette prime, car sans discrimination le chiffre ne dit rien
+        # d'EPS même s'il tombe sous le seuil.
+        (False, True): "ii",
+    }
+    observees = set()
+    for (discrimine, passe), attendue in cas.items():
+        bas = 0.010 if passe else 0.070
+        haut = 0.090 if discrimine else bas * 1.001
+        _, details = verifier_instrument([_mesure(1e-5, bas),
+                                          _mesure(1e-2, haut)])
+        assert details["branche"] == attendue, (discrimine, passe)
+        assert details["label"] in TABLE_BRANCHES[attendue]
+        observees.add(details["branche"])
+    assert observees == {"i", "ii", "iii"}        # les trois exercées
+    assert set(TABLE_BRANCHES) == {"i", "ii", "iii"}
+
+
+def test_chaque_branche_porte_sa_lecture_preecrite():
+    for branche, texte in TABLE_BRANCHES.items():
+        assert texte.startswith(f"({branche})")
 
 
 def test_la_verification_nomme_la_frame_de_retard():

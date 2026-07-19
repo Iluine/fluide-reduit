@@ -28,13 +28,27 @@ par défaut**. Jamais de choix après courbe.
 balayage EPS est d'abord joué à **k=1**, et `lecture_mecanique` REFUSE de
 produire la lecture k=4 sans son PASS/FAIL enregistré (câblage « muette ⇒
 remonter », B9). Une sonde muette se détecte AVANT, pas après (§A14).
-Lectures pré-écrites : k=1 DISCRIMINE (Δχ répond à EPS **et** au moins un
-EPS passe) ⇒ **instrument VALIDE**, et l'AUTRE éventuel à k=4 est
-attribuable à la PÉREMPTION ; k=1 ne discrimine pas non plus ⇒ **sonde
-MUETTE sur EPS, AUTRE D'INSTRUMENT — ne rien régler, remonter**.
+TABLE DE BRANCHES COMPLÈTE ET CLOSE (§A19-complément-2) — aucune lecture
+ne peut tomber hors table :
+  **(i)** k=1 discrimine ET au moins un EPS passe ⇒ **INSTRUMENT VALIDE** ;
+      un AUTRE à k=4 est alors attribuable à la PÉREMPTION, pas au seuil ;
+  **(ii)** k=1 ne discrimine pas ⇒ **SONDE MUETTE sur EPS**, AUTRE
+      D'INSTRUMENT — ne rien régler, remonter ;
+  **(iii)** k=1 DISCRIMINE mais AUCUN EPS ne passe, 1e-5 compris ⇒
+      **MÉCANISME DE REMONTÉE EN QUESTION**. Ni sonde muette (elle
+      discrimine), ni k coupable (la péremption est minimale) : à k=1
+      avec EPS=1e-5 la remontée est quasi sans perte, donc un résidu
+      au-dessus du seuil pointe AILLEURS. DEUX ATTRIBUTIONS NOMMÉES, NON
+      ARMÉES — (a) le retard d'une frame suffit à lui seul, falsificateur
+      = comparer contre la vérité DÉCALÉE d'une frame ; (b) la référence
+      incrémentale DÉRIVE, falsificateur = comparer contre une remontée
+      PLEINE non incrémentale. Les armer est une décision de Romain à la
+      lecture, jamais un enchaînement : ce driver porte le LABEL, il ne
+      mesure ni l'une ni l'autre.
 NOTA : à k=1 subsiste la frame de retard du compteur (choix 6 de la borne
 L3) — la vérification teste la discrimination sous péremption MINIMALE,
-PAS NULLE.
+PAS NULLE. C'est précisément ce qui rend (iii) lisible : la péremption
+restante est minimale, pas nulle, et l'attribution (a) la nomme.
 
 **CE N'EST PAS UN BALAYAGE DE k** : deux valeurs seulement existent ici,
 k=4 (mesure, figée) et k=1 (vérification), et ce driver ne prononce RIEN
@@ -343,6 +357,49 @@ def discrimination_du_balayage(mesures: list[dict]) -> dict:
     }
 
 
+# TABLE DE BRANCHES, close §A19-complément-2 — aucune lecture ne peut
+# tomber hors table. La validité STRICTE (discriminer ET qu'un EPS passe)
+# a exposé un troisième cas, fermé ici AVANT toute donnée.
+LABEL_INSTRUMENT_VALIDE: str = "INSTRUMENT VALIDE"
+LABEL_SONDE_MUETTE: str = "SONDE MUETTE sur EPS"
+LABEL_MECANISME_EN_QUESTION: str = "MÉCANISME DE REMONTÉE EN QUESTION"
+
+TABLE_BRANCHES: dict[str, str] = {
+    "i": ("(i) INSTRUMENT VALIDE — l'observable répond à EPS sous "
+          "péremption minimale et au moins un EPS passe. Un AUTRE à k=4 "
+          "est alors attribuable à la PÉREMPTION, pas au seuil."),
+    "ii": ("(ii) SONDE MUETTE sur EPS — AUTRE D'INSTRUMENT : l'observable "
+           "ne répond pas à EPS même sous péremption minimale. Ne rien "
+           "régler, remonter."),
+    "iii": ("(iii) MÉCANISME DE REMONTÉE EN QUESTION — k=1 DISCRIMINE "
+            "mais AUCUN EPS ne passe, 1e-5 compris. Ni sonde muette "
+            "(elle discrimine), ni k coupable (la péremption est "
+            "minimale) : à k=1 avec EPS=1e-5 la remontée est quasi sans "
+            "perte, donc un résidu au-dessus du seuil pointe AILLEURS."),
+}
+
+# Les deux attributions de la branche (iii) : NOMMÉES, NON ARMÉES.
+# Les armer est une décision de Romain à la lecture, jamais un
+# enchaînement de ce driver.
+ATTRIBUTIONS_MECANISME: dict = {
+    "a_retard_dune_frame": {
+        "enonce": "le retard d'une frame suffit à lui seul",
+        "falsificateur": ("comparer contre la vérité DÉCALÉE d'une "
+                          "frame"),
+        "arme": False,
+    },
+    "b_derive_reference_incrementale": {
+        "enonce": "la référence incrémentale DÉRIVE",
+        "falsificateur": ("comparer contre une remontée PLEINE, non "
+                          "incrémentale"),
+        "arme": False,
+    },
+    "statut": ("NOMMÉES, NON ARMÉES — l'armement de l'une ou l'autre est "
+               "une décision de Romain à la lecture, jamais un "
+               "enchaînement. Ce driver ne mesure ni l'une ni l'autre."),
+}
+
+
 def verifier_instrument(mesures_k1: list[dict]) -> tuple[bool, dict]:
     """VÉRIFICATION D'INSTRUMENT (§A19-complément A) — bras k=1, même
     balayage EPS, DUE AVANT toute lecture. Précédent §A14 : une sonde
@@ -367,19 +424,27 @@ def verifier_instrument(mesures_k1: list[dict]) -> tuple[bool, dict]:
                 if m["delta_chi"]["delta_chi_max"] < SEUIL_IC_BAS]
     repond = discrimination["a_discrimine"]
     valide = bool(repond and passants)
+    if valide:
+        branche, label = "i", LABEL_INSTRUMENT_VALIDE
+    elif not repond:
+        branche, label = "ii", LABEL_SONDE_MUETTE
+    else:
+        branche, label = "iii", LABEL_MECANISME_EN_QUESTION
     details = {
         "cadence_verification": CADENCE_VERIFICATION,
         "discrimination": discrimination,
         "eps_passants_a_k1": passants,
         "instrument_valide": valide,
-        "lecture_preecrite": (
-            "instrument VALIDE : l'observable répond à EPS sous "
-            "péremption minimale — un AUTRE à k=4 est attribuable à la "
-            "PÉREMPTION, pas au seuil"
-            if valide else
-            "sonde MUETTE sur EPS : AUTRE D'INSTRUMENT — ne rien régler, "
-            "remonter. L'observable ne répond pas à EPS même sous "
-            "péremption minimale"),
+        "branche": branche,
+        "label": label,
+        "lecture_preecrite": TABLE_BRANCHES[branche],
+        "attributions_branche_iii": (ATTRIBUTIONS_MECANISME
+                                     if branche == "iii" else None),
+        "table_close": (
+            "table complète et CLOSE (§A19-complément-2) : aucune lecture "
+            "ne peut tomber hors table — (i) discrimine + un EPS passe ; "
+            "(ii) ne discrimine pas ; (iii) discrimine sans qu'aucun EPS "
+            "ne passe"),
         "nota_peremption_minimale": (
             f"à k={CADENCE_VERIFICATION} subsiste la frame de retard du "
             "compteur (choix 6 de la borne L3, endossé) : la "
@@ -621,8 +686,16 @@ def main() -> None:
     verif = lecture["verification_instrument"]
     print("-" * 78)
     print(f"  VÉRIFICATION D'INSTRUMENT (k={CADENCE_VERIFICATION}, DUE) : "
-          f"{'VALIDE' if verif['instrument_valide'] else 'SONDE MUETTE'}")
+          f"branche ({verif['branche']}) {verif['label']}")
     print(f"    {verif['lecture_preecrite']}")
+    if verif["attributions_branche_iii"]:
+        attributions = verif["attributions_branche_iii"]
+        print("    deux attributions NOMMÉES, NON ARMÉES :")
+        for cle in ("a_retard_dune_frame", "b_derive_reference_incrementale"):
+            entree = attributions[cle]
+            print(f"      - {entree['enonce']} ; falsificateur : "
+                  f"{entree['falsificateur']}")
+        print(f"      ({attributions['statut']})")
     print(f"    nota : {verif['nota_peremption_minimale']}")
     print(f"  seuil ic_bas = {SEUIL_IC_BAS}  (règle : le PLUS GRAND EPS "
           f"dont Δχ DÉCIMÉ max < seuil ; le non décimé est un "
