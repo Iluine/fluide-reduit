@@ -89,6 +89,29 @@ le moins cher » serait du raisonnement motivé, explicitement refusé.
 Kernels F et L3, chrono, substrats, pyramide : INTOUCHÉS. Coût : minutes,
 harnais existant. Sortie JSON SANS timestamp.
 
+────────────────────────────────────────────────────────────────────────
+LECTURES ACQUISES (§A19-lecture-diagnostic, pocCascade2phys 4062747)
+────────────────────────────────────────────────────────────────────────
+Ce module a tourné ; ses lectures sont retenues et inscrites ici pour
+qu'il ne porte plus d'attente déjà tranchée :
+  - **D-1(a) : readout PROPRE** — Δχ à blanc exactement nul. Aucun
+    plancher d'instrument. Le gate d'instrument de M-b est DÉGAGÉ, et
+    c'est ce qui autorise le réplicat de `run_f1_attribution_b.py` à
+    servir de plancher de bruit sans rien retrancher au préalable.
+  - **D-2 : APPAREIL** — le résidu vaut −0.162 ms. La règle de ce module
+    était logiquement FAUSSE (elle testait |écart| sans le signe) et son
+    seuil siégeait sous la dérive machine du jour (~0.18 ms) : les deux
+    fautes sont corrigées dans `lecture_d2`, qui reproduit désormais la
+    lecture retenue. L'appareil expliquait 0.822 ms ; le résidu est la
+    dérive machine.
+  - **D-1(b) : branche tirée, interprétation CONTREDITE** — le cumulé
+    (0.0892) dépasse le complet (0.0820). L'observable corrigé ne sera
+    donc PAS « cellules fraîches du cycle » : ce serait complaisant par
+    construction. Le seuil `FACTEUR_EFFONDREMENT` ci-dessous reste celui
+    qui a servi à cette lecture ; il n'est PAS réutilisé pour
+    l'attribution (b), qui nomme le sien et le confronte à un plancher de
+    bruit MESURÉ.
+
 Machine : iluin-tworings3, terminal natif UNIQUEMENT. Usage :
   .venv/bin/python scripts/run_f1_diagnostic_instrument.py
 
@@ -142,9 +165,17 @@ MEDIANE_SONDE_MS: float = 17.249       # sonde à EPS=1e-4
 MEDIANE_MA_QUATER_MS: float = 16.589   # M-a-quater, même config
 ECART_A_ATTRIBUER_MS: float = MEDIANE_SONDE_MS - MEDIANE_MA_QUATER_MS
 
-# Tolérance d'absorption de D-2 : en deçà, l'écart est tenu pour absorbé
-# (bruit de mesure) ; au-delà, il persiste. Nommée AVANT le run.
-TOLERANCE_ABSORPTION_MS: float = 0.15
+# Dérive machine du jour, MESURÉE (§A19-lecture-diagnostic) : c'est le
+# bruit connu côté temps. Tout seuil placé SOUS cette valeur se déclenche
+# sur la seule dérive — c'est la faute de seuil que la lecture du
+# diagnostic a corrigée.
+DERIVE_MACHINE_MS: float = 0.18
+
+# Tolérance d'absorption de D-2, nommée AVANT le run et RELEVÉE
+# STRICTEMENT AU-DESSUS de la dérive machine connue : en deçà, l'écart est
+# tenu pour absorbé ; au-delà — ET SEULEMENT VERS LE HAUT, cf.
+# `lecture_d2` — il persiste.
+TOLERANCE_ABSORPTION_MS: float = 0.25
 
 # Seuil d'« effondrement » de D-1(b), NON couvert par le gravé — le
 # pré-enregistrement dit « si le plancher s'effondre » sans le chiffrer.
@@ -363,10 +394,28 @@ def mesurer_d2(cp, k: int) -> dict:
 
 
 def lecture_d2(mesure: dict) -> dict:
-    """Lectures PRÉ-ÉCRITES de D-2 — l'écart est absorbé, ou il persiste."""
+    """Lectures PRÉ-ÉCRITES de D-2 — l'écart est absorbé, ou il persiste.
+
+    RÈGLE CORRIGÉE (§A19-lecture-diagnostic), sur deux fautes distinctes
+    de la version précédente :
+
+    1. **LE SIGNE.** La règle testait `|écart|`, ce qui est logiquement
+       FAUX. Un terme de production NON COMPTÉ ne peut que rendre la
+       mesure PLUS HAUTE — jamais plus basse. Un résidu NÉGATIF ne peut
+       donc pas le désigner : quelle que soit son ampleur, il ne peut
+       relever que de l'appareil et de la dérive machine. Seul un
+       DÉPASSEMENT VERS LE HAUT est recevable.
+    2. **LE NIVEAU.** La tolérance (0.15 ms) siégeait SOUS la dérive
+       machine du jour (~0.18 ms) : la dérive seule suffisait à déclencher
+       la branche « production ». Elle est relevée strictement au-dessus.
+
+    Contrôle rétrospectif : sur le résidu mesuré de −0.162 ms, l'ancienne
+    règle prononçait « TERME DE PRODUCTION NON COMPTÉ » ; la règle
+    corrigée prononce APPAREIL — ce que la lecture de Romain a retenu."""
     mediane = mesure["frame_time"]["mediane_ms"]
     ecart_vs_ma_quater = mediane - MEDIANE_MA_QUATER_MS
-    absorbe = bool(abs(ecart_vs_ma_quater) <= TOLERANCE_ABSORPTION_MS)
+    # Dépassement VERS LE HAUT seulement : le signe porte la logique.
+    absorbe = bool(ecart_vs_ma_quater <= TOLERANCE_ABSORPTION_MS)
     return {
         "mediane_nue_ms": mediane,
         "mediane_ma_quater_ms": MEDIANE_MA_QUATER_MS,
@@ -374,14 +423,22 @@ def lecture_d2(mesure: dict) -> dict:
         "ecart_a_attribuer_ms": ECART_A_ATTRIBUER_MS,
         "ecart_restant_ms": ecart_vs_ma_quater,
         "tolerance_absorption_ms": TOLERANCE_ABSORPTION_MS,
+        "derive_machine_ms": DERIVE_MACHINE_MS,
         "ecart_absorbe": absorbe,
+        "regle_orientee": (
+            "seul un dépassement VERS LE HAUT est recevable : un terme de "
+            "production non compté rend la mesure PLUS HAUTE, jamais plus "
+            "basse. Un résidu négatif relève de l'appareil et de la "
+            "dérive machine, quelle que soit son ampleur. La tolérance "
+            f"({TOLERANCE_ABSORPTION_MS} ms) siège strictement au-dessus "
+            f"de la dérive connue ({DERIVE_MACHINE_MS} ms)."),
         "lecture": (
             "écart ABSORBÉ : c'était l'APPAREIL de sonde entrant dans le "
             "chrono — sans conséquence sur V4"
             if absorbe else
-            "écart PERSISTANT : TERME DE PRODUCTION NON COMPTÉ — la marge "
-            "de V4 est entamée, et le contrôle T1 de M-b (verdictal, Q3) "
-            "s'appliquera à ce total"),
+            "écart PERSISTANT VERS LE HAUT : TERME DE PRODUCTION NON "
+            "COMPTÉ — la marge de V4 est entamée, et le contrôle T1 de "
+            "M-b (verdictal, Q3) s'appliquera à ce total"),
         "preuve_appareil_hors_boucle": mesure["preuve_appareil_hors_boucle"],
     }
 

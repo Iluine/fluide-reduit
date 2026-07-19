@@ -17,6 +17,7 @@ import pytest
 
 from scripts.run_f1_diagnostic_instrument import (
     CADENCE_FIGEE_DIAGNOSTIC,
+    DERIVE_MACHINE_MS,
     ECART_A_ATTRIBUER_MS,
     EPS_FIGE,
     FACTEUR_EFFONDREMENT,
@@ -246,8 +247,40 @@ def test_ecart_persistant_designe_un_terme_de_production():
         ECART_A_ATTRIBUER_MS, abs=0.001)
 
 
+def test_un_residu_negatif_ne_peut_pas_designer_la_production():
+    """CORRECTION §A19-lecture-diagnostic : la règle testait |écart|, ce
+    qui est logiquement FAUX. Un terme de production non compté rend la
+    mesure PLUS HAUTE, jamais plus basse — un résidu négatif ne peut donc
+    relever que de l'appareil, quelle que soit son AMPLEUR."""
+    for ecart in (-0.162, -0.5, -3.0):
+        lecture = lecture_d2(_mesure_d2(MEDIANE_MA_QUATER_MS + ecart))
+        assert lecture["ecart_absorbe"] is True, ecart
+        assert "APPAREIL" in lecture["lecture"]
+    assert "PLUS HAUTE, jamais plus" in lecture_d2(
+        _mesure_d2(MEDIANE_MA_QUATER_MS))["regle_orientee"]
+
+
+def test_la_regle_corrigee_reproduit_la_lecture_retenue():
+    """Contrôle rétrospectif sur le résidu RÉELLEMENT mesuré (−0.162 ms) :
+    l'ancienne règle prononçait « production non comptée », la corrigée
+    prononce APPAREIL — ce que Romain a retenu."""
+    lecture = lecture_d2(_mesure_d2(MEDIANE_MA_QUATER_MS - 0.162))
+    assert lecture["ecart_restant_ms"] == pytest.approx(-0.162, abs=1e-9)
+    assert lecture["ecart_absorbe"] is True
+    assert abs(-0.162) > 0.15      # l'ancienne règle |écart| se déclenchait
+
+
+def test_la_tolerance_siege_au_dessus_de_la_derive_machine():
+    """Seconde faute corrigée : un seuil placé SOUS le bruit connu se
+    déclenche sur la seule dérive machine."""
+    assert DERIVE_MACHINE_MS == 0.18
+    assert TOLERANCE_ABSORPTION_MS == 0.25
+    assert TOLERANCE_ABSORPTION_MS > DERIVE_MACHINE_MS
+    derive_seule = _mesure_d2(MEDIANE_MA_QUATER_MS + DERIVE_MACHINE_MS)
+    assert lecture_d2(derive_seule)["ecart_absorbe"] is True
+
+
 def test_la_tolerance_dabsorption_est_nommee_avant_le_run():
-    assert TOLERANCE_ABSORPTION_MS == 0.15
     limite = MEDIANE_MA_QUATER_MS + TOLERANCE_ABSORPTION_MS
     assert lecture_d2(_mesure_d2(limite))["ecart_absorbe"] is True
     assert lecture_d2(_mesure_d2(limite + 1e-6))["ecart_absorbe"] is False
