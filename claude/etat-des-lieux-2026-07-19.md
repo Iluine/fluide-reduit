@@ -50,6 +50,13 @@ mesuré, pas argumenté.
 cycles/degré, budget compresseur 32, n=1 (Romain), calibration écran gravée.
 Consommateurs servis : §A12, §A13, §A14, et tous les seuils F1.
 
+**Précision qui porte tout le reste** : le pin est mesuré sur le **READOUT
+D'INSTRUMENT** (albedo + delta_chi en bandes porteuses) — un appareil construit pour
+COMPARER, pas un rendu destiné à être vu. Le transfert de ce pin vers l'image que le
+joueur verra réellement (éclairée, texturée, tone-mappée, avec AA temporel) est la
+dette **albédo→luminance** (§C4-3) — et elle est **INFALSIFIABLE tant qu'aucun rendu
+n'existe** (§4.5). Tous les seuils du projet reposent sur cette transposition.
+
 ### 1.3 Le moteur (F1) — le modèle de coût, mesuré terme à terme
 
 | terme | chiffre | note |
@@ -114,16 +121,25 @@ dérive machine du jour **−1.1 %**.
 
 Aucun n'est crédité d'avance ; **tous ajoutent du coût, aucun n'en retire.**
 
+**Les deux premiers sont la MOITIÉ « PROJECTION » de la thèse** — les readouts
+co-égaux par lesquels `z` devient perceptible. Elle n'a jamais été construite.
+
 1. **Le SON.** Co-égal à l'image dans la thèse fondatrice. Zéro mesure, zéro spec,
-   zéro ligne. C'est le plus gros angle mort du projet.
-2. **Le substrat-jeu réel.** Tout le budget moteur est mesuré sur un **proxy**
+   zéro ligne. Rien ne l'a jamais gaté : il n'a simplement jamais été appelé.
+2. **L'IMAGE RENDUE.** *N'existe pas non plus.* Ce qui existe est un **readout
+   d'instrument** (albedo + delta_chi), fait pour comparer — pas pour être vu. Le
+   moteur de rendu réel doit sortir d'une pyramide de Harten avec fovéa, lointain
+   venu du grossier CPU : ce n'est pas une rastérisation ordinaire. Conséquences :
+   (a) le motif de T2 réserve *l'autre moitié* de la frame au rendu — V4 à 16.589 ms
+   signifie donc « 30 fps avec ~16.7 ms pour un rendu **jamais mesuré** » ; (b) la
+   dette albédo→luminance (§1.2) reste infalsifiable ; (c) « le moteur tient » ne peut
+   pas être prononcé tant que la moitié affichage du budget est vide.
+3. **Le substrat-jeu réel.** Tout le budget moteur est mesuré sur un **proxy**
    (v2-sédiment, `c=8` enveloppe de travail). Le contrôle T1 (devenu **verdictal**)
    existe précisément pour ça — mais si le v-jeu est plus lourd, tout se rejoue.
-3. **Le niveau 0 CPU à 500k cellules** : le harnais en mesure 65k — ×7.6 non mesuré.
-4. **Le calcul 3D** : la note VRAM borne la *mémoire* (~64³) ; le **calcul** n'a aucune
+4. **Le niveau 0 CPU à 500k cellules** : le harnais en mesure 65k — ×7.6 non mesuré.
+5. **Le calcul 3D** : la note VRAM borne la *mémoire* (~64³) ; le **calcul** n'a aucune
    ancre.
-5. **Le rendu** : hors budget T2 par construction. « Où vit-il ? » est nommé à la
-   porte 33.3, pas répondu.
 6. **Les fenêtres d'énergie comme ressource de gameplay** : budgétées dans V4 (2 slots),
    jamais exercées par un contenu réel.
 7. **Le cadencement temporel** : « 1 pas de F par fenêtre par frame » est une hypothèse
@@ -157,6 +173,15 @@ et huit pieds non mesurés qui tous coûtent. Dire « le moteur tient » aujourd
 surclamer ; ce qui est établi est : *le moteur tient au seuil, sur un proxy, à cette
 enveloppe, sur cette machine.*
 
-**Le déséquilibre.** L'histoire persistante — le différenciateur — est mesurée et solide.
-Le moteur est mesuré et serré. Le **son** n'existe pas. Si la thèse tient l'image et le
-son pour co-égaux, le projet a une moitié de thèse sans une seule ligne.
+**Le déséquilibre — corrigé le 2026-07-19 après remarque de Romain.** Le premier cadrage
+(« image mesurée, son absent ») était FAUX : **l'image rendue n'existe pas davantage que
+le son.** Ce qui existe est un readout d'INSTRUMENT, fait pour comparer, pas pour être vu.
+La thèse tient `z` pour source unique et l'image *et* le son pour projections co-égales :
+la moitié **ÉTAT** (z, F, registre, fovéa, budget) est mesurée, chiffrée, gatée,
+disciplinée — la moitié **PROJECTION** n'a jamais été construite, ni pour l'image, ni pour
+le son. Et c'est sur elle que reposent tous les seuils, via le pin (§1.2) et sa dette
+albédo→luminance, aujourd'hui infalsifiable.
+
+Conséquence sur ce qu'on a le droit de dire : « le moteur tient » est hors de portée tant
+que la moitié affichage du budget T2 est vide. Ce qui est établi reste : *la physique
+tient au seuil, sur un proxy, à cette enveloppe, sur cette machine, le rendu non compté.*
