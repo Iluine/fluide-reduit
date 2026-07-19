@@ -31,7 +31,23 @@ même fenêtre, `pas_f_fusionne` et `pas_f_jetable` produisent le même état
 (associativité), pas une physique différente.
 
 CAP GRAVÉ (§A15-lecture-M-a) : DERNIÈRE escalade d'implémentation — aucun
-CUDA Graphs, aucun exotique au-delà de ce fichier."""
+CUDA Graphs, aucun exotique au-delà de ce fichier.
+
+S1 (§A16-complément, pocCascade2phys 03f2534) — GARDE ÉLARGIE À {1, 2}
+SYSTÈMES : le re-épinglage V2 (c dégressif) produit des slots à c=4, donc
+des blocs à UN système, et des comptes impairs en permanence. La garde
+d'entrée exigeait des paires ; elle est un artefact d'INSTRUMENT (un
+assert), pas le calcul — modifier le design épinglé pour satisfaire
+l'assert aurait été l'inversion interdite. Padding (surcompte 0.843 ms =
+autre config) et recomposition à 18 slots (design piloté par l'assert)
+sont REJETÉS et gravés comme tels. CE QUI A CHANGÉ : la seule condition
+de la garde. CE QUI N'A PAS CHANGÉ : le kernel CUDA (`_SOURCE`), à diff
+VIDE — il était déjà générique en systèmes (`bloc_ws = t / nn`, `total`
+dérivé de la shape), aucun chemin de calcul ne lisait `shape[1] == 2`.
+Trois verrous testés (`tests/test_f1_substrat_fusionne.py`) : source du
+kernel bit-identique à la version pré-S1, chemin 2-systèmes BIT-IDENTIQUE
+(c'est lui qui porte l'ancre M-a′), chemin 1-système — NEUF, et dont le
+coût est un objet de la mesure — équivalent au jetable mono-système."""
 from __future__ import annotations
 
 import numpy as np
@@ -52,7 +68,9 @@ _NOM_KERNEL: str = "etage_ssp_wetdry_o2"
 
 # Le kernel : UN étage q_out = w_base·q_base + (1−w_base)·(q_in + dt·L(q_in))
 # + plancher sec — w_base = 0 (étage 1), 0.5 (étage 2). Layout contigu
-# (B, 2, 4, n, n) f32 ; un thread = une cellule d'un bloc (fenêtre, système).
+# (B, S, 4, n, n) f32, S ∈ {1, 2} ; un thread = une cellule d'un bloc
+# (fenêtre, système). Le kernel n'a JAMAIS lu S : il itère `total` blocs
+# aplatis — c'est pourquoi S1 n'y touche pas (diff vide, testé).
 _SOURCE: str = r"""
 #define G """ + f"{GRAVITE}f" + r"""
 #define DRY_EPS """ + f"{DRY_EPS}f" + r"""
@@ -259,9 +277,10 @@ def pas_f_fusionne(q, cp, sortie=None, tampon_etage=None) -> tuple:
     Retourne (q_suivant, dt_cfl_diagnostic) — signature du jetable."""
     if q.dtype != cp.float32:
         raise ValueError(f"pas_f_fusionne : dtype {q.dtype} != float32.")
-    if q.ndim != 5 or q.shape[2] != 4 or q.shape[1] != 2:
+    if q.ndim != 5 or q.shape[2] != 4 or q.shape[1] not in (1, 2):
         raise ValueError(
-            f"pas_f_fusionne : shape {q.shape} != (B, 2, 4, n, n) (E4a).")
+            f"pas_f_fusionne : shape {q.shape} != (B, S, 4, n, n) avec "
+            "S ∈ {1, 2} systèmes (E4a).")
     q = cp.ascontiguousarray(q)
     dt_cfl = reduction_cfl(q, cp)
 
