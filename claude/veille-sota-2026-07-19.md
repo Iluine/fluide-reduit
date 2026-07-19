@@ -192,12 +192,27 @@ C'est le résultat le plus inconfortable de cette veille.
    Les artefacts documentés de PERSIST (objets qui disparaissent, collisions mal
    prédites) et leur propre aveu (*« physical inconsistencies not captured by the FVD »*)
    sont la meilleure formulation du problème que Cascade prétend résoudre — à citer.
-2. **Rechercher la nouveauté dans le couplage**, pas dans la fovéa : *budget
-   d'emplacements borné par l'observation* × *colonne persistante committée à budget
-   aire-proportionnel*. Aucun des travaux trouvés ne fait les deux.
-3. **Emprunter au lieu de redériver** : `r_fovea` et le cadencement ont des modèles
-   perceptuels publiés. Cela peut alléger une campagne gatée sur le chemin critique.
-4. **Brevets — point RÉDUIT (Romain, 2026-07-19)** : les deux références trouvées sont
+2. **CADRAGE CORRIGÉ (Romain, 2026-07-19) : Cascade ne fait pas de recherche, Cascade
+   fait un jeu.** Les §1–§3 ci-dessus ont été écrits en réflexe de chercheur —
+   antériorité, nouveauté, « qui a publié quoi ». Pour un projet de jeu, **« c'est
+   publié » est une BONNE nouvelle** : l'approche est validée par d'autres, et l'étude
+   perceptuelle qu'on comptait payer est déjà faite. Le mot « encombré » était mal
+   choisi. La seule question qui compte vraiment ici : *est-ce que quelqu'un peut
+   sortir le jeu avant nous ?* — et la réponse, vu les 0,37 FPS et les 7 000 GPU-heures
+   de PERSIST, est non par cette voie-là.
+3. **Différence d'approche, décisive et à ne pas perdre** : chez PERSIST l'image est
+   **générée** par un shader neuronal libre de *« learn arbitrary rendering functions »*
+   et de prédire ce que la 3D ne porte pas — d'où une texture qui dérive **pendant que
+   l'état 3D reste stable** (leur pas 1296). Chez Cascade l'image (et le son) sont des
+   **conséquences déterministes de `z`** : optique et acoustique appliquées à l'état.
+   `z` stable ⇒ image stable, par construction ; et l'image devient **falsifiable
+   contre l'état**, question que PERSIST ne peut structurellement pas poser. Corollaire
+   honnête : **le coût de cette projection n'est mesuré ni pour l'optique ni pour
+   l'auditif** — faisabilité hors de question, chiffrage entièrement ouvert.
+4. **Emprunter au lieu de redériver** : `r_fovea` et le cadencement ont des modèles
+   perceptuels publiés ; le son a une littérature mature (synthèse modale). Cela peut
+   alléger une campagne gatée sur le chemin critique.
+5. **Brevets — point RÉDUIT (Romain, 2026-07-19)** : les deux références trouvées sont
    des brevets **US**, donc territoriaux — sans effet en France. Vérification résiduelle,
    dix minutes le jour où ça compte : la famille a-t-elle des membres **EP** ? Nuance à
    ne pas perdre : l'art. 52 CBE exclut les programmes d'ordinateur *« en tant que
@@ -207,7 +222,7 @@ C'est le résultat le plus inconfortable de cette veille.
    par nature. Information, pas conseil juridique. **Ce point n'est pas le sujet** : le
    vrai enjeu de §2 est que le pilier est *publié* — ce qu'aucune juridiction n'efface,
    et qui déplace la nouveauté vers le **couplage**, pas vers la fovéa.
-5. **Le son a un champ** : quand il sera appelé, ce sera de l'intégration, pas de
+6. **Le son a un champ** : quand il sera appelé, ce sera de l'intégration, pas de
    l'invention.
 
 ## 5. Limites de cette veille

@@ -53,9 +53,12 @@ Consommateurs servis : §A12, §A13, §A14, et tous les seuils F1.
 **Précision qui porte tout le reste** : le pin est mesuré sur le **READOUT
 D'INSTRUMENT** (albedo + delta_chi en bandes porteuses) — un appareil construit pour
 COMPARER, pas un rendu destiné à être vu. Le transfert de ce pin vers l'image que le
-joueur verra réellement (éclairée, texturée, tone-mappée, avec AA temporel) est la
-dette **albédo→luminance** (§C4-3) — et elle est **INFALSIFIABLE tant qu'aucun rendu
-n'existe** (§4.5). Tous les seuils du projet reposent sur cette transposition.
+joueur verra réellement est la dette **albédo→luminance** (§C4-3), aujourd'hui
+infalsifiable faute de rendu. Tous les seuils du projet reposent dessus.
+**Atténuation nommée (2026-07-19)** : le rendu visé étant une **fonction déterministe
+de `z`** (optique appliquée à l'état, §4), readout d'instrument et rendu ne sont pas
+deux mondes séparés — le pin pourra se transporter par CONSTRUCTION plutôt que par
+hypothèse, la dette rétrécit d'autant. Elle ne disparaît qu'une fois le rendu écrit.
 
 ### 1.3 Le moteur (F1) — le modèle de coût, mesuré terme à terme
 
@@ -124,16 +127,32 @@ Aucun n'est crédité d'avance ; **tous ajoutent du coût, aucun n'en retire.**
 **Les deux premiers sont la MOITIÉ « PROJECTION » de la thèse** — les readouts
 co-égaux par lesquels `z` devient perceptible. Elle n'a jamais été construite.
 
+**Nature de cette moitié, précisée (Romain, 2026-07-19)** : chez Cascade, image et son
+sont des **conséquences déterministes de `z`** — optique et acoustique appliquées à
+l'état, pas génération. C'est l'opposé de l'approche PERSIST, dont le shader neuronal
+*« can learn arbitrary rendering functions »* et prédit *« information not provided by
+3D latents (texture, lighting, particle effects…) »* — d'où leur dérive de texture
+**alors que leur état 3D reste stable** (leur pas 1296). Une projection optique ne peut
+pas dériver ainsi : `z` stable ⇒ image stable, par construction. Conséquences :
+- **la faisabilité n'est pas la question** — c'est de l'ingénierie connue, pas de la
+  recherche ; **le COÛT l'est entièrement, et il n'est mesuré NI pour l'optique NI pour
+  l'auditif** ;
+- l'image devient **falsifiable contre l'état** (« ce readout est-il la projection
+  correcte de `z` ? ») — question que PERSIST ne peut structurellement pas poser,
+  son état étant lui aussi généré ;
+- la dette **albédo→luminance rétrécit** : si le rendu est une fonction déterministe de
+  `z`, le pin se transporte par CONSTRUCTION au lieu de par hypothèse (§1.2).
+
 1. **Le SON.** Co-égal à l'image dans la thèse fondatrice. Zéro mesure, zéro spec,
-   zéro ligne. Rien ne l'a jamais gaté : il n'a simplement jamais été appelé.
+   zéro ligne. Rien ne l'a jamais gaté : il n'a simplement jamais été appelé. Son coût
+   n'est pas plus mesuré que celui de l'image.
 2. **L'IMAGE RENDUE.** *N'existe pas non plus.* Ce qui existe est un **readout
-   d'instrument** (albedo + delta_chi), fait pour comparer — pas pour être vu. Le
-   moteur de rendu réel doit sortir d'une pyramide de Harten avec fovéa, lointain
-   venu du grossier CPU : ce n'est pas une rastérisation ordinaire. Conséquences :
-   (a) le motif de T2 réserve *l'autre moitié* de la frame au rendu — V4 à 16.589 ms
-   signifie donc « 30 fps avec ~16.7 ms pour un rendu **jamais mesuré** » ; (b) la
-   dette albédo→luminance (§1.2) reste infalsifiable ; (c) « le moteur tient » ne peut
-   pas être prononcé tant que la moitié affichage du budget est vide.
+   d'instrument** (albedo + delta_chi), fait pour comparer — pas pour être vu. Le rendu
+   réel doit projeter une pyramide de Harten creuse avec fovéa, lointain venu du
+   grossier CPU : ce n'est pas une rastérisation ordinaire, et ça occupe *l'autre
+   moitié* de la frame que le motif de T2 réserve. **V4 à 16.589 ms signifie donc
+   « 30 fps avec ~16.7 ms pour un rendu jamais chiffré ».** « Le moteur tient » reste
+   hors de portée tant que cette moitié est vide.
 3. **Le substrat-jeu réel.** Tout le budget moteur est mesuré sur un **proxy**
    (v2-sédiment, `c=8` enveloppe de travail). Le contrôle T1 (devenu **verdictal**)
    existe précisément pour ça — mais si le v-jeu est plus lourd, tout se rejoue.
