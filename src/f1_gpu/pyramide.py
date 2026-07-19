@@ -301,17 +301,31 @@ class PyramideFovea:
     `pas_f` (§A16) : l'applicateur de F, injectable — défaut
     `appliquer_jetable` (M-a/M-c, inchangés). M-a-ter injecte
     l'applicateur du kernel FUSIONNÉ ; la signature est
-    `pas_f(fenetres, xp, sortie) -> (etat, dt_cfl)`."""
+    `pas_f(fenetres, xp, sortie) -> (etat, dt_cfl)`.
+
+    `remontee_active` (§A16-lecture-M-a-ter, sonde d'attribution) : met
+    l'étage de REMONTÉE B4 hors service pour isoler le coût de F. CE QUE
+    L'OFF RETIRE — du TRAVAIL, uniquement : la soustraction
+    `fen − ref`, le seuillage `|d| >= eps`, l'indexation booléenne et le
+    `flatnonzero` (compaction), les DEUX D2H, et la mise à jour
+    incrémentale de la référence. CE QUE L'OFF NE RETIRE PAS — la
+    STRUCTURE : `references[j]` reste PRÉALLOUÉ à sa shape pleine (B2
+    identique, même résidence, même pression sur le mempool), la boucle
+    de niveaux est la même, F s'applique aux mêmes buffers aux mêmes
+    shapes. On mesure une pyramide amputée de son travail de remontée,
+    pas une pyramide plus petite. `False` n'est JAMAIS un défaut : M-a,
+    M-c et M-a-ter gardent la remontée."""
 
     def __init__(self, xp, geo: GeometriePyramide,
                  transferts: TransfertComptable,
                  graine: int = GRAINE_MONDE, eps_detail: float = EPS_DETAIL,
-                 pas_f=appliquer_jetable):
+                 pas_f=appliquer_jetable, remontee_active: bool = True):
         self.xp = xp
         self.geo = geo
         self.transferts = transferts
         self.eps_detail = float(eps_detail)
         self.pas_f = pas_f
+        self.remontee_active = bool(remontee_active)
         self.centre_fin = geo.centre_fin_initial()
         self.monde0 = etat_initial_jetable(1, geo.n0, graine)[0]  # CPU f32
         self.fenetres: dict[int, object] = {}
@@ -410,17 +424,21 @@ class PyramideFovea:
             _, dt_cfl = self.pas_f(fen, xp, fen)
 
             # 3. Remontée : coefficients de détail seuillés (B4/E4d).
-            d = fen - ref
-            masque = xp.abs(d) >= self.eps_detail
-            valeurs = d[masque]
-            indices = xp.flatnonzero(masque).astype(xp.uint32)
-            self.transferts.remonter(valeurs)
-            self.transferts.remonter(indices)
-            ref += xp.where(masque, d, xp.float32(0.0))
-            nnz_par_niveau[str(j)] = int(valeurs.size)
+            # `remontee_active=False` (sonde d'attribution) saute le
+            # TRAVAIL de cet étage ; `ref` reste alloué et intact.
+            if self.remontee_active:
+                d = fen - ref
+                masque = xp.abs(d) >= self.eps_detail
+                valeurs = d[masque]
+                indices = xp.flatnonzero(masque).astype(xp.uint32)
+                self.transferts.remonter(valeurs)
+                self.transferts.remonter(indices)
+                ref += xp.where(masque, d, xp.float32(0.0))
+                nnz_par_niveau[str(j)] = int(valeurs.size)
 
         return {"niveaux_deplaces": niveaux_deplaces,
                 "nnz_par_niveau": nnz_par_niveau,
+                "remontee_active": self.remontee_active,
                 "dt_cfl_dernier": float(dt_cfl)}
 
     # ----- comptes rendus -----
