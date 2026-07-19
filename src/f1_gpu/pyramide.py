@@ -278,6 +278,41 @@ class GeometriePyramide:
                 "par_niveau": par_niveau, "par_role": par_role}
 
 
+def predire_fenetre_cpu(monde0: np.ndarray, geo: GeometriePyramide, j: int,
+                        oy: int, ox: int, x_debut: int, x_fin: int,
+                        n_systemes: int) -> np.ndarray:
+    """Prédiction voisin (motif M6, B4) du bloc [oy:oy+n_fov) x
+    [ox+x_debut:ox+x_fin) du niveau j depuis `monde0` — indices sources
+    clippés au monde 0 (fenêtres clampées, B3). Les `n_systemes` premiers
+    systèmes du monde 0 sont pris (c=4 => 1 système : le contenu jetable
+    n'est pas l'objet de la mesure).
+
+    Fonction de MODULE (et non méthode) pour qu'un driver à orchestration
+    BATCHÉE prédise exactement le même travail que `PyramideFovea` —
+    aucune ré-implémentation, donc aucune omission possible (§A17)."""
+    facteur = 2 ** j
+    iy = np.clip((oy + np.arange(geo.n_fov)) // facteur, 0, geo.n0 - 1)
+    ix = np.clip((ox + np.arange(x_debut, x_fin)) // facteur, 0, geo.n0 - 1)
+    return monde0[:n_systemes, :, iy[:, None], ix[None, :]]
+
+
+def predire_bloc_cpu(monde0: np.ndarray, geo: GeometriePyramide, j: int,
+                     origines: list[tuple[int, int]], x_debut: int,
+                     x_fin: int, n_systemes: int) -> np.ndarray:
+    """Bloc batché (len(origines), n_systemes, 4, n_fov, x_fin−x_debut)
+    f32 — UNE descente par niveau (B4)."""
+    return np.stack([
+        predire_fenetre_cpu(monde0, geo, j, oy, ox, x_debut, x_fin,
+                            n_systemes)
+        for oy, ox in origines])
+
+
+def monde0_jetable(geo: GeometriePyramide,
+                   graine: int = GRAINE_MONDE) -> np.ndarray:
+    """Niveau 0 CPU (2, 4, N0, N0) f32 — la source de toute prédiction."""
+    return etat_initial_jetable(1, geo.n0, graine)[0]
+
+
 def appliquer_jetable(fenetres, xp, sortie):
     """Applicateur de F par DÉFAUT : le F jetable (a1, B5) — accepte 1 ou
     2 systèmes tel quel (aucune contrainte de parité)."""
@@ -327,7 +362,7 @@ class PyramideFovea:
         self.pas_f = pas_f
         self.remontee_active = bool(remontee_active)
         self.centre_fin = geo.centre_fin_initial()
-        self.monde0 = etat_initial_jetable(1, geo.n0, graine)[0]  # CPU f32
+        self.monde0 = monde0_jetable(geo, graine)                 # CPU f32
         self.fenetres: dict[int, object] = {}
         self.references: dict[int, object] = {}
         self._origines: dict[int, list[tuple[int, int]]] = {}
@@ -341,29 +376,15 @@ class PyramideFovea:
 
     # ----- prédiction CPU depuis le niveau 0 (B4) -----
 
-    def _predire_fenetre_cpu(self, j: int, oy: int, ox: int,
-                             x_debut: int, x_fin: int,
-                             n_systemes: int) -> np.ndarray:
-        """Prédiction voisin (motif M6) du bloc [oy:oy+n_fov) x
-        [ox+x_debut:ox+x_fin) du niveau j depuis `monde0` — indices
-        sources clippés au monde 0 (fenêtres clampées, B3). Les
-        `n_systemes` premiers systèmes du monde 0 sont pris (c=4 => 1
-        système : le contenu jetable n'est pas l'objet de la mesure)."""
-        geo = self.geo
-        facteur = 2 ** j
-        iy = np.clip((oy + np.arange(geo.n_fov)) // facteur, 0, geo.n0 - 1)
-        ix = np.clip((ox + np.arange(x_debut, x_fin)) // facteur,
-                     0, geo.n0 - 1)
-        return self.monde0[:n_systemes, :, iy[:, None], ix[None, :]]
-
     def _predire_niveau_cpu(self, j: int, origines: list[tuple[int, int]],
                             x_debut: int, x_fin: int) -> np.ndarray:
         """Bloc batché (n_slots(j), n_systemes(j), 4, n_fov, x_fin−x_debut)
-        f32 — UNE descente par niveau (B4)."""
-        n_systemes = self.geo.n_systemes_du_niveau(j)
-        return np.stack([
-            self._predire_fenetre_cpu(j, oy, ox, x_debut, x_fin, n_systemes)
-            for oy, ox in origines])
+        f32 — UNE descente par niveau (B4). Délègue à `predire_bloc_cpu`
+        (fonction de module) : les drivers batchés appellent la MÊME, donc
+        prédisent exactement le même travail."""
+        return predire_bloc_cpu(
+            self.monde0, self.geo, j, origines, x_debut, x_fin,
+            self.geo.n_systemes_du_niveau(j))
 
     # ----- la frame -----
 
