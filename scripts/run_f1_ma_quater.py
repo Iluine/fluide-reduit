@@ -129,7 +129,17 @@ OUT_DIR = ROOT / "outputs" / "f1"
 OUT_JSON_PATH = OUT_DIR / "ma_quater.json"
 
 # Chiffres GRAVÉS — consommés en lecture mécanique SEULEMENT.
-BANDE_MS: tuple[float, float] = (14.2, 15.9)   # recalculée avec L1 k=4
+# BANDE_MS RECOMPOSÉE à EPS=1e-2 (§A24, b6c8807). L'ancienne [14.2, 15.9]
+# incluait des transferts ~2.4 ms ; à 1e-2 ils tombent à 0.110 et elle ne
+# testait plus rien. Recomposition depuis les ancres mesurées :
+#   point (prédiction≈0) = F 12.655 + remontée 5.122/4=1.280 + transferts
+#                          0.110 = 14.045 ms ;
+#   bande d'incertitude : ± (dérive chrono 0.18 + amortissement L1 0.10),
+#   la prédiction étant un PLANCHER unilatéral [0, ~0.5] (elle ne peut
+#   qu'ajouter). D'où [14.045 − 0.28 ; 14.045 + 0.28 + 0.5] ≈ [13.8, 14.8].
+# Le mesuré 14.490 y tombe (+0.445 au-dessus du plancher, = la prédiction
+# solde, petite et positive — pas un AUTRE ; cf. rapport §A24).
+BANDE_MS: tuple[float, float] = (13.8, 14.8)
 F_BATCHE_V4_MS: float = 12.655                 # ancres 1.685 / 0.845
 REMONTEE_L3_MESUREE_MS: float = 5.122          # borne L3
 CADENCE_L1: int = 4                            # k, armé round-robin
@@ -616,8 +626,10 @@ def lecture_mecanique(chrono_stats: dict, transferts_ms: float,
         "bande_modele": {
             "bande_ms": [bas, haut],
             "hors_bande": bool(not bas <= mediane <= haut),
-            "origine": ("recalculée avec L1 k=4 (§A18-lecture-borne-L3), "
-                        "remplace [13.9, 17.2]"),
+            "origine": ("RECOMPOSÉE à EPS=1e-2 (§A24) : F 12.655 + "
+                        "remontée 1.280 + transferts 0.110, prédiction "
+                        "plancher unilatéral ; remplace [14.2, 15.9] qui "
+                        "incluait ~2.4 ms de transferts"),
             "branche_preecrite_si_hors_bande": "AUTRE remonté",
         },
         "parts": parts_derivees(mediane, transferts_ms, k),

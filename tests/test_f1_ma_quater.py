@@ -330,12 +330,15 @@ def test_mort_sur_la_mediane_frame_complete():
     assert _lecture(16.8)["mort"]["seuil_ms"] == B_FRAME_MS
 
 
-def test_bande_recalculee_avec_l1():
-    lecture = _lecture(15.0)
-    assert lecture["bande_modele"]["bande_ms"] == [14.2, 15.9]
+def test_bande_recomposee_a_eps_1e_2():
+    """§A24 : la bande est recomposée à 1e-2 depuis les ancres. Le mesuré
+    14.490 y tombe (pas un AUTRE) ; 13.0 et 15.0 en sortent."""
+    lecture = _lecture(14.490)
+    assert lecture["bande_modele"]["bande_ms"] == [13.8, 14.8]
     assert lecture["bande_modele"]["hors_bande"] is False
-    assert _lecture(13.0)["bande_modele"]["hors_bande"] is True
-    assert "L1 k=4" in lecture["bande_modele"]["origine"]
+    assert _lecture(13.0)["bande_modele"]["hors_bande"] is True   # sous
+    assert _lecture(15.0)["bande_modele"]["hors_bande"] is True   # au-dessus
+    assert "EPS=1e-2" in lecture["bande_modele"]["origine"]
 
 
 def test_p99_est_reportee_en_evidence():
@@ -379,9 +382,12 @@ def test_le_driver_ne_prononce_rien():
 
 
 def test_constantes_gravees():
-    assert BANDE_MS == (14.2, 15.9)
+    assert BANDE_MS == (13.8, 14.8)          # recomposée à 1e-2 (§A24)
     assert F_BATCHE_V4_MS == 12.655
     assert REMONTEE_L3_MESUREE_MS == 5.122
+    # cohérence de la recomposition : le point plancher (prédiction≈0)
+    assert F_BATCHE_V4_MS + REMONTEE_L3_MESUREE_MS / CADENCE_L1 + 0.110 == \
+        pytest.approx(14.045, abs=0.001)
     assert CADENCE_L1 == 4
     assert B_FRAME_MS == 16.7
 
