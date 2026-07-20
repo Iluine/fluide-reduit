@@ -1,0 +1,82 @@
+{
+  "_note": "LECTURE versionnée (§A23 b6c8807, partie 2a). D-1 est SUPERSEDED (observable v1, artefact 0.082) — reproduit ici sans valeur ; seul D-2 (chrono nu) est lu.",
+  "meta": {
+    "mesure": "diagnostic d'instrument D-1/D-2 (§A19-lecture-sonde-EPS, pocCascade2phys 07ef6cc)",
+    "portee": "diagnostic d'INSTRUMENT — PAS une tentative de régler EPS. La branche (ii) est APPLIQUÉE : rien n'est réglé, EPS reste 0.0001 et k reste 4",
+    "pourquoi": "plancher 0.069 contre seuil de mort M-b 0.0733 (partagent les primitives de readout) : 6 % sous le seuil qui tue Option A. Le chiffrage de M-b est SUSPENDU à cette lecture",
+    "note_falsifiee": "l'explication « l'observable est gouverné par la péremption L1 » a été FALSIFIÉE par le bras k=1 (Δχ identique à 3 décimales entre k=1 et k=4) — elle n'est plus portée nulle part",
+    "levier_verrouille": "passer de 1e-4 à 1e-2 rendrait ~2.5 ms de transferts et ~1.8 ms de médiane — exactement ce qui manque à V4. INUTILISABLE : la non-discrimination signifie que l'observable ne VOIT pas EPS, pas qu'il n'y a rien à voir. « Prenons le moins cher » serait du raisonnement motivé, refusé.",
+    "cellule": {
+      "n_fov": 512,
+      "n_niv": 10,
+      "decimation": 2
+    },
+    "frames": {
+      "warmup_exclu": 30,
+      "serie": 300
+    },
+    "kernels": "F, L3, chrono, substrats, pyramide INTOUCHÉS",
+    "verifs_exigees": [
+      "vram_concordance",
+      "sensibilite_chrono"
+    ]
+  },
+  "d2_chrono_frame_time": {
+    "n": 300,
+    "mediane_ms": 16.29703998565674,
+    "p99_ms": 19.201617679595948,
+    "min_ms": 15.6876802444458,
+    "max_ms": 19.546112060546875
+  },
+  "residence": {
+    "mempool_total_octets": 0,
+    "nvidia_smi_octets": 102760448
+  },
+  "lecture_mecanique": {
+    "d1": {
+      "a_plancher_de_readout": {
+        "delta_chi_a_blanc_max": 0.0,
+        "exactement_nul": true,
+        "lecture": "Δχ à blanc EXACTEMENT NUL : aucun plancher de readout — les primitives ne fabriquent rien, le plancher observé vient d'ailleurs"
+      },
+      "b_plancher_de_couverture": {
+        "facteur_effondrement": 0.5,
+        "seuil_effondrement": 0.04097544717024343,
+        "delta_chi_complet_max": 0.08195089434048686,
+        "delta_chi_restreint_max": {
+          "cycle": 0.009629165329351819,
+          "cumule": 0.08923481984175344
+        },
+        "plancher_seffondre": {
+          "cycle": true,
+          "cumule": false
+        },
+        "seuil_ic_bas": 0.0603,
+        "restreint_sous_le_seuil": {
+          "cycle": true,
+          "cumule": false
+        },
+        "note_seuil": "reporté seulement : que le Δχ restreint repasse ou non sous 0.0603 ne change RIEN à la lecture de la sonde, dont la branche (ii) est appliquée. Aucune relecture d'EPS n'est ouverte par ce chiffre.",
+        "lecture": "le plancher S'EFFONDRE une fois la comparaison restreinte aux cellules couvertes : plancher de COUVERTURE, propre à cette sonde — NON transférable à M-b"
+      },
+      "rappel_portee": "D-1 rapporte ces deux lectures et RIEN d'autre. Aucune conclusion supplémentaire n'est tirée, aucun réglage n'est proposé — la branche (ii) est appliquée."
+    },
+    "d2": {
+      "mediane_nue_ms": 16.29703998565674,
+      "mediane_ma_quater_ms": 16.589,
+      "mediane_sonde_ms": 17.249,
+      "ecart_a_attribuer_ms": 0.6600000000000001,
+      "ecart_restant_ms": -0.29196001434326035,
+      "tolerance_absorption_ms": 0.25,
+      "derive_machine_ms": 0.18,
+      "ecart_absorbe": true,
+      "regle_orientee": "seul un dépassement VERS LE HAUT est recevable : un terme de production non compté rend la mesure PLUS HAUTE, jamais plus basse. Un résidu négatif relève de l'appareil et de la dérive machine, quelle que soit son ampleur. La tolérance (0.25 ms) siège strictement au-dessus de la dérive connue (0.18 ms).",
+      "lecture": "écart ABSORBÉ : c'était l'APPAREIL de sonde entrant dans le chrono — sans conséquence sur V4",
+      "preuve_appareil_hors_boucle": {
+        "capture_desactivee": true,
+        "aucun_coefficient_retenu": true,
+        "note": "PROUVÉ, pas affirmé : la capture est désactivée sur le pipeline réellement chronométré, et aucun coefficient n'a été retenu au terme de la série — l'appareil de reconstruction n'est pas entré dans la boucle"
+      }
+    }
+  }
+}

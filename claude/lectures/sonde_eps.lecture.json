@@ -1,0 +1,309 @@
+{
+  "_note": "LECTURE versionnée (§A22-complément a4e06f6). Tableaux par-frame NON versionnés — sur disque, outputs/f1/. Auditable : meta + lecture_mecanique + table compacte.",
+  "meta": {
+    "mesure": "sonde EPS (N1) VERSION 2 — fidélité du CANAL de remontée (§A21-complément, pocCascade2phys f943e9a)",
+    "supersede": "l'ancien pré-enregistrement (§A19) est SUPERSEDED, pas amendé : son observable était faux (décalage spatial du reconstructeur). AUCUNE lecture de la v1 n'est reconduite — ni le plancher 0.082, ni la branche (ii).",
+    "protocole": {
+      "pipeline": "V4 complet : géométrie emboîtée, prédiction GPU-side, L3, L1 k=4 étalée, fovéa mobile",
+      "verite": "niveau 0 par décimation exacte (moyennes Harten)",
+      "connaissance_cpu": "LUE sur `reference` (option 1, tranchée §A21) au SEUL instant où elle est dans les coordonnées de la frame courante : après le déplacement, avant l'émission. Une copie indépendante peut diverger du device ; une lecture directe ne le peut pas",
+      "deux_verites": "DÉCLARÉES AVANT LE RUN et toutes deux reportées. verite_n (K(n) contre S(n)) PORTE LA RÈGLE — c'est ce que le joueur voit, canal ET péremption acceptée. verite_n_moins_1 (K(n) contre S̃(n−1)) isole le CANAL seul et reste DIAGNOSTIC. Leur écart est le prix de la frame de retard",
+      "observable": "Δχ readout : albedo(S_HALF_OP) puis delta_chi(...)['max_carrier'] — primitives EXISTANTES, espace instrument, jamais l'état",
+      "deux_passes": "chrono nu d'un côté, Δχ hors chrono de l'autre ; aucun chiffre partagé. L'option 1 supprime la capture de coefficients de la v1 : la passe Δχ est plus légère",
+      "echelle_de_lecture": "ÉPINGLÉE : la RÈGLE lit le Δχ DÉCIMÉ ×2 à l'échelle du niveau 0 (256²) — le grossier comparé à ce que le grossier devrait être. Le Δχ SANS décimation est reporté en DIAGNOSTIC SEUL",
+      "verification_instrument": "bras k=1 sur le MÊME balayage, DUE avant toute lecture ; k=1 conserve la frame de retard du compteur — péremption MINIMALE, pas nulle. Ce n'est PAS un balayage de k",
+      "portee": "mesure la fidélité du CANAL (seuil, cadence, transfert), PAS celle de la prédiction propre au CPU — `reference` contient les colonnes prédites GPU-side. Le miroir CPU (option 2) est nommé comme travail de PRODUCTION et non construit",
+      "chrono": "B6 (warmup exclu, médiane ET p99)",
+      "kernels": "F et L3 INTOUCHÉS dans leur code CUDA — empreintes sur la CHAÎNE EXTRAITE : sha256(_SOURCE)=e18015f5...f30b4 (8223 car.), sha256(_SOURCE_L3)=9533a130...781a (9635 car.)"
+    },
+    "balayage_eps": [
+      1e-05,
+      0.0001,
+      0.0003,
+      0.001,
+      0.003,
+      0.01
+    ],
+    "cadence_l1": 4,
+    "s_half_op": 0.030219219955821115,
+    "frames": {
+      "warmup_exclu": 30,
+      "serie": 300
+    },
+    "verifs_exigees": [
+      "vram_concordance",
+      "sensibilite_chrono"
+    ]
+  },
+  "table_compacte": [
+    {
+      "eps": 1e-05,
+      "delta_chi_max_n": 0.00017880114982654627,
+      "delta_chi_max_n_moins_1": 0.00016272903391167937,
+      "prix_peremption": 1.6072115914866902e-05,
+      "octets_par_frame_median": 21291112.0,
+      "mediane_ms": 19.495871543884277,
+      "p99_ms": 34.058016738891574
+    },
+    {
+      "eps": 0.0001,
+      "delta_chi_max_n": 0.000300442557691738,
+      "delta_chi_max_n_moins_1": 0.00028497389638565407,
+      "prix_peremption": 1.546866130608393e-05,
+      "octets_par_frame_median": 12749856.0,
+      "mediane_ms": 16.996352195739746,
+      "p99_ms": 20.494463062286375
+    },
+    {
+      "eps": 0.0003,
+      "delta_chi_max_n": 0.0004893910507763333,
+      "delta_chi_max_n_moins_1": 0.00047525245082258305,
+      "prix_peremption": 1.413859995375022e-05,
+      "octets_par_frame_median": 8418304.0,
+      "mediane_ms": 16.507391929626465,
+      "p99_ms": 20.940971641540525
+    },
+    {
+      "eps": 0.001,
+      "delta_chi_max_n": 0.001043545541459856,
+      "delta_chi_max_n_moins_1": 0.0010325153967562506,
+      "prix_peremption": 1.1030144703605416e-05,
+      "octets_par_frame_median": 3630404.0,
+      "mediane_ms": 15.731711864471436,
+      "p99_ms": 18.60855188369751
+    },
+    {
+      "eps": 0.003,
+      "delta_chi_max_n": 0.0021086697581668146,
+      "delta_chi_max_n_moins_1": 0.0020993681808273434,
+      "prix_peremption": 9.301577339471123e-06,
+      "octets_par_frame_median": 1304204.0,
+      "mediane_ms": 15.262800216674805,
+      "p99_ms": 18.437537937164304
+    },
+    {
+      "eps": 0.01,
+      "delta_chi_max_n": 0.0025162704808991965,
+      "delta_chi_max_n_moins_1": 0.0025069689035597253,
+      "prix_peremption": 9.301577339471123e-06,
+      "octets_par_frame_median": 371996.0,
+      "mediane_ms": 15.195183753967285,
+      "p99_ms": 18.526824054718016
+    }
+  ],
+  "residence": {
+    "mempool_total_octets": 0,
+    "nvidia_smi_octets": 102760448
+  },
+  "lecture_mecanique": {
+    "seuil_ic_bas": 0.0603,
+    "regle": "EPS retenu = le PLUS GRAND EPS dont le Δχ DÉCIMÉ max de série, lu sur verite_n, reste < 0.0603 (ic_bas) — lecture sur l'IC entier",
+    "echelle_de_lecture": {
+      "grandeur_de_la_regle": "delta_chi_max (DÉCIMÉ, échelle du niveau 0)",
+      "motif": "le grossier comparé à ce que le grossier devrait être, à sa propre résolution — c'est l'objet qui existe et sera consommé",
+      "non_decime": "delta_chi_max_sans_decimation — DIAGNOSTIC SEUL, jamais la règle : la décimation déplace les bandes porteuses que delta_chi lit, la relation n'est pas monotone"
+    },
+    "verite_de_lecture": {
+      "verite_de_la_regle": "verite_n",
+      "motif": "la règle décide d'INNOCUITÉ PERCEPTUELLE, et le joueur ne perçoit pas un canal — il perçoit un écart à l'instant présent. Lire la règle sur la vérité transportée s'accorderait gratuitement la frame de retard que le joueur subit.",
+      "verite_diagnostique": "verite_n_moins_1",
+      "usage_du_diagnostic": "isole la fidélité du CANAL seul (seuil, cadence, transfert). Leur écart est le prix de la frame de retard : en cas d'échec, il dit s'il faut incriminer le SEUIL ou le RETARD. Jamais la règle.",
+      "declaree_avant_run": true
+    },
+    "portee_option_1": "la connaissance du CPU est LUE sur `reference`, qui contient les colonnes PRÉDITES GPU-side : la sonde crédite donc le CPU d'une prédiction identique à celle du device. Elle mesure la fidélité du CANAL, jamais celle de la prédiction propre au CPU — laquelle exigerait le miroir CPU (option 2), nommé comme travail de PRODUCTION et non construit. Aucun résultat d'ici ne peut s'énoncer « le lointain est fidèle », seulement « le canal l'est ».",
+    "eps_retenu": 0.01,
+    "eps_satisfaisants": [
+      1e-05,
+      0.0001,
+      0.0003,
+      0.001,
+      0.003,
+      0.01
+    ],
+    "autre_remonte": false,
+    "eps_propose_jamais_applique": "la règle Q2 PROPOSE un EPS ; ce driver ne l'APPLIQUE pas. EPS_EN_VIGUEUR reste 0.0001 et la cadence reste 4 tant qu'une décision explicite ne les change pas — appliquer une proposition au fil d'un run serait décider sans l'avoir dit.",
+    "branche_preecrite_si_aucun": "AUTRE remonté, AUCUN EPS retenu par défaut — jamais de choix après courbe",
+    "verification_instrument": {
+      "indetermination": {
+        "amplitude_balayage": 0.0023720627075378697,
+        "plancher_bruit": 0.0,
+        "facteur": 3.0,
+        "seuil": 0.0,
+        "declenchee": false,
+        "motif": "amplitude 2.372e-03 >= 3 × plancher 0.000e+00",
+        "regle": "PRÉ-ÉCRITE §A22-complément, tranchée AVANT les chiffres : amplitude du balayage < 3 × plancher ⇒ INDÉTERMINÉ-INSTRUMENT, AUCUNE branche prononcée."
+      },
+      "branche": "i",
+      "label": "INSTRUMENT VALIDE",
+      "lecture_preecrite": "(i) INSTRUMENT VALIDE — au moins un EPS passe. L'instrument SUFFIT pour cette conclusion : qu'il discrimine ou non ne la change pas, et la discrimination passe en DIAGNOSTIC.",
+      "eps_passants": {
+        "verite_n": [
+          1e-05,
+          0.0001,
+          0.0003,
+          0.001,
+          0.003,
+          0.01
+        ],
+        "verite_n_moins_1": [
+          1e-05,
+          0.0001,
+          0.0003,
+          0.001,
+          0.003,
+          0.01
+        ]
+      },
+      "discrimination": {
+        "delta_chi_max_min": 0.0001442078035966965,
+        "delta_chi_max_max": 0.0025162705111345662,
+        "amplitude_relative": 0.9426898646395239,
+        "amplitude_absolue": 0.0023720627075378697,
+        "seuil_discrimination": 0.05,
+        "plancher_bruit": 0.0,
+        "plancher_evalue": true,
+        "critere_forme": true,
+        "critere_echelle": true,
+        "a_discrimine": true,
+        "octets_par_frame_min": 375644.0,
+        "octets_par_frame_max": 65228608.0,
+        "rapport_octets": 173.64474875147747,
+        "note": "DEUX conditions (§A22) : amplitude relative >= 5 % (FORME, sans échelle donc reconductible) ET amplitude absolue au-dessus du plancher MESURÉ par réplicat (ÉCHELLE). En v1 le critère relatif statuait SEUL, sur un observable qui était un artefact de décalage spatial (~0.082) : aucune valeur de la v1 n'est reconduite. Diagnostic reporté ; k n'est pas balayé."
+      },
+      "discrimination_gate": false,
+      "role_de_la_discrimination": "DIAGNOSTIC — au moins un EPS passe, l'instrument SUFFIT pour cette conclusion : un observable sous le seuil est innocent quelle que soit sa pente",
+      "attributions_branche_iii": null,
+      "table_close": "table COMPLÈTE et CLOSE (§A22) : (i) un EPS passe sur vérité(n) ; (iii-bis) aucun sur vérité(n) mais un sur vérité(n−1) ; (iii) aucun sur les deux, mais le balayage discrimine ; (ii) aucun sur les deux et pas de discrimination. Les quatre issues sont exhaustives et mutuellement exclusives.",
+      "cadence_verification": 1,
+      "instrument_valide": true,
+      "eps_passants_a_k1": [
+        1e-05,
+        0.0001,
+        0.0003,
+        0.001,
+        0.003,
+        0.01
+      ],
+      "nota_peremption_minimale": "à k=1 subsiste la frame de retard du compteur (choix 6 de la borne L3, endossé) : la vérification teste sous péremption MINIMALE, PAS NULLE — c'est ce qui rend (iii-bis) lisible ici, la seule péremption restante ÉTANT cette frame de retard",
+      "portee": "ce bras n'est PAS un balayage de k et ne décide aucun cadencement ; toute DÉCISION sur k reste gatée σ_ω (R4)"
+    },
+    "branche_a_la_mesure": {
+      "indetermination": {
+        "amplitude_balayage": 0.00233746933107265,
+        "plancher_bruit": 0.0,
+        "facteur": 3.0,
+        "seuil": 0.0,
+        "declenchee": false,
+        "motif": "amplitude 2.337e-03 >= 3 × plancher 0.000e+00",
+        "regle": "PRÉ-ÉCRITE §A22-complément, tranchée AVANT les chiffres : amplitude du balayage < 3 × plancher ⇒ INDÉTERMINÉ-INSTRUMENT, AUCUNE branche prononcée."
+      },
+      "branche": "i",
+      "label": "INSTRUMENT VALIDE",
+      "lecture_preecrite": "(i) INSTRUMENT VALIDE — au moins un EPS passe. L'instrument SUFFIT pour cette conclusion : qu'il discrimine ou non ne la change pas, et la discrimination passe en DIAGNOSTIC.",
+      "eps_passants": {
+        "verite_n": [
+          1e-05,
+          0.0001,
+          0.0003,
+          0.001,
+          0.003,
+          0.01
+        ],
+        "verite_n_moins_1": [
+          1e-05,
+          0.0001,
+          0.0003,
+          0.001,
+          0.003,
+          0.01
+        ]
+      },
+      "discrimination": {
+        "delta_chi_max_min": 0.00017880114982654627,
+        "delta_chi_max_max": 0.0025162704808991965,
+        "amplitude_relative": 0.928941999207235,
+        "amplitude_absolue": 0.00233746933107265,
+        "seuil_discrimination": 0.05,
+        "plancher_bruit": 0.0,
+        "plancher_evalue": true,
+        "critere_forme": true,
+        "critere_echelle": true,
+        "a_discrimine": true,
+        "octets_par_frame_min": 371996.0,
+        "octets_par_frame_max": 21291112.0,
+        "rapport_octets": 57.23478747083302,
+        "note": "DEUX conditions (§A22) : amplitude relative >= 5 % (FORME, sans échelle donc reconductible) ET amplitude absolue au-dessus du plancher MESURÉ par réplicat (ÉCHELLE). En v1 le critère relatif statuait SEUL, sur un observable qui était un artefact de décalage spatial (~0.082) : aucune valeur de la v1 n'est reconduite. Diagnostic reporté ; k n'est pas balayé."
+      },
+      "discrimination_gate": false,
+      "role_de_la_discrimination": "DIAGNOSTIC — au moins un EPS passe, l'instrument SUFFIT pour cette conclusion : un observable sous le seuil est innocent quelle que soit sa pente",
+      "attributions_branche_iii": null,
+      "table_close": "table COMPLÈTE et CLOSE (§A22) : (i) un EPS passe sur vérité(n) ; (iii-bis) aucun sur vérité(n) mais un sur vérité(n−1) ; (iii) aucun sur les deux, mais le balayage discrimine ; (ii) aucun sur les deux et pas de discrimination. Les quatre issues sont exhaustives et mutuellement exclusives."
+    },
+    "discrimination_du_balayage": {
+      "delta_chi_max_min": 0.00017880114982654627,
+      "delta_chi_max_max": 0.0025162704808991965,
+      "amplitude_relative": 0.928941999207235,
+      "amplitude_absolue": 0.00233746933107265,
+      "seuil_discrimination": 0.05,
+      "plancher_bruit": 0.0,
+      "plancher_evalue": true,
+      "critere_forme": true,
+      "critere_echelle": true,
+      "a_discrimine": true,
+      "octets_par_frame_min": 371996.0,
+      "octets_par_frame_max": 21291112.0,
+      "rapport_octets": 57.23478747083302,
+      "note": "DEUX conditions (§A22) : amplitude relative >= 5 % (FORME, sans échelle donc reconductible) ET amplitude absolue au-dessus du plancher MESURÉ par réplicat (ÉCHELLE). En v1 le critère relatif statuait SEUL, sur un observable qui était un artefact de décalage spatial (~0.082) : aucune valeur de la v1 n'est reconduite. Diagnostic reporté ; k n'est pas balayé."
+    },
+    "innocuite": {
+      "delta_chi_max_decime": 0.0025162704808991965,
+      "seuil": 0.0603,
+      "innocuite_etablie": true,
+      "formulation": "innocuité ÉTABLIE",
+      "jamais_nocivite": "au-dessus du seuil on ne conclut JAMAIS à une « nocivité établie » : le joueur ne voit jamais la référence. Le seul indice interne serait la cohérence proche/lointain — mesure DIFFÉRENTE, nommée, NON armée."
+    },
+    "branche_preecrite_decision_k": {
+      "applicable": false,
+      "par_branche_iii_bis": false,
+      "enonce": "instrument VALIDÉ + aucun EPS ne passe à k=4, OU branche (iii-bis) à la mesure (le retard DÉSIGNÉ comme cause) ⇒ la décision passe à k, et le RÉVEIL σ_ω devient LA décision explicite à prendre (R4). Le budget transferts ensuite.",
+      "statut": "REPORTÉE — ce driver ne la déclenche pas et ne réveille rien. Aucun réveil silencieux, aucune reformulation après lecture : la décision appartient à Romain."
+    },
+    "eps_en_vigueur": 0.0001,
+    "cadence_mesure": 4,
+    "cadence_verification": 1,
+    "exclusion_k": "balayage de k INTERDIT (§A19) : SEULES deux cadences existent ici — 4 pour la mesure (figée, [NON-ANCRÉ, par budget]) et 1 pour la VÉRIFICATION D'INSTRUMENT. Ce driver ne prononce RIEN sur le cadencement ; toute décision sur k reste gatée σ_ω (R4).",
+    "rappel_portee": "sonde N1 : elle mesure la fidélité du niveau 0 vivant, rien d'autre. N2 (M-b) N'EST PAS achetée — elle vient après cette lecture, avec son propre chiffrage. Aucun verdict ici.",
+    "plancher_bruit": {
+      "mesure": {
+        "plancher_delta_chi": 0.0,
+        "eps_du_replicat": 0.0001,
+        "n_repetitions": 3,
+        "ecarts_observes": {
+          "verite_n.delta_chi_max": 0.0,
+          "verite_n.delta_chi_max_sans_decimation": 0.0,
+          "verite_n_moins_1.delta_chi_max": 0.0,
+          "verite_n_moins_1.delta_chi_max_sans_decimation": 0.0
+        },
+        "mesure": "3 répétitions du MÊME EPS, tout identique ; plancher = plus grand écart observé",
+        "justification": "un plancher SUPPOSÉ est un seuil qu'on ajuste après coup. Celui-ci est mesuré sur la chaîne elle-même, aux deux vérités, avant toute lecture. Trois passes plutôt que deux : deux ne donnaient qu'un tirage de la dispersion.",
+        "note_si_nul": "un plancher NUL dit que la chaîne est DÉTERMINISTE, pas qu'elle est infiniment précise : le critère RELATIF porte alors seul la discrimination, et c'est dit.",
+        "deterministe": true
+      },
+      "verification": {
+        "plancher_delta_chi": 0.0,
+        "eps_du_replicat": 0.0001,
+        "n_repetitions": 3,
+        "ecarts_observes": {
+          "verite_n.delta_chi_max": 0.0,
+          "verite_n.delta_chi_max_sans_decimation": 0.0,
+          "verite_n_moins_1.delta_chi_max": 0.0,
+          "verite_n_moins_1.delta_chi_max_sans_decimation": 0.0
+        },
+        "mesure": "3 répétitions du MÊME EPS, tout identique ; plancher = plus grand écart observé",
+        "justification": "un plancher SUPPOSÉ est un seuil qu'on ajuste après coup. Celui-ci est mesuré sur la chaîne elle-même, aux deux vérités, avant toute lecture. Trois passes plutôt que deux : deux ne donnaient qu'un tirage de la dispersion.",
+        "note_si_nul": "un plancher NUL dit que la chaîne est DÉTERMINISTE, pas qu'elle est infiniment précise : le critère RELATIF porte alors seul la discrimination, et c'est dit.",
+        "deterministe": true
+      }
+    }
+  }
+}
