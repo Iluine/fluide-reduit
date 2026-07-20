@@ -16,10 +16,13 @@ import json
 import numpy as np
 import pytest
 
+import inspect
+
 from scripts.run_f1_ma_quater import (
     ANCRES_MESUREES_MS,
     BANDE_MS,
     CADENCE_L1,
+    EPS_PRODUCTION,
     F_BATCHE_V4_MS,
     REMONTEE_L3_MESUREE_MS,
     PipelineMaQuater,
@@ -33,6 +36,9 @@ from scripts.run_f1_ma_quater import (
     resume_prediction,
     slots_v4,
 )
+from scripts import run_f1_ma_quater
+from scripts.run_f1_sonde_eps import EPS_EN_VIGUEUR
+from src.f1_gpu.pyramide import EPS_DETAIL
 from scripts.run_f1_ma_ter import B_FRAME_MS, N_NIV
 from scripts.run_f1_s2_mobile import plan_groupes
 from src.f1_gpu.backend import cupy_disponible
@@ -45,6 +51,44 @@ gpu_requis = pytest.mark.skipif(
 # V4 réelle en réduction : mêmes 11 slots, n_fov minuscule.
 GEO_PETITE = GeometriePyramide(n_fov=8, n_niv=N_NIV, n0=8,
                                slots=slots_v4(N_NIV), emboitee=True)
+
+
+# ----- 0. EPS de production APPLIQUÉ = 1e-2 (§A23) -----
+
+def test_eps_production_vaut_1e_2_et_cite_sa_decision():
+    """§A23 (b6c8807) : EPS = 1e-2 est appliqué. Ce test fige la valeur et
+    échoue si elle bouge — et il exige que le commentaire du réglage CITE
+    la décision, faute de quoi le seuil pourrait glisser sans traçabilité.
+    Un chiffre gravé ne bouge pas sans sa décision à côté."""
+    assert EPS_PRODUCTION == 1e-2
+    source = inspect.getsource(run_f1_ma_quater)
+    reglage = source[:source.index("EPS_PRODUCTION: float")]
+    contexte = reglage[-1400:]
+    assert "b6c8807" in contexte and "§A23" in contexte
+    # les trois portées gravées doivent voyager avec le réglage
+    assert "INNOCENT ≠ OPTIMAL" in contexte
+    assert "LE CANAL ≠ LE LOINTAIN" in contexte
+    assert "SCOPÉ À CE SUBSTRAT" in contexte
+
+
+def test_les_ancres_gelees_restent_a_1e_4():
+    """Le réglage de production ne touche à AUCUNE ancre gelée : EPS_DETAIL
+    (borne L3) et EPS_EN_VIGUEUR (régime figé de D-1/D-2 et attribution_b)
+    restent 1e-4. C'est ce qui rend la valeur de production DISTINCTE et
+    non un écrasement rétroactif."""
+    assert EPS_DETAIL == 1e-4
+    assert EPS_EN_VIGUEUR == 1e-4
+    assert EPS_PRODUCTION != EPS_DETAIL
+
+
+@gpu_requis
+def test_la_production_tourne_bien_a_eps_production():
+    """L'application n'est pas qu'une constante : le pipeline de production
+    doit RÉELLEMENT porter 1e-2. On le vérifie sur la config réduite."""
+    import cupy as cp
+    pipeline = PipelineMaQuater(cp, GEO_PETITE, TransfertComptable(cp),
+                                k=CADENCE_L1, eps=EPS_PRODUCTION)
+    assert pipeline.eps == 1e-2
 
 
 # ----- 1. la géométrie V4 est un ARBRE (propriété E) -----

@@ -210,7 +210,13 @@ from src.multiresolution import downsample  # noqa: E402
 OUT_DIR = ROOT / "outputs" / "f1"
 OUT_JSON_PATH = OUT_DIR / "sonde_eps.json"
 
-# Balayage GRAVÉ (§A19). 1e-4 est la valeur en vigueur, [NON-ANCRÉ].
+# Balayage GRAVÉ (§A19). EPS_EN_VIGUEUR = le RÉGIME au moment de la sonde
+# (1e-4), figé et importé tel quel par D-1/D-2 (EPS_FIGE) et attribution_b
+# (EPS_COURANT) : il NE bouge pas, sans quoi ces lectures gelées seraient
+# réécrites. La production, elle, est passée à 1e-2 (§A23, b6c8807) —
+# porté par EPS_PRODUCTION dans run_f1_ma_quater.py, non ici. « En
+# vigueur » nomme donc le régime figé de CETTE sonde, pas la production
+# courante ; distinction consignée pour qu'il ne se lise pas périmé.
 EPS_BALAYAGE: tuple[float, ...] = (1e-5, 1e-4, 3e-4, 1e-3, 3e-3, 1e-2)
 EPS_EN_VIGUEUR: float = 1e-4
 

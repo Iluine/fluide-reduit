@@ -137,6 +137,30 @@ GATE_VRAM_GO: float = 1.35                     # gate de résidence, gravé
 N_SLOTS_ENERGIE_V4: int = 2
 NIVEAU_PARENT_CPU: int = 1
 
+# ─── SEUIL DE PRODUCTION EPS = 1e-2, APPLIQUÉ (§A23, pocCascade2phys
+# b6c8807) ────────────────────────────────────────────────────────────
+# La sonde EPS v2 a proposé 1e-2 (les six EPS du balayage passent,
+# innocuité ÉTABLIE à 24× sous ic_bas) ; Romain l'APPLIQUE ici. C'est le
+# seul point où le régime de production diffère du paramètre d'instrument
+# EPS_DETAIL (1e-4), délibérément INCHANGÉ : lui est l'ancre gravée sous
+# laquelle la borne L3 fut mesurée, et EPS_EN_VIGUEUR (sonde) est le
+# régime FIGÉ qu'importent D-1/D-2 et attribution_b. Aucune de ces ancres
+# gelées ne peut porter la valeur de production courante sans réécrire une
+# mesure acquise — d'où cette constante distincte (choix d'implémentation
+# remonté, le gravé nommant « EPS_EN_VIGUEUR »).
+#
+# TROIS PORTÉES GRAVÉES (§A23), à garder sous les yeux à toute lecture :
+#   1. INNOCENT ≠ OPTIMAL — le balayage ne borne pas par le haut : tous
+#      ses points passent, donc 1e-2 est le plus grand TESTÉ, pas un
+#      optimum. Où EPS cesserait d'être innocent n'est pas mesuré.
+#   2. LE CANAL ≠ LE LOINTAIN — la sonde mesure la fidélité du CANAL
+#      (seuil, cadence, transfert), option 1. L'argument de sûreté du
+#      lointain (miroir CPU, option 2) reste NON mesuré : « le canal est
+#      innocent à 1e-2 » ne dit pas « le lointain est fidèle à 1e-2 ».
+#   3. SCOPÉ À CE SUBSTRAT — vaut pour le substrat F1/V4 mesuré, pas
+#      au-delà.
+EPS_PRODUCTION: float = 1e-2
+
 # Ancres MESURÉES (§A18 P3 : « ancres MESURÉES : 1.685 / 0.845 »). Le
 # 2-systèmes vient de M-a′ ; le 1-système vient de s1 BATCHÉE — 0.845, et
 # NON l'étiquette structurelle 0.843 que le modèle supposait avant s1.
@@ -614,13 +638,17 @@ def main() -> None:
     geo = geometrie_v4()
     prediction = resume_prediction(geo)
     transferts = TransfertComptable(cp)
-    pipeline = PipelineMaQuater(cp, geo, transferts, k=CADENCE_L1)
+    # EPS = 1e-2 APPLIQUÉ (§A23) : le régime de production, pas le défaut
+    # d'instrument. Passé explicitement pour que la production ne dépende
+    # pas d'une valeur par défaut restée à 1e-4 pour les bornes gelées.
+    pipeline = PipelineMaQuater(cp, geo, transferts, k=CADENCE_L1,
+                                eps=EPS_PRODUCTION)
     round_robin = diagnostic_round_robin(pipeline.plans, CADENCE_L1)
     transferts.frame_suivante()
 
     print(f"V4 emboîtée : {geo.n_slots_total} slots / {geo.blocs_actifs_gpu} "
-          f"blocs ; propriété E = {prediction['propriete_e_satisfaite']}",
-          flush=True)
+          f"blocs ; propriété E = {prediction['propriete_e_satisfaite']} ; "
+          f"EPS_PRODUCTION={EPS_PRODUCTION:g} (§A23)", flush=True)
     print(f"prédiction : {prediction['n_slots_gpu']} GPU-side / "
           f"{prediction['n_slots_cpu']} CPU ; L1 k={CADENCE_L1} étalée "
           f"{round_robin['slots_par_tour']} slots/tour", flush=True)
@@ -659,8 +687,14 @@ def main() -> None:
                                    "anti-minoration, −16.9 % mesuré"),
                 "remontee": (f"kernel L3 INTOUCHÉ, L1 ÉTALÉE round-robin "
                              f"k={CADENCE_L1}"),
-                "kernels": ("F fusionné empreinte e8fcaad4...7f04 et L3 "
-                            "tel que mesuré à la borne — INTOUCHÉS"),
+                "eps_production": (
+                    f"{EPS_PRODUCTION:g} APPLIQUÉ (§A23, b6c8807) — trois "
+                    "portées : innocent≠optimal (balayage non borné par le "
+                    "haut) ; CANAL≠lointain (miroir CPU non mesuré) ; "
+                    "scopé à ce substrat"),
+                "kernels": ("F fusionné et L3 tel que mesuré à la borne — "
+                            "INTOUCHÉS (git diff + empreintes _SOURCE / "
+                            "_SOURCE_L3)"),
                 "chrono": "B6 (cuda-Events, warmup exclu, médiane ET p99)",
             },
             "cellule": {"n_fov": N_FOV, "n_niv": N_NIV},
