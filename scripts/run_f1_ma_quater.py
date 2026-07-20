@@ -429,7 +429,11 @@ class PipelineMaQuater:
             # le mauvais slot (le premier) sans que rien ne le signale.
             elements_par_slot = int(fen.shape[1] * 4 * fen.shape[-1]
                                     * fen.shape[-2])
-            offset_emission = int(debut * elements_par_slot)
+            # L'offset est confié au compacteur, qui le fait voyager AVEC
+            # les données du même tour (§A21-complément). Depuis le
+            # ping-pong, les données transférées sont celles de n−1 : les
+            # indexer par l'offset de n écrirait dans le mauvais slot.
+            compacteur.noter_offset(int(debut * elements_par_slot))
             for segment_debut, segment_fin, emet in (
                     (0, debut, False), (debut, fin, True),
                     (fin, fen.shape[0], False)):
@@ -452,13 +456,33 @@ class PipelineMaQuater:
                 if self.capturer_coefficients:
                     self.coefficients_frame.append(
                         (indice, valeurs_cpu,
-                         indices_cpu.astype(np.int64) + offset_emission))
+                         indices_cpu.astype(np.int64)
+                         + compacteur.offset_precedent()))
             compacteur.cloturer_frame()
         return lancements
 
-    def frame(self, delta_x: int = DELTA_X_MOBILE) -> dict:
+    def frame(self, delta_x: int = DELTA_X_MOBILE,
+              observateur=None) -> dict:
+        """Une frame complète. `observateur`, s'il est fourni, est appelé
+        UNE fois, APRÈS le déplacement et AVANT l'émission (§A21-complément).
+
+        Pourquoi cet instant précis, et pas un autre : c'est le SEUL où
+        `reference` porte la connaissance du CPU DANS LES COORDONNÉES DE
+        LA FRAME COURANTE. Le déplacement vient d'y appliquer le roll et
+        les colonnes prédites ; l'émission de cette frame n'y a pas encore
+        été absorbée. Lue plus tôt, la connaissance est dans les
+        coordonnées de la frame précédente ; lue plus tard, elle contient
+        déjà ce que le CPU ne recevra qu'à la frame suivante. Confondre
+        ces instants, c'est refabriquer le décalage spatial qui a produit
+        le plancher 0.082 (§A19-CORRECTION).
+
+        JAMAIS employé dans une passe CHRONOMÉTRÉE — même discipline que
+        `capturer_coefficients`. Le coût quand il vaut None est un test
+        d'identité par frame, sans commune mesure avec les ~16 ms."""
         self.coefficients_frame = []
         diagnostic = self._deplacer(delta_x)
+        if observateur is not None:
+            observateur(self)
         self.lancements_derniere_frame = self._appliquer_f()
         self.frame_courante += 1
         diagnostic["lancements"] = self.lancements_derniere_frame

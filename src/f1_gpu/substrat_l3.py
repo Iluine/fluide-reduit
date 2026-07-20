@@ -254,6 +254,13 @@ class CompacteurL3:
         self._indices = [cp.empty(self.taille_max, dtype=cp.uint32)
                          for _ in range(self.N_JEUX)]
         self._jeu = 0
+        # L'offset d'indices de chaque jeu. Les indices émis sont
+        # RELATIFS au tableau passé au kernel (la tranche du tour) : un
+        # consommateur qui reconstruit doit y ajouter l'offset du tour
+        # ÉMETTEUR. Il doit donc voyager AVEC les données, sous le même
+        # invariant qu'elles — sinon le ping-pong livre les données d'un
+        # tour indexées par l'offset d'un autre.
+        self._offsets = [0 for _ in range(self.N_JEUX)]
         self.compteur = cp.zeros(1, dtype=cp.uint32)
         # Tampon hôte page-locked : la copie asynchrone y atterrit.
         self._memoire_pinned = cp.cuda.alloc_pinned_memory(4)
@@ -305,10 +312,28 @@ class CompacteurL3:
         self.compteur.fill(0)
         self._jeu = (self._jeu + 1) % self.N_JEUX
 
+    def noter_offset(self, offset: int) -> None:
+        """Enregistre, pour le jeu COURANT, l'offset d'indices de
+        l'émission de cette frame.
+
+        Les indices émis sont relatifs au tableau passé au kernel — la
+        tranche du tour, pas le groupe entier. L'offset qui les remet en
+        place appartient donc au tour ÉMETTEUR, et doit voyager avec les
+        données sous le MÊME invariant : taille, données ET offset du même
+        tour. Le lui refuser livrerait les couples d'un tour indexés par
+        l'offset d'un autre — écriture silencieuse dans le mauvais slot."""
+        self._offsets[self._jeu] = int(offset)
+
+    def offset_precedent(self) -> int:
+        """Offset du jeu que `vues_a_transferer` rend — celui du tour qui
+        a réellement émis ces couples."""
+        return self._offsets[(self._jeu + 1) % self.N_JEUX]
+
     def vues_a_transferer(self, taille: int):
         """Tranches contiguës à remonter, prises dans le jeu PRÉCÉDENT —
-        celui que le compteur `taille` décrit. Taille et données du même
-        tour : c'est là que l'invariant se tient."""
+        celui que le compteur `taille` décrit, et que `offset_precedent`
+        indexe. Taille, données et offset du même tour : c'est là que
+        l'invariant se tient."""
         precedent = (self._jeu + 1) % self.N_JEUX
         return (self._valeurs[precedent][:taille],
                 self._indices[precedent][:taille])

@@ -433,3 +433,27 @@ def test_le_surcout_pingpong_sur_v4_vaut_120_mio():
     residence_v2_go, surcout_go = 0.311, un_jeu / 1000 ** 3
     assert surcout_go == pytest.approx(0.126, abs=0.001)
     assert residence_v2_go + surcout_go < GATE_VRAM_GO
+
+
+# ----- l'offset voyage avec les données, sous le même invariant -----
+
+@gpu_requis
+def test_loffset_suit_les_donnees_et_non_la_frame_courante():
+    """RÉGRESSION TROUVÉE PAR LE VERROU DE LA SONDE (§A21-complément).
+
+    Les indices émis sont relatifs à la tranche passée au kernel. Le
+    ping-pong livre les données de n−1 pendant la frame n : les indexer
+    par l'offset de n les écrirait dans le mauvais slot, en silence.
+    L'offset relève donc du MÊME invariant que la taille et les données —
+    il vient du tour ÉMETTEUR."""
+    import cupy as cp
+    compacteur = CompacteurL3(cp, 64)
+    compacteur.noter_offset(1000)          # frame n : tour à l'offset 1000
+    assert compacteur.offset_precedent() == 0        # aucun prédécesseur
+    compacteur.cloturer_frame()
+    compacteur.noter_offset(2000)          # frame n+1 : offset 2000
+    # ... mais ce qu'on transfère est l'émission de la frame n :
+    assert compacteur.offset_precedent() == 1000
+    compacteur.cloturer_frame()
+    compacteur.noter_offset(3000)
+    assert compacteur.offset_precedent() == 2000

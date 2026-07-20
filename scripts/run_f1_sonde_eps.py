@@ -1,119 +1,134 @@
-"""F1 — SONDE EPS (N1) : à quel EPS_DETAIL la remontée seuillée cesse-t-elle
-d'être fidèle AU READOUT ? (§A19, pocCascade2phys c3d13a1).
+"""F1 — SONDE EPS (N1), VERSION 2 : PRÉ-ENREGISTREMENT NEUF, à endosser
+AVANT tout run (§A21-complément, pocCascade2phys f943e9a).
 
-CE QUE N1 MESURE, ET LA CONCESSION QUI L'A FAIT NAÎTRE : la formule du
-§A18-lecture — « balayage EPS gratuit dans le run M-b » — était FAUSSE sur
-l'observable. EPS_DETAIL gouverne la fidélité du NIVEAU 0 VIVANT, pas le
-contrat live↔rederive ; il n'atteint le Δχ de M-b qu'au second ordre. La
-sonde corrigée est AUTONOME : elle compare directement les deux niveaux 0.
+**L'ANCIEN PRÉ-ENREGISTREMENT EST SUPERSEDED (§A19-CORRECTION).** Il
+n'est pas amendé, il est remplacé : son observable était faux. Le
+reconstructeur entretenait une copie CPU indépendante qui n'appliquait ni
+le roll ni les colonnes prédites que le device écrit dans `references` à
+chaque déplacement de fovéa. La sonde comparait donc des régions
+spatialement DÉCALÉES. Le plancher 0.082, insensible à EPS comme à k et
+resté inexpliqué, était CELA — pas une infidélité du grossier. Aucune
+lecture de la v1 n'est reconduite.
 
+────────────────────────────────────────────────────────────────────────
+CE QUE LA SONDE COMPARE, MAINTENANT
+────────────────────────────────────────────────────────────────────────
   - **VÉRITÉ** : niveau 0 par DÉCIMATION EXACTE (moyennes Harten,
     `multiresolution.downsample`) de l'état fin courant ;
-  - **VIVANT** : niveau 0 reconstruit par la remontée SEUILLÉE à EPS,
-    INCRÉMENTALE, **L1 k=4 étalée INCLUSE** — la péremption
-    d'amortissement fait partie du régime de production, pas un défaut
-    qu'on écarterait pour flatter la mesure ;
+  - **CONNAISSANCE DU CPU** : LUE sur `reference` (option 1, tranchée par
+    Romain). Le schéma B4 pose que `reference` EST le modèle de ce que le
+    CPU sait ; depuis le ping-pong (§A21) tout ce qui est émis est
+    transféré une fois et une seule, donc l'identité est EXACTE à une
+    frame près. Une copie indépendante peut diverger du device — une
+    lecture directe ne le peut pas. C'est tout l'objet du correctif ;
   - **OBSERVABLE** : Δχ readout — `albedo` au point d'opération S_HALF_OP
-    puis `delta_chi(...)["max_carrier"]`, les primitives EXISTANTES,
-    importées et non réécrites. Espace instrument, JAMAIS l'état : aucune
-    comparaison L2 sur les champs (règle 2 du dépôt).
+    puis `delta_chi(...)["max_carrier"]`, primitives EXISTANTES, importées
+    et non réécrites. Espace instrument, JAMAIS l'état (règle 2).
 
-RÈGLE DE DÉCISION PRÉ-ENREGISTRÉE (Q2), appliquée SANS interprétation :
-**EPS retenu = le plus grand EPS dont le Δχ MAX de série reste < 0.0603
-(ic_bas)** — lecture sur l'IC entier, discipline §A13. Si aucun EPS du
-balayage ne satisfait, 1e-5 compris : **AUTRE remonté, aucun EPS retenu
-par défaut**. Jamais de choix après courbe.
+L'INSTANT DE LECTURE EST GRAVÉ, parce qu'il est la cause du désastre
+précédent : la connaissance est capturée APRÈS le déplacement et AVANT
+l'émission de la frame. C'est le SEUL instant où `reference` porte la
+connaissance du CPU dans les coordonnées de la frame courante.
 
-**VÉRIFICATION D'INSTRUMENT (A), DUE AVANT TOUTE LECTURE** — le même
-balayage EPS est d'abord joué à **k=1**, et `lecture_mecanique` REFUSE de
-produire la lecture k=4 sans son PASS/FAIL enregistré (câblage « muette ⇒
-remonter », B9). Une sonde muette se détecte AVANT, pas après (§A14).
-TABLE DE BRANCHES COMPLÈTE ET CLOSE (§A19-complément-2) — aucune lecture
-ne peut tomber hors table :
-  **(i)** k=1 discrimine ET au moins un EPS passe ⇒ **INSTRUMENT VALIDE** ;
-      un AUTRE à k=4 est alors attribuable à la PÉREMPTION, pas au seuil ;
-  **(ii)** k=1 ne discrimine pas ⇒ **SONDE MUETTE sur EPS**, AUTRE
-      D'INSTRUMENT — ne rien régler, remonter ;
-  **(iii)** k=1 DISCRIMINE mais AUCUN EPS ne passe, 1e-5 compris ⇒
-      **MÉCANISME DE REMONTÉE EN QUESTION**. Ni sonde muette (elle
-      discrimine), ni k coupable (la péremption est minimale) : à k=1
-      avec EPS=1e-5 la remontée est quasi sans perte, donc un résidu
-      au-dessus du seuil pointe AILLEURS. DEUX ATTRIBUTIONS NOMMÉES, NON
-      ARMÉES — (a) le retard d'une frame suffit à lui seul, falsificateur
-      = comparer contre la vérité DÉCALÉE d'une frame ; (b) la référence
-      incrémentale DÉRIVE, falsificateur = comparer contre une remontée
-      PLEINE non incrémentale. Les armer est une décision de Romain à la
-      lecture, jamais un enchaînement : ce driver porte le LABEL, il ne
-      mesure ni l'une ni l'autre.
-NOTA : à k=1 subsiste la frame de retard du compteur (choix 6 de la borne
-L3) — la vérification teste la discrimination sous péremption MINIMALE,
-PAS NULLE. C'est précisément ce qui rend (iii) lisible : la péremption
-restante est minimale, pas nulle, et l'attribution (a) la nomme.
+────────────────────────────────────────────────────────────────────────
+LES DEUX VÉRITÉS, DÉCLARÉES AVANT LE RUN
+────────────────────────────────────────────────────────────────────────
+Consigne gravée : à la frame n le CPU connaît l'état de n−1. Contre
+quelle vérité comparer doit donc être DIT d'avance, sous peine de
+refabriquer un artefact. Les deux sont déclarées, et TOUTES DEUX
+reportées — le surcoût est marginal (un champ capturé de plus, une
+évaluation de Δχ de plus, sur la même trajectoire) :
 
-**CE N'EST PAS UN BALAYAGE DE k** : deux valeurs seulement existent ici,
-k=4 (mesure, figée) et k=1 (vérification), et ce driver ne prononce RIEN
-sur le cadencement. Toute DÉCISION sur k reste gatée σ_ω (R4) et
-appartient à Romain — le driver refuse fail-loud toute autre valeur.
+  - **vérité(n)** — K(n) contre S(n), l'état MAINTENANT. Canal ET
+    péremption acceptée. **ELLE PORTE LA RÈGLE Q2.** Justification : la
+    règle décide d'INNOCUITÉ PERCEPTUELLE, et le joueur ne perçoit pas un
+    canal — il perçoit un écart à l'instant présent. Lire la règle sur la
+    vérité transportée reviendrait à s'accorder gratuitement la frame de
+    retard que le joueur, lui, subit ;
+  - **vérité(n−1)** — K(n) contre S̃(n−1), l'état d'où la connaissance
+    provient, transporté dans les mêmes coordonnées. Isole la fidélité du
+    CANAL SEUL. **DIAGNOSTIC, jamais la règle.**
 
-DEUX PASSES PAR EPS, et c'est délibéré : reconstruire le vivant exige de
-rapatrier des coefficients et la vérité, ce qui fausserait un chrono. La
-passe CHRONO tourne donc le pipeline nu (B6 : warmup exclu, série,
-médiane ET p99) ; la passe Δχ rejoue la MÊME trajectoire (même graine,
-même géométrie, même k) en évaluant l'observable hors de toute mesure de
-temps. Les deux passes ne partagent aucun chiffre.
+Leur ÉCART est le prix de la frame de retard, reporté comme tel : en cas
+d'échec il dit s'il faut incriminer le SEUIL ou le RETARD, et cette
+distinction est précisément ce que l'attribution (a) — nommée, non armée
+— demanderait.
 
-**ÉCHELLE DE LECTURE ÉPINGLÉE (B)** : la règle Q2 lit le Δχ **DÉCIMÉ à
-l'échelle du niveau 0** — le grossier comparé à ce que le grossier
-devrait être, à sa propre résolution : c'est l'objet qui existe et qui
-sera consommé. Le Δχ NON décimé est reporté en **DIAGNOSTIC SEUL**, et
-n'entre dans aucune décision. La relation entre les deux n'est pas
-monotone : la décimation ne fait pas qu'atténuer, elle DÉPLACE les bandes
-porteuses que `delta_chi` est seul à lire (vérifié au build : 0.038
-décimé contre 0.022 à pleine résolution sur un cas).
+────────────────────────────────────────────────────────────────────────
+PORTÉE, ET CE QUE LA SONDE NE MESURE PAS
+────────────────────────────────────────────────────────────────────────
+Le device inscrit dans `reference` les colonnes qu'il a PRÉDITES
+GPU-side. Les lire CRÉDITE donc le CPU d'une prédiction identique à celle
+du device. **La sonde mesure la fidélité du CANAL — seuil, cadence,
+transfert — et NON celle de la prédiction propre au CPU.** C'est une
+limite déclarée, pas un détail : mesurer la seconde exige le MIROIR CPU
+(option 2), nommé comme travail de PRODUCTION et délibérément non
+construit. Un résultat de cette sonde ne peut donc jamais s'énoncer « le
+lointain est fidèle », seulement « le canal l'est ».
 
-**LOGIQUE DU CRITÈRE (C)**, fait de logique et non préférence : le joueur
-ne voit JAMAIS la référence. Donc Δχ < 0.0603 ⇒ **innocuité ÉTABLIE** ;
+────────────────────────────────────────────────────────────────────────
+RÈGLE DE DÉCISION (Q2), RECONDUITE POUR L'OBSERVABLE CORRIGÉ
+────────────────────────────────────────────────────────────────────────
+**EPS retenu = le PLUS GRAND EPS dont le Δχ MAX de série, lu sur
+vérité(n) et à l'échelle DÉCIMÉE du niveau 0, reste < 0.0603 (ic_bas)** —
+lecture sur l'IC entier, discipline §A13. Si aucun EPS du balayage ne
+satisfait, 1e-5 compris : **AUTRE remonté, aucun EPS retenu par défaut.**
+Jamais de choix après courbe.
+
+ÉCHELLE ÉPINGLÉE : la règle lit le Δχ DÉCIMÉ — le grossier comparé à ce
+que le grossier devrait être, à sa propre résolution. Le non décimé est
+reporté en DIAGNOSTIC SEUL. La relation n'est pas monotone : décimer
+DÉPLACE les bandes porteuses que `delta_chi` est seul à lire.
+
+LOGIQUE DU CRITÈRE, inchangée et toujours un fait de logique : le joueur
+ne voit JAMAIS la référence. Δχ < 0.0603 ⇒ **innocuité ÉTABLIE** ;
 Δχ > 0.0603 ⇒ **innocuité NON ÉTABLIE** — et JAMAIS « nocivité établie ».
-Un AUTRE ne justifie donc PAS de resserrer EPS ; le seul indice interne
-dont le joueur disposerait est la cohérence proche/lointain, et c'est une
-MESURE DIFFÉRENTE, nommée et NON armée.
-
-**BRANCHE PRÉ-ÉCRITE (D), REPORTÉE** : instrument VALIDÉ + aucun EPS ne
-passe à k=4 ⇒ la décision passe à k, et le RÉVEIL σ_ω devient LA décision
-explicite à prendre. Ce driver la REPORTE au JSON ; il ne la déclenche
-pas et ne réveille rien.
 
 ────────────────────────────────────────────────────────────────────────
-NOTE FALSIFIÉE PAR LA MESURE — CORRIGÉE ICI (§A19-lecture-sonde-EPS)
+VÉRIFICATION D'INSTRUMENT ET TABLE DE BRANCHES, RECONDUITES
 ────────────────────────────────────────────────────────────────────────
-Ce module portait, avant le run, l'hypothèse suivante : « l'observable
-est gouverné par la PÉREMPTION L1, pas par EPS ». Le bras de vérification
-k=1 l'a FALSIFIÉE — Δχ est identique à TROIS DÉCIMALES entre k=1 et k=4.
-Ni EPS ni k ne bougent l'aiguille, et le Δχ non décimé est tout aussi plat
-(≈0.069).
+Le même balayage est d'abord joué à **k=1**, et `lecture_mecanique`
+REFUSE de produire la lecture k=4 sans son PASS/FAIL enregistré (câblage
+B9). Une sonde muette se détecte AVANT, pas après (§A14). La table reste
+COMPLÈTE et CLOSE :
+  **(i)** k=1 discrimine ET au moins un EPS passe ⇒ **INSTRUMENT VALIDE** ;
+  **(ii)** k=1 ne discrimine pas ⇒ **SONDE MUETTE sur EPS** — ne rien
+      régler, remonter ;
+  **(iii)** k=1 DISCRIMINE mais AUCUN EPS ne passe ⇒ **MÉCANISME DE
+      REMONTÉE EN QUESTION**, avec ses deux attributions nommées et non
+      armées.
+NOTA : à k=1 subsiste la frame de retard du compteur (choix 6) — la
+vérification teste la discrimination sous péremption MINIMALE, PAS NULLE.
 
-Ce n'est donc PAS la péremption : c'est un **PLANCHER STRUCTUREL**
-(signature §A14, « muette par construction »). L'hypothèse est retirée et
-n'est plus portée comme vraie nulle part — la garder aurait fait lire les
-chiffres à travers une explication réfutée. Le suspect principal, nommé au
-journal : le DOMAINE DE COMPARAISON — les cellules du niveau 0 que nulle
-fenêtre active ne remonte jamais donnent un écart constant, indépendant de
-tout réglage.
+**CE N'EST PAS UN BALAYAGE DE k** : deux valeurs seulement, k=4 (mesure,
+figée) et k=1 (vérification). Toute DÉCISION sur k reste gatée σ_ω (R4).
 
-C'est ce que le DIAGNOSTIC D'INSTRUMENT (D-1/D-2,
-`run_f1_diagnostic_instrument.py`) va trancher. La branche (ii) est
-appliquée en attendant : **rien n'est réglé**, EPS reste 1e-4 et k reste
-figé.
+────────────────────────────────────────────────────────────────────────
+DEUX PASSES, ET CE QUI A ALLÉGÉ LA SECONDE
+────────────────────────────────────────────────────────────────────────
+La passe CHRONO tourne le pipeline nu (B6 : warmup exclu, série, médiane
+ET p99). La passe Δχ rejoue la MÊME trajectoire hors de toute mesure de
+temps. Les deux ne partagent aucun chiffre.
 
-Kernels F et L3, chrono, substrats : INTOUCHÉS. Sortie JSON SANS
-timestamp.
+L'option 1 SUPPRIME la capture de coefficients dont la v1 avait besoin :
+l'observable se lit sur le device. La passe Δχ est donc plus légère — et
+c'est cohérent avec la lecture D-2, qui attribuait +0.822 ms à l'appareil
+de sonde.
+
+────────────────────────────────────────────────────────────────────────
+CE QUI EST FIGÉ TANT QUE RIEN N'EST ENDOSSÉ
+────────────────────────────────────────────────────────────────────────
+EPS reste 1e-4, k reste 4, **rien n'est réglé**. Kernels F et L3
+INTOUCHÉS dans leur code CUDA ; les deux empreintes, sur la CHAÎNE
+EXTRAITE et non sur les fichiers, sont re-calculables :
+    sha256(substrat_fusionne._SOURCE)  = e18015f5...f30b4  (8223 car.)
+    sha256(substrat_l3._SOURCE_L3)     = 9533a130...781a   (9635 car.)
 
 Machine : iluin-tworings3, terminal natif UNIQUEMENT. Usage :
   .venv/bin/python scripts/run_f1_sonde_eps.py
 
-POINT D'ARRÊT OBLIGATOIRE après le run : lecture remontée à Romain. N2
-(M-b) N'EST PAS achetée — elle vient après cette lecture, avec son propre
-chiffrage."""
+**POINT D'ARRÊT : ce pré-enregistrement est remonté pour ENDOSSEMENT.
+AUCUN run avant. N2 (M-b) n'est pas achetée.**"""
 from __future__ import annotations
 
 import json
@@ -166,6 +181,25 @@ CADENCE_FIGEE: int = CADENCE_MESURE        # nom historique, conservé
 
 CHAMP_SEDIMENT: int = 3          # (h, hu, hv, s) — s porte le readout
 
+# Le pré-enregistrement v2 est REMONTÉ, pas encore endossé. Tant que ce
+# drapeau est faux, le driver REFUSE de tourner : « aucun run avant
+# endossement » devient mécanique au lieu d'être une promesse. C'est
+# Romain qui le lève, avec le commit qui endosse.
+ENDOSSEMENT_PREREG_V2: bool = False
+
+
+def exiger_endossement() -> None:
+    """Verrou de procédure : un pré-enregistrement remonté n'est pas un
+    pré-enregistrement endossé. Mesurer avant endossement laisserait la
+    règle se former après la donnée."""
+    if not ENDOSSEMENT_PREREG_V2:
+        raise RuntimeError(
+            "SONDE EPS v2 : pré-enregistrement REMONTÉ, NON ENDOSSÉ "
+            "(§A21-complément). Aucun run n'est produit avant endossement "
+            "— l'ancien pré-enregistrement est superseded et la règle ne "
+            "doit pas pouvoir se former après la donnée. Lever "
+            "ENDOSSEMENT_PREREG_V2 est une décision de Romain.")
+
 
 def exiger_cadence_admise(k: int) -> None:
     """Garde d'intégrité : SEULES deux cadences existent ici — celle de
@@ -195,14 +229,20 @@ def exiger_cadence_figee(k: int) -> None:
 
 
 class ReconstructeurNiveau0:
-    """Le niveau 0 VIVANT : ce que le CPU sait réellement, reconstruit à
-    partir des seuls coefficients qui lui sont REMONTÉS — donc seuillés à
-    EPS et périmés par L1 (une fenêtre ne remonte qu'une frame sur k).
+    """**SUPERSEDED (§A19-CORRECTION). NE PAS EMPLOYER POUR UNE LECTURE
+    NEUVE.** Conservé parce que des lectures ACQUISES en dépendent
+    (`run_f1_diagnostic_instrument.py`) et qu'on ne réécrit pas le passé.
 
-    Le schéma B4 est incrémental : chaque coefficient reçu s'ajoute à ce
-    que le CPU détenait. Les résidus sous le seuil s'accumulent côté GPU
-    et repassent le seuil plus tard — rien n'est perdu, mais le vivant
-    RETARDE sur la vérité, et c'est exactement ce que la sonde mesure."""
+    Ce reconstructeur entretenait une copie CPU INDÉPENDANTE, alimentée
+    par les seuls coefficients reçus. Il ne faisait NI le roll NI les
+    colonnes prédites que le device applique à `references` à chaque
+    déplacement de fovéa. Il comparait donc des régions spatiales
+    DÉCALÉES, et c'est ce décalage — non une infidélité du grossier — qui
+    produisait le plancher 0.082, insensible à EPS comme à k.
+
+    Il est remplacé par `ConnaissanceCpu` (option 1, §A21-complément) :
+    une copie indépendante peut diverger du device, une lecture directe
+    ne le peut pas."""
 
     def __init__(self, pipeline: PipelineMaQuater):
         # Le CPU part de ce qu'il a descendu : les références initiales.
@@ -220,6 +260,60 @@ class ReconstructeurNiveau0:
     def champ(self, indice_groupe: int, position: int) -> np.ndarray:
         """Champ sédiment d'un slot, vu par le CPU."""
         return self.vivant[indice_groupe][position, 0, CHAMP_SEDIMENT]
+
+
+# ----- OPTION 1 : la connaissance du CPU se LIT, elle ne se refait pas -----
+
+VERITE_COURANTE: str = "verite_n"                 # porte la RÈGLE Q2
+VERITE_TRANSPORTEE: str = "verite_n_moins_1"      # DIAGNOSTIC de canal
+
+
+class ConnaissanceCpu:
+    """Ce que le CPU sait, LU SUR `reference` — option 1, tranchée §A21.
+
+    Le schéma B4 pose que `reference` EST le modèle de la connaissance du
+    CPU : le kernel émet d = etat − reference, transmet d, puis fait
+    reference += d. Depuis le ping-pong (§A21), tout ce qui est émis est
+    transféré une fois et une seule ; l'identité est donc EXACTE, à un
+    décalage d'une frame près. La lire plutôt que la refaire supprime par
+    construction toute possibilité de divergence — c'est là tout l'objet
+    du correctif.
+
+    S'emploie comme OBSERVATEUR de `PipelineMaQuater.frame` : appelée
+    après le déplacement et avant l'émission, elle capture au vol les
+    DEUX champs dont la sonde a besoin, dans les MÊMES coordonnées :
+
+      - `connaissance` = K(n) : `reference` transportée dans les
+        coordonnées de la frame n, avant que l'émission de n n'y entre.
+        C'est ce que le CPU détient à la frame n ;
+      - `verite_transportee` = S̃(n−1) : l'état de la frame n−1, roulé et
+        complété par les colonnes prédites, donc lui aussi dans les
+        coordonnées de n.
+
+    La vérité COURANTE S(n) se lit après la frame, par `champ_verite`.
+
+    PORTÉE DÉCLARÉE, ET C'EST UNE LIMITE, PAS UN DÉTAIL : le device
+    inscrit dans `reference` les colonnes qu'il a PRÉDITES GPU-side. La
+    lire, c'est donc CRÉDITER le CPU d'une prédiction identique à celle du
+    device. La sonde mesure ainsi la fidélité du CANAL — seuil, cadence,
+    transfert — et NON celle de la prédiction propre au CPU. Mesurer
+    cette dernière exige le miroir CPU (option 2), NOMMÉ comme travail de
+    PRODUCTION et délibérément non construit ici."""
+
+    def __init__(self, indice_groupe: int, position: int):
+        self.indice_groupe = indice_groupe
+        self.position = position
+        self.connaissance: np.ndarray | None = None
+        self.verite_transportee: np.ndarray | None = None
+
+    def _lire(self, buffers: list) -> np.ndarray:
+        bloc = buffers[self.indice_groupe][self.position, 0, CHAMP_SEDIMENT]
+        return vers_cpu(bloc).astype(np.float64)
+
+    def __call__(self, pipeline: PipelineMaQuater) -> None:
+        """Point d'arrêt : après le déplacement, avant l'émission."""
+        self.connaissance = self._lire(pipeline.references)
+        self.verite_transportee = self._lire(pipeline.fenetres)
 
 
 def champ_verite(pipeline: PipelineMaQuater, indice_groupe: int,
@@ -275,32 +369,82 @@ def mesurer_chrono(cp, eps: float, k: int) -> dict:
 
 def mesurer_delta_chi(cp, eps: float, k: int, frames: int,
                       facteur_decimation: int) -> dict:
-    """Passe Δχ : même trajectoire, observable évalué HORS chrono."""
+    """Passe Δχ : même trajectoire, observable évalué HORS chrono, et la
+    connaissance du CPU LUE sur `reference` (option 1, §A21-complément).
+
+    LES DEUX VÉRITÉS SONT DÉCLARÉES ICI, AVANT LE RUN, et toutes deux
+    reportées — leur coût relatif est marginal (un champ de plus capturé
+    par frame, une évaluation de Δχ de plus) et les CONFONDRE
+    refabriquerait l'artefact :
+
+      - **vérité(n)** — K(n) contre S(n), l'état MAINTENANT. C'est ce que
+        le joueur voit : canal ET péremption acceptée. **Elle porte la
+        RÈGLE Q2** parce que la règle décide d'innocuité perceptuelle, et
+        que le joueur ne perçoit pas un canal, il perçoit un écart à
+        l'instant présent ;
+      - **vérité(n−1)** — K(n) contre S̃(n−1), l'état d'où la connaissance
+        provient, transporté dans les mêmes coordonnées. Elle isole la
+        fidélité du CANAL SEUL (seuil, cadence, transfert), sans la frame
+        de retard. **Diagnostic**, jamais la règle.
+
+    L'écart entre les deux EST le prix de la péremption d'une frame ; il
+    est reporté comme tel, ce qui rend lisible, en cas d'échec, s'il faut
+    incriminer le seuil ou le retard.
+
+    Aucune capture de coefficients n'est nécessaire : l'observable se lit
+    sur le device. La passe est donc plus légère que la précédente."""
     geo = geometrie_v4()
     transferts = TransfertComptable(cp)
-    pipeline = PipelineMaQuater(cp, geo, transferts, k=k, eps=eps,
-                                capturer_coefficients=True)
-    reconstructeur = ReconstructeurNiveau0(pipeline)
+    pipeline = PipelineMaQuater(cp, geo, transferts, k=k, eps=eps)
     indice_groupe, position = _slot_observe(pipeline)
+    observateur = ConnaissanceCpu(indice_groupe, position)
 
-    serie_decimee: list[float] = []
-    serie_pleine: list[float] = []
+    series: dict[str, dict[str, list[float]]] = {
+        verite: {"decime": [], "plein": []}
+        for verite in (VERITE_COURANTE, VERITE_TRANSPORTEE)}
+
     for _ in range(frames):
-        pipeline.frame(delta_x=DELTA_X_MOBILE)
-        reconstructeur.appliquer(pipeline.coefficients_frame)
-        vivant = reconstructeur.champ(indice_groupe, position)
-        verite = champ_verite(pipeline, indice_groupe, position)
-        serie_decimee.append(
-            delta_chi_readout(vivant, verite, facteur_decimation))
-        serie_pleine.append(delta_chi_readout(vivant, verite, 1))
+        pipeline.frame(delta_x=DELTA_X_MOBILE, observateur=observateur)
+        connaissance = observateur.connaissance
+        verites = {
+            VERITE_COURANTE: champ_verite(pipeline, indice_groupe, position),
+            VERITE_TRANSPORTEE: observateur.verite_transportee,
+        }
+        for nom, verite in verites.items():
+            series[nom]["decime"].append(
+                delta_chi_readout(connaissance, verite, facteur_decimation))
+            series[nom]["plein"].append(
+                delta_chi_readout(connaissance, verite, 1))
+
+    def resume(valeurs: dict) -> dict:
+        return {
+            "delta_chi_max": float(np.max(valeurs["decime"])),
+            "delta_chi_median": float(np.percentile(valeurs["decime"], 50)),
+            "delta_chi_max_sans_decimation": float(np.max(valeurs["plein"])),
+            "delta_chi_median_sans_decimation": float(
+                np.percentile(valeurs["plein"], 50)),
+        }
+
+    courante = resume(series[VERITE_COURANTE])
+    transportee = resume(series[VERITE_TRANSPORTEE])
     return {
         "frames_evaluees": frames,
         "facteur_decimation": facteur_decimation,
-        "delta_chi_max": float(np.max(serie_decimee)),
-        "delta_chi_median": float(np.percentile(serie_decimee, 50)),
-        "delta_chi_max_sans_decimation": float(np.max(serie_pleine)),
-        "delta_chi_median_sans_decimation": float(
-            np.percentile(serie_pleine, 50)),
+        # La RÈGLE lit ici, et seulement ici.
+        **courante,
+        "verite_de_la_regle": VERITE_COURANTE,
+        "par_verite": {VERITE_COURANTE: courante,
+                       VERITE_TRANSPORTEE: transportee},
+        "prix_peremption_une_frame": (courante["delta_chi_max"]
+                                      - transportee["delta_chi_max"]),
+        "note_verites": (
+            f"{VERITE_COURANTE} (K(n) contre S(n)) porte la RÈGLE : c'est "
+            "ce que le JOUEUR voit — canal ET péremption acceptée. "
+            f"{VERITE_TRANSPORTEE} (K(n) contre S̃(n−1)) isole le CANAL "
+            "seul et reste un DIAGNOSTIC. Leur écart est le prix de la "
+            "frame de retard ; il dit, en cas d'échec, s'il faut "
+            "incriminer le seuil ou le retard. Les confondre "
+            "refabriquerait l'artefact du décalage spatial."),
         "note": ("le décimé porte la RÈGLE (le niveau 0 est l'observable "
                  "du joueur hors fovéa) ; le non-décimé est reporté à "
                  "côté. Aucun des deux n'est un majorant de l'autre par "
@@ -340,13 +484,14 @@ def discrimination_du_balayage(mesures: list[dict]) -> dict:
         "rapport_octets": (float(octets_max / octets_min)
                            if octets_min > 0 else None),
         "note": ("si le trafic varie fortement mais que Δχ ne bouge pas, "
-                 "l'observable ne VOIT pas EPS. L'explication « c'est la "
-                 "péremption L1 » a été FALSIFIÉE par le bras k=1 (Δχ "
-                 "identique à 3 décimales entre k=1 et k=4) : c'est un "
-                 "PLANCHER STRUCTUREL, dont le suspect nommé est le "
-                 "DOMAINE DE COMPARAISON (cellules jamais remontées). "
+                 "l'observable ne VOIT pas EPS. NOTA v2 : en v1 ce test "
+                 "était rendu ininterprétable par le DÉCALAGE SPATIAL du "
+                 "reconstructeur, qui plaquait un plancher insensible à "
+                 "tout (0.082). L'observable est corrigé (option 1, "
+                 "§A21-complément) et la discrimination redevient "
+                 "lisible ; aucune valeur de la v1 n'est reconduite. "
                  "Diagnostic reporté, aucune conclusion tirée ici ; k "
-                 "n'est pas balayé (§A19). D-1/D-2 tranchent."),
+                 "n'est pas balayé."),
     }
 
 
@@ -530,9 +675,9 @@ def lecture_mecanique(mesures: list[dict],
     return {
         "seuil_ic_bas": SEUIL_IC_BAS,
         "regle": ("EPS retenu = le PLUS GRAND EPS dont le Δχ DÉCIMÉ max "
-                  "de série reste < 0.0603 (ic_bas) — lecture sur l'IC "
-                  "entier"),
-        # (B) — l'échelle de lecture est ÉPINGLÉE, et dite ici.
+                  f"de série, lu sur {VERITE_COURANTE}, reste < 0.0603 "
+                  "(ic_bas) — lecture sur l'IC entier"),
+        # (B) — échelle ET vérité de lecture, toutes deux ÉPINGLÉES.
         "echelle_de_lecture": {
             "grandeur_de_la_regle": "delta_chi_max (DÉCIMÉ, échelle du "
                                     "niveau 0)",
@@ -544,6 +689,30 @@ def lecture_mecanique(mesures: list[dict],
                            "les bandes porteuses que delta_chi lit, la "
                            "relation n'est pas monotone"),
         },
+        "verite_de_lecture": {
+            "verite_de_la_regle": VERITE_COURANTE,
+            "motif": ("la règle décide d'INNOCUITÉ PERCEPTUELLE, et le "
+                      "joueur ne perçoit pas un canal — il perçoit un "
+                      "écart à l'instant présent. Lire la règle sur la "
+                      "vérité transportée s'accorderait gratuitement la "
+                      "frame de retard que le joueur subit."),
+            "verite_diagnostique": VERITE_TRANSPORTEE,
+            "usage_du_diagnostic": (
+                "isole la fidélité du CANAL seul (seuil, cadence, "
+                "transfert). Leur écart est le prix de la frame de "
+                "retard : en cas d'échec, il dit s'il faut incriminer le "
+                "SEUIL ou le RETARD. Jamais la règle."),
+            "declaree_avant_run": True,
+        },
+        "portee_option_1": (
+            "la connaissance du CPU est LUE sur `reference`, qui contient "
+            "les colonnes PRÉDITES GPU-side : la sonde crédite donc le CPU "
+            "d'une prédiction identique à celle du device. Elle mesure la "
+            "fidélité du CANAL, jamais celle de la prédiction propre au "
+            "CPU — laquelle exigerait le miroir CPU (option 2), nommé "
+            "comme travail de PRODUCTION et non construit. Aucun résultat "
+            "d'ici ne peut s'énoncer « le lointain est fidèle », seulement "
+            "« le canal l'est »."),
         "eps_retenu": retenu,
         "eps_satisfaisants": [m["eps"] for m in satisfaisants],
         "autre_remonte": bool(retenu is None),
@@ -575,6 +744,9 @@ def lecture_mecanique(mesures: list[dict],
 
 
 def main() -> None:
+    # AVANT toute allocation : un pré-enregistrement remonté n'est pas
+    # endossé, et rien ne doit tourner tant qu'il ne l'est pas.
+    exiger_endossement()
     cp = exiger_cupy()
     exiger_pass(VERIFS_EXIGEES)
     exiger_cadence_figee(CADENCE_FIGEE)
@@ -613,36 +785,61 @@ def main() -> None:
 
     document = {
         "meta": {
-            "mesure": "sonde EPS (N1) — fidélité du niveau 0 vivant "
-                      "(§A19, pocCascade2phys c3d13a1)",
+            "mesure": ("sonde EPS (N1) VERSION 2 — fidélité du CANAL de "
+                       "remontée (§A21-complément, pocCascade2phys "
+                       "f943e9a)"),
+            "supersede": (
+                "l'ancien pré-enregistrement (§A19) est SUPERSEDED, pas "
+                "amendé : son observable était faux (décalage spatial du "
+                "reconstructeur). AUCUNE lecture de la v1 n'est "
+                "reconduite — ni le plancher 0.082, ni la branche (ii)."),
             "protocole": {
                 "pipeline": ("V4 complet : géométrie emboîtée, prédiction "
                              "GPU-side, L3, L1 k=4 étalée, fovéa mobile"),
                 "verite": "niveau 0 par décimation exacte (moyennes Harten)",
-                "vivant": ("niveau 0 reconstruit par la remontée seuillée, "
-                           "incrémentale, L1 k=4 INCLUSE (la péremption "
-                           "fait partie du régime)"),
+                "connaissance_cpu": (
+                    "LUE sur `reference` (option 1, tranchée §A21) au SEUL "
+                    "instant où elle est dans les coordonnées de la frame "
+                    "courante : après le déplacement, avant l'émission. "
+                    "Une copie indépendante peut diverger du device ; une "
+                    "lecture directe ne le peut pas"),
+                "deux_verites": (
+                    f"DÉCLARÉES AVANT LE RUN et toutes deux reportées. "
+                    f"{VERITE_COURANTE} (K(n) contre S(n)) PORTE LA RÈGLE "
+                    "— c'est ce que le joueur voit, canal ET péremption "
+                    f"acceptée. {VERITE_TRANSPORTEE} (K(n) contre S̃(n−1)) "
+                    "isole le CANAL seul et reste DIAGNOSTIC. Leur écart "
+                    "est le prix de la frame de retard"),
                 "observable": ("Δχ readout : albedo(S_HALF_OP) puis "
                                "delta_chi(...)['max_carrier'] — primitives "
                                "EXISTANTES, espace instrument, jamais "
                                "l'état"),
                 "deux_passes": ("chrono nu d'un côté, Δχ hors chrono de "
-                                "l'autre — reconstruire le vivant exige "
-                                "des rapatriements qui fausseraient le "
-                                "temps ; aucun chiffre partagé"),
+                                "l'autre ; aucun chiffre partagé. L'option "
+                                "1 supprime la capture de coefficients de "
+                                "la v1 : la passe Δχ est plus légère"),
                 "echelle_de_lecture": (
-                    f"ÉPINGLÉE (§A19-complément B) : la RÈGLE lit le Δχ "
-                    f"DÉCIMÉ ×{facteur} à l'échelle du niveau 0 "
-                    f"({N0_DEFAUT}²) — le grossier comparé à ce que le "
-                    "grossier devrait être. Le Δχ SANS décimation est "
-                    "reporté en DIAGNOSTIC SEUL"),
+                    f"ÉPINGLÉE : la RÈGLE lit le Δχ DÉCIMÉ ×{facteur} à "
+                    f"l'échelle du niveau 0 ({N0_DEFAUT}²) — le grossier "
+                    "comparé à ce que le grossier devrait être. Le Δχ SANS "
+                    "décimation est reporté en DIAGNOSTIC SEUL"),
                 "verification_instrument": (
                     f"bras k={CADENCE_VERIFICATION} sur le MÊME balayage, "
-                    "DUE avant toute lecture (§A19-complément A) ; k=1 "
-                    "conserve la frame de retard du compteur — péremption "
-                    "MINIMALE, pas nulle. Ce n'est PAS un balayage de k"),
+                    "DUE avant toute lecture ; k=1 conserve la frame de "
+                    "retard du compteur — péremption MINIMALE, pas nulle. "
+                    "Ce n'est PAS un balayage de k"),
+                "portee": (
+                    "mesure la fidélité du CANAL (seuil, cadence, "
+                    "transfert), PAS celle de la prédiction propre au CPU "
+                    "— `reference` contient les colonnes prédites "
+                    "GPU-side. Le miroir CPU (option 2) est nommé comme "
+                    "travail de PRODUCTION et non construit"),
                 "chrono": "B6 (warmup exclu, médiane ET p99)",
-                "kernels": "F fusionné et L3 INTOUCHÉS",
+                "kernels": (
+                    "F et L3 INTOUCHÉS dans leur code CUDA — empreintes "
+                    "sur la CHAÎNE EXTRAITE : sha256(_SOURCE)=e18015f5..."
+                    "f30b4 (8223 car.), sha256(_SOURCE_L3)=9533a130...781a "
+                    "(9635 car.)"),
             },
             "balayage_eps": list(EPS_BALAYAGE),
             "cadence_l1": CADENCE_FIGEE,

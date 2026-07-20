@@ -116,31 +116,34 @@ def test_le_balayage_grave_est_reproduit():
 
 def test_signale_un_balayage_qui_ne_discrimine_pas():
     """Le trafic varie d'un facteur énorme mais Δχ ne bouge pas :
-    l'observable ne VOIT pas EPS. La note ne doit PLUS attribuer cela à
-    la péremption L1 — le bras k=1 l'a FALSIFIÉ (Δχ identique à trois
-    décimales entre k=1 et k=4) : c'est un plancher STRUCTUREL, que
-    D-1/D-2 tranchent."""
+    l'observable ne VOIT pas EPS. La note dit désormais POURQUOI ce test
+    était ininterprétable en v1 — le décalage spatial du reconstructeur y
+    plaquait un plancher insensible à tout — et que l'observable est
+    corrigé (§A21-complément)."""
     mesures = [_mesure(1e-5, 0.0806, octets=200000.0),
                _mesure(1e-2, 0.0805, octets=100.0)]
     diagnostic = discrimination_du_balayage(mesures)
     assert diagnostic["a_discrimine"] is False
     assert diagnostic["amplitude_relative"] < 0.01
     assert diagnostic["rapport_octets"] == pytest.approx(2000.0)
-    assert "PLANCHER STRUCTUREL" in diagnostic["note"]
-    assert "FALSIFIÉE" in diagnostic["note"]
-    assert "DOMAINE DE COMPARAISON" in diagnostic["note"]
+    assert "DÉCALAGE SPATIAL" in diagnostic["note"]
+    assert "aucune valeur de la v1 n'est reconduite" in diagnostic["note"]
 
 
-def test_lhypothese_peremption_nest_plus_portee_comme_vraie():
-    """Garde anti-régression : l'explication réfutée ne doit revenir dans
-    aucune note. Elle n'apparaît que dans le docstring, en CITATION de ce
-    qui a été falsifié."""
+def test_aucune_explication_refutee_nest_portee_comme_vraie():
+    """Garde anti-régression, élargie à la v2 : ni l'explication par la
+    péremption (falsifiée par le bras k=1), ni le « plancher structurel »
+    (expliqué depuis : c'était le décalage spatial) ne doivent revenir
+    comme des faits. Le module doit en outre porter son statut de
+    SUPERSEDED, faute de quoi une lecture v1 pourrait être reprise."""
     import scripts.run_f1_sonde_eps as sonde
     diagnostic = discrimination_du_balayage([
         _mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)])
     assert "gouverné par la PÉREMPTION" not in diagnostic["note"]
-    assert "FALSIFIÉE" in sonde.__doc__
-    assert "PLANCHER STRUCTUREL" in sonde.__doc__
+    assert "PLANCHER STRUCTUREL" not in diagnostic["note"]
+    doc = " ".join(sonde.__doc__.split())
+    assert "SUPERSEDED" in doc
+    assert "Aucune lecture de la v1 n'est reconduite" in doc
 
 
 def test_signale_un_balayage_qui_discrimine():
