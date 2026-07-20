@@ -71,11 +71,33 @@ def test_le_prefixe_device_vient_du_fusionne():
 
 def test_le_kernel_m_a_prime_reste_intouche():
     """Le fusionné garde son empreinte : la borne M-a′ est citée, jamais
-    re-mesurée ni modifiée."""
+    re-mesurée ni modifiée.
+
+    L'empreinte porte sur la CHAÎNE CUDA EXTRAITE (`_SOURCE`), PAS sur le
+    fichier — c'est dit ici pour que la preuve soit re-calculable par qui
+    l'exige (§A21)."""
     import hashlib
+    assert len(_SOURCE_FUSIONNE) == 8223
     empreinte = hashlib.sha256(_SOURCE_FUSIONNE.encode()).hexdigest()
     assert empreinte == (
         "e18015f57e14263414239b18c51d25cd335250f58dde2ccb892a6e2c1d6f30b4")
+
+
+def test_le_kernel_l3_a_son_propre_verrou_dempreinte():
+    """VERROU AJOUTÉ, autorisé §A21. Le kernel L3 portait `reference += d`
+    sans aucun verrou d'empreinte : seules l'équivalence structurelle et
+    l'égalité bit-à-bit de l'état le tenaient. C'est lui qui décide de ce
+    que le CPU saura ; il ne pouvait pas rester sans.
+
+    Même forme que celui du fusionné : sha256 de la CHAÎNE CUDA EXTRAITE
+    (`_SOURCE_L3`), pas du fichier — de sorte que le Python du module
+    (buffers, comptabilité) puisse bouger sans que le CUDA ne bouge, et
+    que ce soit PROUVÉ plutôt qu'affirmé."""
+    import hashlib
+    assert len(_SOURCE_L3) == 9635
+    empreinte = hashlib.sha256(_SOURCE_L3.encode()).hexdigest()
+    assert empreinte == (
+        "9533a130b6624ce1b5b76d7d8e206aaae2e55fcc34e2a8d4eafa315e8014781a")
 
 
 # ----- verrou 1 : l'état est BIT-IDENTIQUE au fusionné -----
@@ -266,8 +288,12 @@ def test_compteur_lu_a_retard_dune_frame():
 def test_diagnostic_retard_repose_sur_la_variabilite():
     """Le retard d'une frame se diagnostique par la VARIABILITÉ des
     tailles, pas par un cumul : chaque frame transférant ce que la
-    précédente a émis, un cumul serait tautologique. Tailles stables =>
-    retard neutre, seule la dernière frame reste en attente."""
+    précédente a émis, un cumul serait tautologique.
+
+    DEPUIS §A21 (ping-pong), `tailles_stables` ne CONDITIONNE plus la
+    complétude du transfert — il ne décrit plus que la variabilité de
+    l'émission. Le diagnostic reste utile, sa portée a changé, et la note
+    ne doit plus invoquer l'incrémentalité pour rassurer."""
     import cupy as cp
     q, _ = _etat_et_reference(cp)
     compacteur = CompacteurL3(cp, taille_sortie_max(q))
@@ -280,7 +306,9 @@ def test_diagnostic_retard_repose_sur_la_variabilite():
     assert diagnostic["taille_max"] == 120
     assert diagnostic["tailles_stables"] is True
     assert diagnostic["compteur_final_non_transfere"] == 120
-    assert "incrémental" in diagnostic["note"]
+    assert "PING-PONG" in diagnostic["note"]
+    assert "une fois et une seule" in diagnostic["note"]
+    assert "rien n'est perdu" not in diagnostic["note"]   # nota RETIRÉ
 
     variable = CompacteurL3(cp, taille_sortie_max(q))
     for taille in (100, 180, 140):

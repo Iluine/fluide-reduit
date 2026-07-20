@@ -162,7 +162,10 @@ def test_diagnostic_retard_signale_la_stabilite():
     assert diagnostic["frames_observees"] == 6
     assert diagnostic["taille_max"] > 0
     assert isinstance(diagnostic["tailles_stables"], bool)
-    assert "incrémental" in diagnostic["note"]
+    # §A21 : la note ne rassure plus par l'incrémentalité (nota RETIRÉ),
+    # elle dit la bijection que le ping-pong garantit.
+    assert "PING-PONG" in diagnostic["note"]
+    assert "une fois et une seule" in diagnostic["note"]
 
 
 # ----- arithmétique de lecture -----

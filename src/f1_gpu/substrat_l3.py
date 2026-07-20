@@ -11,9 +11,15 @@ ultérieure — pas de CUDA Graphs, pas d'exotique, pas de « version mieux
 optimisée » — n'est autorisée après ce build.
 
 LE KERNEL M-a′ EST INTOUCHÉ : `substrat_fusionne.py` n'est pas modifié,
-son bloc `_SOURCE` garde l'empreinte
-e8fcaad47db0af010728d5c5d878e1629191bfef4e0382fa80aa3cefd9f27f04, et la
-borne M-a′ (1.685 ms/slot) est citée telle quelle, jamais re-mesurée.
+et la borne M-a′ (1.685 ms/slot) est citée telle quelle, jamais
+re-mesurée. L'empreinte qui le verrouille — la SEULE citée désormais,
+re-calculable par qui l'exige (§A21) — porte sur la CHAÎNE CUDA EXTRAITE
+et non sur le fichier :
+    sha256(substrat_fusionne._SOURCE.encode()) = e18015f5...f30b4
+Le kernel L3 de ce module a désormais le SIEN, de même forme
+(`_SOURCE_L3`, chaîne extraite) : c'est lui qui porte `reference += d`,
+il ne pouvait pas rester sans verrou. Les deux sont imposés par des
+tests, et le code CUDA reste intouché même quand le Python autour bouge.
 
 ÉQUIVALENCE DE MOTIF, ACQUISE PAR CONSTRUCTION : les fonctions device du
 fusionné (`desing`, `minmod`, `lire`, `pentes_axe`, `flux_1d`,
@@ -54,10 +60,13 @@ ainsi, coûte tant », jamais « il aurait fallu mieux l'implémenter » :
   5. DIMENSIONNEMENT AU PIRE CAS. Tout peut être émis : les buffers de
      sortie valent l'état entier (142.6 Mo à la config V2 — gate 1.35 Go,
      V2 mesurée 0.311 Go). Dimensionner en dessous exigerait de savoir
-     d'avance combien sera émis.
+     d'avance combien sera émis. DEPUIS §A21 ces buffers sont en
+     PING-PONG, donc DOUBLÉS ; `CompacteurL3.octets_buffers()` reporte le
+     total pour que la résidence le montre.
   6. COMPTEUR LU À RETARD D'UNE FRAME (`CompacteurL3`) — voir sa
      docstring : aucune synchronisation par frame, la maladie s2 ne
-     rouvre pas.
+     rouvre pas. Le ping-pong de §A21 le PRÉSERVE : il ne change que le
+     jeu de buffers transféré, pas la façon de lire le compteur.
 
 L'ORDRE D'ÉMISSION N'EST PAS GARANTI (compaction atomique). L'ensemble
 émis, lui, l'est. Les tests comparent donc des ensembles TRIÉS — une
@@ -178,31 +187,73 @@ def taille_sortie_max(q) -> int:
 
 
 class CompacteurL3:
-    """Buffers d'émission + compteur LU À RETARD D'UNE FRAME (choix 6,
-    endossé §A18-complément).
+    """Buffers d'émission en PING-PONG — implémentation de l'INVARIANT
+    gravé §A21 (pocCascade2phys 299adfc) :
 
-    Pourquoi ce retard : connaître la taille émise exige de lire le
-    compteur, donc de rapatrier un scalaire, donc de SYNCHRONISER — la
-    maladie que s2 a guérie sur la CFL. Ici le compteur est copié
-    ASYNCHRONEMENT vers un tampon hôte *pinned*, et la frame courante
-    dimensionne son transfert sur la valeur arrivée à la frame
-    PRÉCÉDENTE. Aucun `synchronize()`, aucun `int(tableau_device)` par
-    frame ; la lecture porte sur de la mémoire hôte, elle ne bloque pas.
+        **la référence du device n'avance QUE sur ce qui a été
+        effectivement TRANSFÉRÉ, jamais sur ce qui a été ÉMIS.**
 
-    Conséquence NOMMÉE, reportée et jamais tue : si l'émission d'une frame
-    dépasse celle de la précédente, une part des coefficients n'est pas
-    transférée ce tour-là. Le schéma B4 étant incrémental (les résidus
-    s'accumulent et repassent le seuil), rien n'est perdu définitivement —
-    `ecart_emis_transferes()` rend l'écart lisible.
+    Le kernel, lui, est INTOUCHÉ : il fait `reference[p] += d` à
+    l'émission, et il n'a aucun moyen de savoir ce qui sera transféré.
+    L'invariant ne peut donc pas être tenu dans le kernel — il est tenu
+    ICI, en garantissant que TOUT ce qui est émis finit transféré, une
+    fois et une seule. La bijection émis ↔ reçu vaut l'invariant.
+
+    ────────────────────────────────────────────────────────────────────
+    CE QU'IL A FALLU RÉPARER (§A19-CORRECTION, deux défauts EXHIBÉS)
+    ────────────────────────────────────────────────────────────────────
+    L'ancien schéma faisait venir la TAILLE d'une frame et les DONNÉES
+    d'une autre : `taille` était le compteur de n−1, le tampon contenait
+    l'émission de n. Il en découlait deux pertes symétriques :
+      (α) frame émettant PLUS que la précédente : les couples au-delà de
+          `taille` n'étaient jamais transférés, alors que le kernel avait
+          déjà fait `reference[p] += d` pour eux. Perte DÉFINITIVE — le
+          détail est absorbé dans la référence et ne repasse plus le
+          seuil. Le nota « le schéma étant incrémental, rien n'est perdu »
+          était FAUX ; il est RETIRÉ (§A21), pas nuancé ;
+      (β) frame émettant MOINS : la remise à zéro du compteur ne réécrit
+          pas les buffers, et les positions [émis, taille) portaient
+          encore les couples de la frame précédente — retransférés et
+          RÉAPPLIQUÉS.
+
+    ────────────────────────────────────────────────────────────────────
+    LE PING-PONG, ET POURQUOI IL SUFFIT
+    ────────────────────────────────────────────────────────────────────
+    Deux jeux de buffers. La frame n écrit dans le jeu `n mod 2` ; le
+    transfert de la frame n porte sur le jeu de n−1, dimensionné par le
+    compteur de n−1. **Taille et données du même tour** : la cause commune
+    des deux défauts disparaît, et avec elle les deux défauts.
+
+    Le compteur, lui, n'avait rien de faux : `hote[0]` porte déjà le
+    compte de n−1. C'est la DONNÉE qui était de la mauvaise frame. Le
+    mécanisme du choix 6 est donc conservé tel quel.
+
+    CHOIX 6 PRÉSERVÉ, ET C'EST VÉRIFIABLE : le correctif n'ajoute qu'une
+    allocation à la construction (B2) et un basculement d'indice Python.
+    Aucun `synchronize()`, aucun `int(tableau_device)`, aucune copie
+    bloquante par frame — un test l'impose en interdisant les points
+    d'entrée de synchronisation pendant une série de frames.
+
+    COÛT : les buffers d'émission doublent. Ils étaient dimensionnés au
+    PIRE CAS (choix 5) ; `octets_buffers()` reporte le total réel pour que
+    la résidence le montre.
 
     B2 : tout est préalloué à la construction ; la boucle de frame
     n'alloue rien."""
 
+    N_JEUX: int = 2               # ping-pong : n mod 2
+
     def __init__(self, cp, taille_max: int):
         self.cp = cp
         self.taille_max = int(taille_max)
-        self.valeurs = cp.empty(self.taille_max, dtype=cp.float32)
-        self.indices = cp.empty(self.taille_max, dtype=cp.uint32)
+        # Les DEUX jeux, préalloués (B2). `_jeu` désigne celui où le
+        # kernel de la frame courante écrit ; l'autre porte la frame
+        # précédente, intégralement, et n'attend que son transfert.
+        self._valeurs = [cp.empty(self.taille_max, dtype=cp.float32)
+                         for _ in range(self.N_JEUX)]
+        self._indices = [cp.empty(self.taille_max, dtype=cp.uint32)
+                         for _ in range(self.N_JEUX)]
+        self._jeu = 0
         self.compteur = cp.zeros(1, dtype=cp.uint32)
         # Tampon hôte page-locked : la copie asynchrone y atterrit.
         self._memoire_pinned = cp.cuda.alloc_pinned_memory(4)
@@ -212,8 +263,24 @@ class CompacteurL3:
         self.tailles_vues: list[int] = []
         self.compteur_final = 0
 
+    # ----- le jeu COURANT : c'est lui que le kernel reçoit -----
+
+    @property
+    def valeurs(self):
+        """Buffer de valeurs de la frame COURANTE — celui que `pas_f_l3`
+        passe au kernel."""
+        return self._valeurs[self._jeu]
+
+    @property
+    def indices(self):
+        """Buffer d'indices de la frame COURANTE."""
+        return self._indices[self._jeu]
+
     def taille_precedente(self) -> int:
-        """Compteur de la frame précédente — lecture HÔTE, sans blocage."""
+        """Compteur de la frame précédente — lecture HÔTE, sans blocage.
+
+        C'est la taille du jeu PRÉCÉDENT, celui que `vues_a_transferer`
+        rend : les deux viennent du même tour."""
         return int(min(int(self.hote[0]), self.taille_max))
 
     def noter_taille(self, taille: int) -> None:
@@ -223,28 +290,44 @@ class CompacteurL3:
 
     def cloturer_frame(self) -> None:
         """Copie asynchrone du compteur vers l'hôte (pour la frame
-        suivante), puis remise à zéro. Les deux ordres sont soumis au
-        stream courant, donc exécutés APRÈS le kernel de cette frame."""
+        suivante), remise à zéro, puis BASCULE du ping-pong. Les deux
+        premiers ordres sont soumis au stream courant, donc exécutés
+        APRÈS le kernel de cette frame ; la bascule est un entier Python.
+
+        Après la bascule, le jeu que le kernel vient de remplir devient le
+        jeu « précédent » — c'est lui que la frame suivante transférera,
+        avec le compteur qui l'accompagne."""
         cp = self.cp
         cp.cuda.runtime.memcpyAsync(
             self._memoire_pinned.ptr, self.compteur.data.ptr, 4,
             cp.cuda.runtime.memcpyDeviceToHost,
             cp.cuda.Stream.null.ptr)
         self.compteur.fill(0)
+        self._jeu = (self._jeu + 1) % self.N_JEUX
 
     def vues_a_transferer(self, taille: int):
-        """Tranches contiguës à remonter (valeurs f32 + indices u32)."""
-        return self.valeurs[:taille], self.indices[:taille]
+        """Tranches contiguës à remonter, prises dans le jeu PRÉCÉDENT —
+        celui que le compteur `taille` décrit. Taille et données du même
+        tour : c'est là que l'invariant se tient."""
+        precedent = (self._jeu + 1) % self.N_JEUX
+        return (self._valeurs[precedent][:taille],
+                self._indices[precedent][:taille])
+
+    def octets_buffers(self) -> int:
+        """Empreinte VRAM des buffers d'émission — les DEUX jeux. À
+        reporter tel quel dans la résidence : le ping-pong double le
+        dimensionnement au pire cas (choix 5), et cela doit se voir."""
+        return int(sum(b.nbytes for b in self._valeurs)
+                   + sum(b.nbytes for b in self._indices))
 
     def diagnostic_retard(self) -> dict:
-        """Ce que le retard d'une frame a coûté, rendu lisible.
+        """Ce que le retard d'une frame coûte, rendu lisible.
 
-        Le transfert de la frame *n* est dimensionné sur le compteur de
-        *n−1*. Si les tailles émises sont STABLES (min == max), le retard
-        est exactement neutre : chaque frame transfère ce que la
-        précédente a émis, et seule la dernière reste en attente. C'est
-        la variabilité — pas un cumul, qui serait tautologique — qui dit
-        si le retard mord. Agrégé HORS chrono."""
+        Le transfert de la frame *n* porte sur les DONNÉES et le COMPTEUR
+        de *n−1* : la variabilité des tailles n'entame plus la complétude
+        du transfert, elle ne dit plus que la variabilité de l'émission.
+        Seule la dernière frame reste en attente à la fin de la série.
+        Agrégé HORS chrono."""
         tailles = [t for t in self.tailles_vues if t > 0]
         stable = bool(tailles) and min(tailles) == max(tailles)
         return {
@@ -255,11 +338,14 @@ class CompacteurL3:
                                if tailles else 0),
             "tailles_stables": stable,
             "compteur_final_non_transfere": self.compteur_final,
-            "note": ("retard d'une frame (choix 6). Tailles stables => le "
-                     "retard est neutre, seule la dernière frame reste en "
-                     "attente. Sinon l'écart frame à frame est reporté "
-                     "par min/max ; le schéma B4 étant incrémental, les "
-                     "résidus repassent le seuil — rien n'est perdu."),
+            "octets_buffers": self.octets_buffers(),
+            "note": ("retard d'une frame (choix 6), buffers en PING-PONG "
+                     "(§A21) : données ET compteur viennent du même tour, "
+                     "donc tout ce qui est émis est transféré une fois et "
+                     "une seule. `tailles_stables` ne conditionne plus la "
+                     "complétude — il ne décrit plus que la variabilité de "
+                     "l'émission. Seule la dernière frame de la série "
+                     "reste en attente."),
         }
 
 

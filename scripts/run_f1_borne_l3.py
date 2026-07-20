@@ -175,7 +175,10 @@ class BrasBorne:
         total = sum(b.nbytes for b in self.fenetres)
         total += sum(b.nbytes for b in self.references)
         for compacteur in self.compacteurs:
-            total += int(compacteur.valeurs.nbytes + compacteur.indices.nbytes)
+            # Les DEUX jeux du ping-pong (§A21). NOTA : la borne L3 est
+            # une mesure ACQUISE et n'est pas re-jouée ; cette ligne suit
+            # le compacteur pour rester juste, elle ne recompte rien.
+            total += compacteur.octets_buffers()
         return int(total)
 
     def n_blocs(self) -> int:

@@ -133,6 +133,7 @@ BANDE_MS: tuple[float, float] = (14.2, 15.9)   # recalculée avec L1 k=4
 F_BATCHE_V4_MS: float = 12.655                 # ancres 1.685 / 0.845
 REMONTEE_L3_MESUREE_MS: float = 5.122          # borne L3
 CADENCE_L1: int = 4                            # k, armé round-robin
+GATE_VRAM_GO: float = 1.35                     # gate de résidence, gravé
 N_SLOTS_ENERGIE_V4: int = 2
 NIVEAU_PARENT_CPU: int = 1
 
@@ -501,9 +502,17 @@ class PipelineMaQuater:
         total = sum(b.nbytes for b in self.fenetres)
         total += sum(b.nbytes for b in self.references)
         for compacteur in self.compacteurs:
-            total += int(compacteur.valeurs.nbytes
-                         + compacteur.indices.nbytes)
+            # Les DEUX jeux du ping-pong (§A21) : le doublement des
+            # buffers d'émission doit se voir dans la résidence.
+            total += compacteur.octets_buffers()
         return int(total)
+
+    def octets_surcout_pingpong(self) -> int:
+        """Prix du correctif §A21, isolé : le SECOND jeu de buffers
+        d'émission, soit la moitié de leur total. Reporté à part plutôt
+        que fondu dans `octets_etat` — un correctif qui coûte de la VRAM
+        doit se lire comme tel à la lecture de la résidence."""
+        return int(sum(c.octets_buffers() for c in self.compacteurs) // 2)
 
     def n_blocs(self) -> int:
         return int(sum(b.shape[0] * b.shape[1] for b in self.fenetres))
@@ -643,6 +652,13 @@ def main() -> None:
             "mempool_total_octets": int(mempool.total_bytes()),
             "etat_prealloue_octets": pipeline.octets_etat(),
             "nvidia_smi_octets": vram_nvidia_smi_octets(),
+            "surcout_pingpong_octets": pipeline.octets_surcout_pingpong(),
+            "gate_go": GATE_VRAM_GO,
+            "note_pingpong": (
+                "le correctif §A21 (buffers d'émission en PING-PONG) "
+                "double le dimensionnement au pire cas des buffers "
+                "d'émission. Le surcoût est reporté À PART, jamais fondu "
+                f"dans le total ; le gate reste {GATE_VRAM_GO} Go."),
         },
         "lecture_mecanique": lecture,
     }
