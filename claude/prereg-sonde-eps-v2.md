@@ -1,7 +1,11 @@
 # Pré-enregistrement — SONDE EPS (N1), version 2
 
-**Statut : REMONTÉ POUR ENDOSSEMENT. Aucun run avant.**
-Source : pocCascade2phys PREREGISTRATION.md §A21-complément (commit f943e9a).
+**Statut : ENDOSSÉ §A22 sous trois amendements, INTÉGRÉS ci-dessous.
+REMONTÉ pour endossement du texte FINAL. Aucun run avant.**
+Sources : pocCascade2phys PREREGISTRATION.md §A21-complément (f943e9a) et
+**§A22 (a0a305a)** — amendements (A) critère de discrimination et plancher
+de bruit, (B) branche (iii-bis) péremption, (C) la discrimination ne gate
+qu'en cas d'échec.
 Verrou mécanique : `ENDOSSEMENT_PREREG_V2 = False` dans
 `scripts/run_f1_sonde_eps.py` — le driver refuse fail-loud avant même de
 toucher au device. Le lever est la décision d'endossement.
@@ -80,8 +84,9 @@ de retard. **Jamais la règle.**
 
 C'est le **prix de la frame de retard**, reporté comme tel
 (`prix_peremption_une_frame`). En cas d'échec, il dit s'il faut incriminer le
-**seuil** ou le **retard** — distinction que l'attribution (a), nommée et non
-armée, demanderait.
+**seuil** ou le **retard**. C'est ce discriminateur que l'amendement (B)
+câble à la table, sous la branche **(iii-bis)** — et c'est par là que
+l'attribution (a) se trouve **armée** (§ 5).
 
 ---
 
@@ -104,20 +109,95 @@ EPS retenu par défaut.** Jamais de choix après courbe.
 
 ---
 
-## 5. Vérification d'instrument et table de branches, reconduites
+## 4bis. (A) Critère de discrimination et plancher de bruit
 
-Le même balayage est d'abord joué à **k=1**, et `lecture_mecanique` refuse de
-produire la lecture k=4 sans son PASS/FAIL enregistré (câblage B9). Une sonde
-muette se détecte avant, pas après (§A14).
+Le critère entre au pré-enregistrement, et il a **deux conditions** :
 
 | | |
 |---|---|
-| **(i)** | k=1 discrimine **et** au moins un EPS passe ⇒ **INSTRUMENT VALIDE** |
-| **(ii)** | k=1 ne discrimine pas ⇒ **SONDE MUETTE sur EPS** — ne rien régler, remonter |
-| **(iii)** | k=1 discrimine mais **aucun** EPS ne passe ⇒ **MÉCANISME DE REMONTÉE EN QUESTION**, avec ses deux attributions nommées et non armées |
+| **FORME** | amplitude **relative** du Δχ max sur le balayage ≥ **5 %** |
+| **ÉCHELLE** | amplitude **absolue** au-dessus d'un plancher de bruit **mesuré par réplicat** |
+
+**Le plancher est mesuré, pas supposé.** Le même EPS — celui *en vigueur*,
+donc pas un choix — est rejoué à l'identique : graine, géométrie, cadence,
+série. Tout ce qui sépare les deux passes est du bruit par définition. Le
+plancher retenu est le plus grand écart observé **sur les deux vérités**, la
+règle lisant l'une et (iii-bis) l'autre. Coût : une passe Δχ sur douze.
+
+**Pourquoi le seuil relatif de 5 % est conservé, et pourquoi c'est un choix.**
+Une amplitude relative est **sans échelle** : elle ne devient pas fausse
+quand l'observable passe de ~0.082 (artefact) à ~1e-4 (attendu). Ce qui la
+rendait insuffisante, c'est qu'elle **statuait seule** — 5 % de 1e-4 valent
+5e-6, et rien ne disait si 5e-6 était du signal ou du bruit. Le défaut
+n'était pas sa valeur, c'était l'absence de plancher.
+
+En choisir une autre aujourd'hui reviendrait à la choisir *en connaissant
+l'échelle de l'observable* : un seuil formé avec la donnée en vue. On garde
+donc le critère de forme tel quel, et on lui adjoint un critère d'échelle qui,
+lui, est mesuré.
+
+**Si le plancher ressort nul**, cela dit que la chaîne est déterministe, pas
+qu'elle est infiniment précise : le critère relatif porte alors seul, et le
+driver le dit plutôt que d'en profiter. **Sans plancher évalué**, la
+discrimination reste *indéterminée* — jamais prononcée sur la forme seule,
+qui fut la faute de la v1.
+
+---
+
+## 5. Table de branches et vérification d'instrument
+
+Le même balayage est d'abord joué à **k=1**, et `lecture_mecanique` refuse de
+produire la lecture k=4 sans son PASS/FAIL enregistré (câblage B9).
+
+### (C) La discrimination ne gate qu'en cas d'échec
+
+Si **au moins un EPS passe** sur vérité(n), l'instrument **suffit** pour cette
+conclusion : un observable qui reste sous le seuil est innocent quelle que
+soit sa pente. La discrimination devient alors un **diagnostic**. Elle ne
+**gate** que lorsque rien ne passe — le seul cas où il faut savoir si l'on
+mesure quelque chose, et c'est là que (ii), (iii) et (iii-bis) se séparent.
+
+### La table, close sur quatre issues
+
+| | condition | lecture |
+|---|---|---|
+| **(i)** | un EPS passe sur vérité(n) | **INSTRUMENT VALIDE** |
+| **(iii-bis)** | aucun sur vérité(n), au moins un sur vérité(n−1) | **PÉREMPTION** |
+| **(iii)** | aucun sur les deux, mais le balayage discrimine | **MÉCANISME DE REMONTÉE EN QUESTION** |
+| **(ii)** | aucun sur les deux, pas de discrimination | **SONDE MUETTE sur EPS** |
+
+Exhaustives et mutuellement exclusives ; un test de couverture exerce les
+quatre.
+
+### (B) La branche (iii-bis) — PÉREMPTION
+
+Retirer la seule frame de retard suffirait à satisfaire la règle : **la cause
+est le retard, pas le mécanisme.** Le mécanisme de remontée est **exonéré**,
+et la décision passe à k — donc au **réveil σ_ω (R4)**, qui appartient à
+Romain. Le driver le reporte et ne réveille rien.
+
+Le discriminateur est `prix_peremption_une_frame`, déjà reporté par frame :
+l'écart entre les deux vérités **est** le prix du retard.
+
+**Ordre remonté comme choix.** Le gravé dit que (ii), (iii) et (iii-bis) se
+séparent sous le gate, sans fixer leur ordre. (iii-bis) est évaluée **avant**
+la discrimination, parce qu'elle repose sur une **mesure directe** — le prix
+du retard — et non sur la pente du balayage. Une sonde peut être muette sur
+EPS tout en mesurant parfaitement ce prix : les deux axes sont indépendants,
+et « la cause est le retard » est plus informatif que « sonde muette ».
+
+### L'attribution (a) est désormais ARMÉE
+
+Son falsificateur gravé était « comparer contre la vérité **décalée d'une
+frame** » — c'est exactement vérité(n−1), que la v2 reporte à chaque frame.
+**La branche (iii-bis) est sa lecture pré-écrite** : (a) n'a plus besoin d'un
+bras dédié, elle est tranchée par la table. L'attribution (b) reste **non
+armée**, son bras restant gaté.
 
 *Nota* : à k=1 subsiste la frame de retard du compteur (choix 6) — la
-vérification teste la discrimination sous péremption **minimale, pas nulle**.
+vérification teste sous péremption **minimale, pas nulle**. C'est précisément
+ce qui rend (iii-bis) lisible à k=1 : la seule péremption restante **est**
+cette frame de retard.
 
 **Ce n'est pas un balayage de k** : deux valeurs seulement, k=4 (mesure, figée)
 et k=1 (vérification). Toute décision sur k reste gatée σ_ω (R4).
@@ -176,16 +256,30 @@ croire la v1 seulement imprécise.
 
 ## 9. Ce qui est demandé
 
-**Endosser ce pré-enregistrement**, ou le renvoyer amendé. Sur endossement,
-`ENDOSSEMENT_PREREG_V2` est levé et le balayage peut tourner.
+**Endosser ce texte final**, ou le renvoyer amendé. Les trois amendements de
+§A22 y sont intégrés (§ 4bis pour A, § 5 pour B et C). Sur endossement,
+`ENDOSSEMENT_PREREG_V2` est levé — par Romain, pas par moi — et le balayage
+peut tourner.
 
-Deux conséquences à connaître avant de trancher, ni l'une ni l'autre traitée
-ici :
+Trois conséquences à connaître avant de trancher, aucune traitée ici :
 
 1. **`run_f1_attribution_b.py` reste gaté** — il est bâti sur l'observable v1
    et son verrou d'invariant refusera de prononcer. Le ré-armer sur
    l'observable corrigé est une décision distincte.
-2. **La lecture D-2 gagne en cohérence** : l'option 1 supprime la capture de
+2. **L'attribution (a) n'a plus besoin de son bras** : (iii-bis) la tranche
+   depuis la table. C'est un bras d'économisé, pas un bras d'ajouté.
+3. **La lecture D-2 gagne en cohérence** : l'option 1 supprime la capture de
    coefficients dont la v1 avait besoin, ce qui va dans le sens des +0.822 ms
    attribués à l'appareil de sonde. Ce n'est pas une re-mesure, seulement une
    cohérence à noter.
+
+### Un choix, et une chose que je n'ai pas su trancher seul
+
+- **Choix remonté** : l'ordre d'évaluation de (iii-bis) avant la
+  discrimination (§ 5). Le gravé fixe que les trois se séparent sous le gate,
+  pas leur ordre.
+- **Point à surveiller à la lecture** : le plancher mesuré par réplicat n'a
+  qu'**un** réplicat. S'il ressort très petit devant l'amplitude du balayage,
+  la question ne se pose pas. S'il en est du même ordre, un réplicat unique ne
+  suffira pas à trancher, et il faudra en jouer plusieurs — décision qui
+  appartiendra à Romain à la lecture, pas au driver.

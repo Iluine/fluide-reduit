@@ -22,7 +22,11 @@ from scripts.run_f1_sonde_eps import (
     CADENCE_VERIFICATION,
     CADENCES_ADMISES,
     LABEL_MECANISME_EN_QUESTION,
+    LABEL_PEREMPTION,
+    SEUIL_DISCRIMINATION_RELATIVE,
     TABLE_BRANCHES,
+    VERITE_COURANTE,
+    VERITE_TRANSPORTEE,
     CHAMP_SEDIMENT,
     EPS_BALAYAGE,
     EPS_EN_VIGUEUR,
@@ -60,9 +64,28 @@ def _pipeline(cp, eps: float, k: int = CADENCE_FIGEE):
 
 # ----- 1. la règle Q2, telle qu'elle est gravée -----
 
-def _mesure(eps: float, dchi_max: float, octets: float = 1000.0) -> dict:
-    return {"eps": eps, "delta_chi": {"delta_chi_max": dchi_max},
-            "chrono": {"octets_par_frame_median": octets}}
+def _mesure(eps: float, dchi_max: float, octets: float = 1000.0,
+            dchi_max_n1: float | None = None) -> dict:
+    """Mesure factice au format v2 : les DEUX vérités (§A21-complément).
+
+    `dchi_max_n1` par défaut égal à vérité(n) — le cas neutre, où la
+    frame de retard ne coûte rien et où (iii-bis) ne peut pas tirer."""
+    if dchi_max_n1 is None:
+        dchi_max_n1 = dchi_max
+    par_verite = {
+        VERITE_COURANTE: {"delta_chi_max": dchi_max,
+                          "delta_chi_max_sans_decimation": dchi_max},
+        VERITE_TRANSPORTEE: {"delta_chi_max": dchi_max_n1,
+                             "delta_chi_max_sans_decimation": dchi_max_n1},
+    }
+    return {
+        "eps": eps,
+        "delta_chi": {"delta_chi_max": dchi_max,
+                      "verite_de_la_regle": VERITE_COURANTE,
+                      "par_verite": par_verite,
+                      "prix_peremption_une_frame": dchi_max - dchi_max_n1},
+        "chrono": {"octets_par_frame_median": octets},
+    }
 
 
 def _verification(valide: bool = True) -> dict:
@@ -73,8 +96,10 @@ def _verification(valide: bool = True) -> dict:
             "discrimination": {"a_discrimine": valide}, "portee": "z"}
 
 
-def _lire(mesures: list[dict], valide: bool = True) -> dict:
-    return lecture_mecanique(mesures, _verification(valide))
+def _lire(mesures: list[dict], valide: bool = True,
+          plancher: float = 0.0) -> dict:
+    return lecture_mecanique(mesures, _verification(valide),
+                             plancher)
 
 
 def test_retient_le_plus_grand_eps_sous_le_seuil():
@@ -122,12 +147,47 @@ def test_signale_un_balayage_qui_ne_discrimine_pas():
     corrigé (§A21-complément)."""
     mesures = [_mesure(1e-5, 0.0806, octets=200000.0),
                _mesure(1e-2, 0.0805, octets=100.0)]
-    diagnostic = discrimination_du_balayage(mesures)
+    diagnostic = discrimination_du_balayage(mesures, plancher=0.0)
     assert diagnostic["a_discrimine"] is False
+    assert diagnostic["critere_forme"] is False        # la FORME manque
+    assert diagnostic["critere_echelle"] is True       # l'ÉCHELLE suffit
     assert diagnostic["amplitude_relative"] < 0.01
     assert diagnostic["rapport_octets"] == pytest.approx(2000.0)
-    assert "DÉCALAGE SPATIAL" in diagnostic["note"]
+    assert "décalage spatial" in diagnostic["note"]
     assert "aucune valeur de la v1 n'est reconduite" in diagnostic["note"]
+
+
+def test_la_discrimination_exige_les_deux_criteres():
+    """(A) §A22 : un rapport spectaculaire entre deux nombres tous deux
+    DANS LE BRUIT ne discrimine pas. La FORME seule ne suffit plus."""
+    mesures = [_mesure(1e-5, 1e-6), _mesure(1e-2, 1e-4)]
+    assert discrimination_du_balayage(mesures, plancher=0.0)[
+        "a_discrimine"] is True                # hors bruit : discrimine
+    serre = discrimination_du_balayage(mesures, plancher=1e-3)
+    assert serre["critere_forme"] is True      # 99 % d'amplitude relative
+    assert serre["critere_echelle"] is False   # mais sous le plancher
+    assert serre["a_discrimine"] is False
+
+
+def test_sans_plancher_la_discrimination_reste_indeterminee():
+    """Plutôt que de prononcer sur la FORME seule — la faute de la v1 —
+    l'absence de plancher laisse la discrimination indéterminée."""
+    diagnostic = discrimination_du_balayage(
+        [_mesure(1e-5, 0.010), _mesure(1e-2, 0.090)])
+    assert diagnostic["plancher_evalue"] is False
+    assert diagnostic["critere_forme"] is True
+    assert diagnostic["a_discrimine"] is False
+
+
+def test_le_seuil_relatif_est_conserve_et_justifie():
+    """Le critère de FORME est SANS ÉCHELLE : il ne devient pas faux
+    quand l'observable passe de ~0.082 à ~1e-4. C'est son isolement qui
+    était le défaut, pas sa valeur."""
+    assert SEUIL_DISCRIMINATION_RELATIVE == 0.05
+    note = discrimination_du_balayage(
+        [_mesure(1e-5, 0.01), _mesure(1e-2, 0.09)], plancher=0.0)["note"]
+    assert "FORME" in note and "ÉCHELLE" in note
+    assert "réplicat" in note
 
 
 def test_aucune_explication_refutee_nest_portee_comme_vraie():
@@ -137,8 +197,8 @@ def test_aucune_explication_refutee_nest_portee_comme_vraie():
     comme des faits. Le module doit en outre porter son statut de
     SUPERSEDED, faute de quoi une lecture v1 pourrait être reprise."""
     import scripts.run_f1_sonde_eps as sonde
-    diagnostic = discrimination_du_balayage([
-        _mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)])
+    diagnostic = discrimination_du_balayage(
+        [_mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)], plancher=0.0)
     assert "gouverné par la PÉREMPTION" not in diagnostic["note"]
     assert "PLANCHER STRUCTUREL" not in diagnostic["note"]
     doc = " ".join(sonde.__doc__.split())
@@ -148,8 +208,8 @@ def test_aucune_explication_refutee_nest_portee_comme_vraie():
 
 def test_signale_un_balayage_qui_discrimine():
     """Contre-épreuve : si Δχ suit EPS, le diagnostic le dit."""
-    diagnostic = discrimination_du_balayage([
-        _mesure(1e-5, 0.010), _mesure(1e-2, 0.090)])
+    diagnostic = discrimination_du_balayage(
+        [_mesure(1e-5, 0.010), _mesure(1e-2, 0.090)], plancher=0.0)
     assert diagnostic["a_discrimine"] is True
     assert diagnostic["amplitude_relative"] > 0.5
 
@@ -182,7 +242,8 @@ def test_instrument_valide_si_k1_discrimine_et_un_eps_passe():
     assert details["instrument_valide"] is True
     assert details["eps_passants_a_k1"] == [1e-5]
     assert "VALIDE" in details["lecture_preecrite"]
-    assert "PÉREMPTION" in details["lecture_preecrite"]
+    # (C) §A22 : la conclusion ne dépend plus de la discrimination.
+    assert "DIAGNOSTIC" in details["lecture_preecrite"]
 
 
 def test_sonde_muette_si_k1_ne_discrimine_pas():
@@ -196,73 +257,119 @@ def test_sonde_muette_si_k1_ne_discrimine_pas():
 
 
 def test_branche_iii_mecanisme_de_remontee_en_question():
-    """Lecture pré-écrite (iii), §A19-complément-2 : k=1 DISCRIMINE mais
-    aucun EPS ne passe. Ni sonde muette (elle discrimine), ni k coupable
-    (péremption minimale) — le résidu pointe AILLEURS, et le label le
-    dit. Les DEUX conditions restent exigées pour (i)."""
-    valide, details = verifier_instrument([
-        _mesure(1e-5, 0.070), _mesure(1e-2, 0.200)])
+    """(iii) : le balayage DISCRIMINE mais aucun EPS ne passe, sur AUCUNE
+    des deux vérités. Ni sonde muette (elle discrimine), ni retard
+    coupable (le retirer ne sauve aucun EPS) — le résidu pointe AILLEURS.
+
+    Le plancher de bruit est fourni : sans lui la discrimination reste
+    indéterminée (§A22)."""
+    valide, details = verifier_instrument(
+        [_mesure(1e-5, 0.070), _mesure(1e-2, 0.200)], plancher=0.0)
     assert valide is False
     assert details["discrimination"]["a_discrimine"] is True
     assert details["eps_passants_a_k1"] == []
     assert details["branche"] == "iii"
     assert details["label"] == LABEL_MECANISME_EN_QUESTION
-    assert "MÉCANISME DE REMONTÉE EN QUESTION" in details["label"]
     assert "pointe AILLEURS" in details["lecture_preecrite"]
 
 
-def test_les_deux_attributions_de_la_branche_iii_sont_nommees_non_armees():
-    """Elles sont NOMMÉES avec leur falsificateur, et NON ARMÉES : les
-    armer est une décision de Romain, jamais un enchaînement."""
-    _, details = verifier_instrument([
-        _mesure(1e-5, 0.070), _mesure(1e-2, 0.200)])
+def test_branche_iii_bis_designe_le_retard_et_non_le_mecanisme():
+    """(iii-bis), §A22 : aucun EPS ne passe sur vérité(n) MAIS au moins un
+    passe sur vérité(n−1). Retirer la seule frame de retard suffirait donc
+    à satisfaire la règle — la cause est LE RETARD, et le mécanisme de
+    remontée est EXONÉRÉ."""
+    valide, details = verifier_instrument(
+        [_mesure(1e-5, 0.070, dchi_max_n1=0.010),
+         _mesure(1e-2, 0.200, dchi_max_n1=0.150)], plancher=0.0)
+    assert valide is False
+    assert details["branche"] == "iii-bis"
+    assert details["label"] == LABEL_PEREMPTION
+    assert details["eps_passants"][VERITE_COURANTE] == []
+    assert details["eps_passants"][VERITE_TRANSPORTEE] == [1e-5]
+    assert "la cause est LE RETARD" in details["lecture_preecrite"]
+    assert "EXONÉRÉ" in details["lecture_preecrite"]
+    # (iii-bis) n'est PAS une attribution de mécanisme : rien à armer.
+    assert details["attributions_branche_iii"] is None
+
+
+def test_iii_bis_prime_meme_si_le_balayage_ne_discrimine_pas():
+    """ORDRE REMONTÉ COMME CHOIX : (iii-bis) repose sur une mesure
+    DIRECTE (le prix du retard), pas sur la pente du balayage. Une sonde
+    peut être muette sur EPS tout en mesurant parfaitement ce prix — les
+    deux axes sont indépendants, et « la cause est le retard » est plus
+    informatif que « sonde muette »."""
+    _, details = verifier_instrument(
+        [_mesure(1e-5, 0.0806, dchi_max_n1=0.010),
+         _mesure(1e-2, 0.0805, dchi_max_n1=0.010)], plancher=0.0)
+    assert details["discrimination"]["a_discrimine"] is False
+    assert details["branche"] == "iii-bis"
+
+
+def test_la_discrimination_ne_gate_quen_cas_dechec():
+    """(C) §A22 : au moins un EPS passe ⇒ l'instrument SUFFIT, la
+    discrimination passe en DIAGNOSTIC. Aucun ne passe ⇒ elle GATE."""
+    _, passe = verifier_instrument(
+        [_mesure(1e-5, 0.0100), _mesure(1e-2, 0.0101)], plancher=0.0)
+    assert passe["branche"] == "i"                  # malgré une pente nulle
+    assert passe["discrimination"]["a_discrimine"] is False
+    assert passe["discrimination_gate"] is False
+    assert "DIAGNOSTIC" in passe["role_de_la_discrimination"]
+
+    _, echoue = verifier_instrument(
+        [_mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)], plancher=0.0)
+    assert echoue["discrimination_gate"] is True
+    assert "GATE" in echoue["role_de_la_discrimination"]
+
+
+def test_lattribution_a_est_desormais_armee_par_la_verite_transportee():
+    """(a) « le retard d'une frame suffit à lui seul » avait pour
+    falsificateur « comparer contre la vérité DÉCALÉE d'une frame ». La v2
+    la reporte à chaque frame : (a) est ARMÉE, et (iii-bis) est sa
+    lecture. (b) reste NON armée, son bras étant gaté."""
+    _, details = verifier_instrument(
+        [_mesure(1e-5, 0.070), _mesure(1e-2, 0.200)], plancher=0.0)
     attributions = details["attributions_branche_iii"]
-    assert attributions is not None
     retard = attributions["a_retard_dune_frame"]
     derive = attributions["b_derive_reference_incrementale"]
-    assert "retard d'une frame" in retard["enonce"]
-    assert "DÉCALÉE d'une frame" in retard["falsificateur"]
-    assert "incrémentale DÉRIVE" in derive["enonce"]
-    assert "PLEINE" in derive["falsificateur"]
-    assert retard["arme"] is False and derive["arme"] is False
-    assert "NON ARMÉES" in attributions["statut"]
-    assert "décision de Romain" in attributions["statut"]
+    assert retard["arme"] is True
+    assert "vérité(n−1)" in retard["arme_par"]
+    assert derive["arme"] is False
+    assert "GATÉ" in derive["statut_du_bras"]
 
 
 def test_les_attributions_nexistent_que_pour_la_branche_iii():
-    """(i) et (ii) ne portent aucune attribution — elles ont leur propre
-    lecture."""
-    for mesures in ([_mesure(1e-5, 0.010), _mesure(1e-2, 0.090)],
-                    [_mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)]):
-        _, details = verifier_instrument(mesures)
+    """(i), (ii) et (iii-bis) ne portent aucune attribution de mécanisme —
+    chacune a sa propre lecture."""
+    cas = [
+        [_mesure(1e-5, 0.010), _mesure(1e-2, 0.090)],            # (i)
+        [_mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)],          # (ii)
+        [_mesure(1e-5, 0.070, dchi_max_n1=0.010),                # (iii-bis)
+         _mesure(1e-2, 0.200, dchi_max_n1=0.150)],
+    ]
+    for mesures in cas:
+        _, details = verifier_instrument(mesures, plancher=0.0)
         assert details["attributions_branche_iii"] is None
 
 
-def test_la_table_de_branches_est_close():
-    """Les trois branches couvrent TOUS les cas : discriminer ou non,
-    croisé avec au moins un EPS passant ou aucun. Aucune lecture ne peut
-    tomber hors table."""
+def test_la_table_de_branches_est_close_sur_quatre_issues():
+    """Les QUATRE issues sont exhaustives et mutuellement exclusives, et
+    le test les exerce toutes (§A22)."""
     cas = {
-        # (discrimine, un EPS passe) -> branche attendue
-        (True, True): "i",
-        (False, False): "ii",
-        (True, False): "iii",
-        # (False, True) : ne discrimine pas mais un EPS passe -> (ii),
-        # la muette prime, car sans discrimination le chiffre ne dit rien
-        # d'EPS même s'il tombe sous le seuil.
-        (False, True): "ii",
+        # (passe sur n, passe sur n−1, discrimine) -> branche
+        "i": ([_mesure(1e-5, 0.010), _mesure(1e-2, 0.090)], None),
+        "iii-bis": ([_mesure(1e-5, 0.070, dchi_max_n1=0.010),
+                     _mesure(1e-2, 0.200, dchi_max_n1=0.150)], None),
+        "iii": ([_mesure(1e-5, 0.070), _mesure(1e-2, 0.200)], None),
+        "ii": ([_mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)], None),
     }
     observees = set()
-    for (discrimine, passe), attendue in cas.items():
-        bas = 0.010 if passe else 0.070
-        haut = 0.090 if discrimine else bas * 1.001
-        _, details = verifier_instrument([_mesure(1e-5, bas),
-                                          _mesure(1e-2, haut)])
-        assert details["branche"] == attendue, (discrimine, passe)
+    for attendue, (mesures, _) in cas.items():
+        _, details = verifier_instrument(mesures, plancher=0.0)
+        assert details["branche"] == attendue, attendue
         assert details["label"] in TABLE_BRANCHES[attendue]
         observees.add(details["branche"])
-    assert observees == {"i", "ii", "iii"}        # les trois exercées
-    assert set(TABLE_BRANCHES) == {"i", "ii", "iii"}
+    assert observees == {"i", "ii", "iii", "iii-bis"}
+    assert set(TABLE_BRANCHES) == {"i", "ii", "iii", "iii-bis"}
 
 
 def test_chaque_branche_porte_sa_lecture_preecrite():

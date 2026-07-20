@@ -187,14 +187,28 @@ def test_la_verite_de_la_regle_est_celle_que_le_joueur_voit():
     assert "Jamais la règle" in verites["usage_du_diagnostic"]
 
 
-def _mesure(eps: float, delta_chi_max: float) -> dict:
+def _mesure(eps: float, delta_chi_max: float,
+            delta_chi_max_n1: float | None = None) -> dict:
+    if delta_chi_max_n1 is None:
+        delta_chi_max_n1 = delta_chi_max
+    par_verite = {
+        VERITE_COURANTE: {
+            "delta_chi_max": delta_chi_max,
+            "delta_chi_max_sans_decimation": delta_chi_max},
+        VERITE_TRANSPORTEE: {
+            "delta_chi_max": delta_chi_max_n1,
+            "delta_chi_max_sans_decimation": delta_chi_max_n1},
+    }
     return {
         "eps": eps,
         "chrono": {"octets_par_frame_median": 1000 * (1 + eps),
                    "temps_transfert_median_ms": 2.0,
                    "frame_time": {"mediane_ms": 16.0, "p99_ms": 17.0}},
-        "delta_chi": {"delta_chi_max": delta_chi_max,
-                      "verite_de_la_regle": VERITE_COURANTE},
+        "delta_chi": {
+            "delta_chi_max": delta_chi_max,
+            "verite_de_la_regle": VERITE_COURANTE,
+            "par_verite": par_verite,
+            "prix_peremption_une_frame": delta_chi_max - delta_chi_max_n1},
     }
 
 
@@ -202,7 +216,7 @@ def _lecture_factice() -> dict:
     mesures = [_mesure(1e-5, 0.02), _mesure(1e-4, 0.03), _mesure(1e-2, 0.09)]
     verification = {"instrument_valide": True, "branche": "i",
                     "label": "INSTRUMENT VALIDE"}
-    return lecture_mecanique(mesures, verification)
+    return lecture_mecanique(mesures, verification, plancher=0.0)
 
 
 def test_la_regle_q2_est_reconduite_pour_lobservable_corrige():

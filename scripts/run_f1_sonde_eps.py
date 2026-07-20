@@ -85,20 +85,67 @@ ne voit JAMAIS la référence. Δχ < 0.0603 ⇒ **innocuité ÉTABLIE** ;
 Δχ > 0.0603 ⇒ **innocuité NON ÉTABLIE** — et JAMAIS « nocivité établie ».
 
 ────────────────────────────────────────────────────────────────────────
-VÉRIFICATION D'INSTRUMENT ET TABLE DE BRANCHES, RECONDUITES
+CRITÈRE DE DISCRIMINATION ET PLANCHER DE BRUIT (amendement A, §A22)
+────────────────────────────────────────────────────────────────────────
+Le critère entre au PRÉ-ENREGISTREMENT, et il a DEUX conditions :
+  - **FORME** : amplitude RELATIVE du Δχ max sur le balayage >= 5 % ;
+  - **ÉCHELLE** : amplitude ABSOLUE au-dessus d'un plancher de bruit
+    **MESURÉ PAR RÉPLICAT** — le même EPS (celui en vigueur) rejoué à
+    l'identique, tout ce qui sépare les deux passes étant du bruit par
+    définition. Discipline reprise de l'attribution (b).
+
+Le seuil relatif de 5 % est CONSERVÉ, et c'est un choix justifié : une
+amplitude relative est SANS ÉCHELLE, donc elle ne devient pas fausse
+quand l'observable passe de ~0.082 (artefact) à ~1e-4 (attendu). Ce qui
+la rendait insuffisante, c'est qu'elle statuait SEULE — 5 % de 1e-4
+valent 5e-6, et rien ne disait si 5e-6 était du signal. Le défaut n'était
+pas sa valeur, c'était l'absence de plancher. En choisir une autre
+aujourd'hui reviendrait à la choisir en connaissant l'échelle de
+l'observable : un seuil formé avec la donnée en vue. On garde donc le
+critère de forme, et on lui adjoint un critère d'échelle MESURÉ.
+
+────────────────────────────────────────────────────────────────────────
+VÉRIFICATION D'INSTRUMENT ET TABLE DE BRANCHES (amendements B et C)
 ────────────────────────────────────────────────────────────────────────
 Le même balayage est d'abord joué à **k=1**, et `lecture_mecanique`
 REFUSE de produire la lecture k=4 sans son PASS/FAIL enregistré (câblage
-B9). Une sonde muette se détecte AVANT, pas après (§A14). La table reste
-COMPLÈTE et CLOSE :
-  **(i)** k=1 discrimine ET au moins un EPS passe ⇒ **INSTRUMENT VALIDE** ;
-  **(ii)** k=1 ne discrimine pas ⇒ **SONDE MUETTE sur EPS** — ne rien
-      régler, remonter ;
-  **(iii)** k=1 DISCRIMINE mais AUCUN EPS ne passe ⇒ **MÉCANISME DE
-      REMONTÉE EN QUESTION**, avec ses deux attributions nommées et non
-      armées.
+B9). Une sonde muette se détecte AVANT, pas après (§A14).
+
+**(C) LA DISCRIMINATION NE GATE QU'EN CAS D'ÉCHEC.** Si au moins un EPS
+passe sur vérité(n), l'instrument SUFFIT pour cette conclusion : un
+observable qui reste sous le seuil est innocent quelle que soit sa pente,
+et la discrimination devient un DIAGNOSTIC. Elle ne gate que lorsque rien
+ne passe — le seul cas où il faut savoir si l'on mesure quelque chose.
+
+TABLE COMPLÈTE ET CLOSE, quatre issues exhaustives et exclusives :
+  **(i)** au moins un EPS passe sur vérité(n) ⇒ **INSTRUMENT VALIDE** ;
+  **(iii-bis)** aucun sur vérité(n) mais au moins un sur vérité(n−1) ⇒
+      **PÉREMPTION** : retirer la seule frame de retard suffirait à
+      satisfaire la règle, donc la cause est LE RETARD et le mécanisme de
+      remontée est EXONÉRÉ. La décision passe à k — donc au réveil σ_ω,
+      qui appartient à Romain ;
+  **(iii)** aucun sur les deux vérités, mais le balayage DISCRIMINE ⇒
+      **MÉCANISME DE REMONTÉE EN QUESTION** ;
+  **(ii)** aucun sur les deux et pas de discrimination ⇒ **SONDE MUETTE
+      sur EPS** — ne rien régler, remonter.
+
+ORDRE REMONTÉ COMME CHOIX : (iii-bis) est évaluée AVANT la
+discrimination, parce qu'elle repose sur une MESURE DIRECTE — le prix de
+la frame de retard — et non sur la pente du balayage. Une sonde peut être
+muette sur EPS tout en mesurant parfaitement ce prix : les deux axes sont
+indépendants, et « la cause est le retard » est plus informatif que
+« sonde muette ».
+
+L'ATTRIBUTION (a), « le retard d'une frame suffit à lui seul », est ainsi
+ARMÉE : son falsificateur gravé était « comparer contre la vérité DÉCALÉE
+d'une frame », et c'est exactement vérité(n−1). La branche (iii-bis) EST
+sa lecture pré-écrite. L'attribution (b) reste NON armée, son bras étant
+gaté.
+
 NOTA : à k=1 subsiste la frame de retard du compteur (choix 6) — la
-vérification teste la discrimination sous péremption MINIMALE, PAS NULLE.
+vérification teste sous péremption MINIMALE, PAS NULLE. C'est précisément
+ce qui rend (iii-bis) lisible à k=1 : la seule péremption restante EST
+cette frame de retard.
 
 **CE N'EST PAS UN BALAYAGE DE k** : deux valeurs seulement, k=4 (mesure,
 figée) et k=1 (vérification). Toute DÉCISION sur k reste gatée σ_ω (R4).
@@ -454,44 +501,116 @@ def mesurer_delta_chi(cp, eps: float, k: int, frames: int,
     }
 
 
-SEUIL_DISCRIMINATION_RELATIVE: float = 0.05    # 5 % d'amplitude
+# ----- (A) CRITÈRE DE DISCRIMINATION, PRÉ-ENREGISTRÉ (§A22) -----
+#
+# Le seuil RELATIF de 5 % est CONSERVÉ, et c'est un choix qui se justifie
+# plutôt qu'un héritage : une amplitude relative est SANS ÉCHELLE, donc
+# elle ne devient pas fausse quand l'observable passe de ~0.082 (artefact)
+# à ~1e-4 (attendu). Ce qui la rendait insuffisante, c'est qu'elle
+# statuait SEULE : 5 % de 1e-4 valent 5e-6, et rien ne disait si 5e-6
+# était du signal ou du bruit. Le défaut n'était pas la valeur, c'était
+# l'absence de plancher.
+#
+# Choisir aujourd'hui une AUTRE valeur relative serait la choisir en
+# connaissant l'échelle de l'observable — un seuil formé avec la donnée
+# en vue. On garde donc le critère de FORME tel quel, et on lui adjoint
+# un critère d'ÉCHELLE qui, lui, est MESURÉ.
+SEUIL_DISCRIMINATION_RELATIVE: float = 0.05    # 5 % d'amplitude, FORME
+
+# Le réplicat qui MESURE le plancher : le même EPS joué DEUX FOIS, tout
+# identique. Discipline reprise de l'attribution (b) — un plancher supposé
+# est un seuil qu'on ajuste après coup. La valeur employée est celle EN
+# VIGUEUR (1e-4) : ce n'est pas un choix, c'est le régime.
+REPLICAT_EPS: float = EPS_EN_VIGUEUR
 
 
-def discrimination_du_balayage(mesures: list[dict]) -> dict:
-    """Le balayage a-t-il seulement DISCRIMINÉ ? Amplitude relative du Δχ
-    max entre le plus petit et le plus grand EPS.
+def plancher_bruit_replicat(mesure: dict, replicat: dict) -> dict:
+    """Plancher de bruit de l'observable, MESURÉ par réplicat.
 
-    Si elle est négligeable, l'observable n'est pas gouverné par EPS mais
-    par la péremption L1 (k figé) : un AUTRE remonté signifierait alors
-    « à ce k, le niveau 0 vivant est infidèle quel que soit EPS », et NON
-    « EPS est trop grand ». Diagnostic REPORTÉ — le driver ne conclut
-    pas, et il ne balaie pas k pour autant (interdit, §A19)."""
+    Deux passes Δχ à graine, géométrie, cadence et série identiques : tout
+    ce qui les sépare est du bruit par définition. Le plancher retenu est
+    le plus grand écart observé, sur LES DEUX vérités — la règle lit l'une,
+    la branche (iii-bis) lit l'autre, aucune ne doit être jugée sous son
+    propre bruit.
+
+    Un plancher NUL dirait que la chaîne est DÉTERMINISTE, pas qu'elle est
+    infiniment précise : le critère relatif porterait alors seul, et c'est
+    dit plutôt que tu."""
+    ecarts: dict[str, float] = {}
+    for verite in (VERITE_COURANTE, VERITE_TRANSPORTEE):
+        for grandeur in ("delta_chi_max", "delta_chi_max_sans_decimation"):
+            a = mesure["par_verite"][verite][grandeur]
+            b = replicat["par_verite"][verite][grandeur]
+            ecarts[f"{verite}.{grandeur}"] = abs(a - b)
+    plancher = max(ecarts.values()) if ecarts else 0.0
+    return {
+        "plancher_delta_chi": float(plancher),
+        "eps_du_replicat": REPLICAT_EPS,
+        "ecarts_observes": ecarts,
+        "mesure": "réplicat : même EPS, tout identique, deux passes",
+        "justification": (
+            "un plancher SUPPOSÉ est un seuil qu'on ajuste après coup. "
+            "Celui-ci est mesuré sur la chaîne elle-même, aux deux "
+            "vérités, avant toute lecture."),
+        "note_si_nul": (
+            "un plancher NUL dit que la chaîne est DÉTERMINISTE, pas "
+            "qu'elle est infiniment précise : le critère RELATIF porte "
+            "alors seul la discrimination, et c'est dit."),
+        "deterministe": bool(plancher == 0.0),
+    }
+
+
+def discrimination_du_balayage(mesures: list[dict],
+                               plancher: float | None = None) -> dict:
+    """Le balayage a-t-il DISCRIMINÉ ? DEUX conditions, pas une (§A22) :
+
+      - **FORME** : amplitude RELATIVE du Δχ max entre le plus petit et le
+        plus grand EPS, au-dessus de 5 % ;
+      - **ÉCHELLE** : amplitude ABSOLUE au-dessus du plancher de bruit
+        MESURÉ par réplicat.
+
+    L'une sans l'autre ne dit rien. Un rapport spectaculaire entre deux
+    nombres tous deux dans le bruit ne discrimine pas ; un écart absolu
+    confortable qui ne représente qu'un pour-cent de l'observable non
+    plus. C'est la leçon de la v1, où le critère relatif statuait seul sur
+    un observable qui était un artefact.
+
+    `plancher` à None : le critère d'échelle n'est pas évaluable et la
+    discrimination reste INDÉTERMINÉE plutôt que d'être prononcée sur la
+    forme seule."""
     valeurs = [m["delta_chi"]["delta_chi_max"] for m in mesures]
     coefficients = [m["chrono"]["octets_par_frame_median"] for m in mesures]
     if not valeurs:
-        return {"amplitude_relative": 0.0, "a_discrimine": False}
+        return {"amplitude_relative": 0.0, "amplitude_absolue": 0.0,
+                "a_discrimine": False, "plancher_evalue": False}
     plus_bas, plus_haut = min(valeurs), max(valeurs)
-    amplitude = (plus_haut - plus_bas) / plus_haut if plus_haut > 0 else 0.0
+    absolue = plus_haut - plus_bas
+    relative = absolue / plus_haut if plus_haut > 0 else 0.0
     octets_min, octets_max = min(coefficients), max(coefficients)
+    forme = bool(relative >= SEUIL_DISCRIMINATION_RELATIVE)
+    echelle = bool(plancher is not None and absolue > plancher)
     return {
         "delta_chi_max_min": plus_bas,
         "delta_chi_max_max": plus_haut,
-        "amplitude_relative": float(amplitude),
+        "amplitude_relative": float(relative),
+        "amplitude_absolue": float(absolue),
         "seuil_discrimination": SEUIL_DISCRIMINATION_RELATIVE,
-        "a_discrimine": bool(amplitude >= SEUIL_DISCRIMINATION_RELATIVE),
+        "plancher_bruit": plancher,
+        "plancher_evalue": bool(plancher is not None),
+        "critere_forme": forme,
+        "critere_echelle": echelle,
+        "a_discrimine": bool(forme and echelle),
         "octets_par_frame_min": octets_min,
         "octets_par_frame_max": octets_max,
         "rapport_octets": (float(octets_max / octets_min)
                            if octets_min > 0 else None),
-        "note": ("si le trafic varie fortement mais que Δχ ne bouge pas, "
-                 "l'observable ne VOIT pas EPS. NOTA v2 : en v1 ce test "
-                 "était rendu ininterprétable par le DÉCALAGE SPATIAL du "
-                 "reconstructeur, qui plaquait un plancher insensible à "
-                 "tout (0.082). L'observable est corrigé (option 1, "
-                 "§A21-complément) et la discrimination redevient "
-                 "lisible ; aucune valeur de la v1 n'est reconduite. "
-                 "Diagnostic reporté, aucune conclusion tirée ici ; k "
-                 "n'est pas balayé."),
+        "note": ("DEUX conditions (§A22) : amplitude relative >= 5 % "
+                 "(FORME, sans échelle donc reconductible) ET amplitude "
+                 "absolue au-dessus du plancher MESURÉ par réplicat "
+                 "(ÉCHELLE). En v1 le critère relatif statuait SEUL, sur "
+                 "un observable qui était un artefact de décalage spatial "
+                 "(~0.082) : aucune valeur de la v1 n'est reconduite. "
+                 "Diagnostic reporté ; k n'est pas balayé."),
     }
 
 
@@ -501,19 +620,27 @@ def discrimination_du_balayage(mesures: list[dict]) -> dict:
 LABEL_INSTRUMENT_VALIDE: str = "INSTRUMENT VALIDE"
 LABEL_SONDE_MUETTE: str = "SONDE MUETTE sur EPS"
 LABEL_MECANISME_EN_QUESTION: str = "MÉCANISME DE REMONTÉE EN QUESTION"
+LABEL_PEREMPTION: str = "PÉREMPTION"
 
 TABLE_BRANCHES: dict[str, str] = {
-    "i": ("(i) INSTRUMENT VALIDE — l'observable répond à EPS sous "
-          "péremption minimale et au moins un EPS passe. Un AUTRE à k=4 "
-          "est alors attribuable à la PÉREMPTION, pas au seuil."),
-    "ii": ("(ii) SONDE MUETTE sur EPS — AUTRE D'INSTRUMENT : l'observable "
-           "ne répond pas à EPS même sous péremption minimale. Ne rien "
-           "régler, remonter."),
-    "iii": ("(iii) MÉCANISME DE REMONTÉE EN QUESTION — k=1 DISCRIMINE "
-            "mais AUCUN EPS ne passe, 1e-5 compris. Ni sonde muette "
-            "(elle discrimine), ni k coupable (la péremption est "
-            "minimale) : à k=1 avec EPS=1e-5 la remontée est quasi sans "
-            "perte, donc un résidu au-dessus du seuil pointe AILLEURS."),
+    "i": ("(i) INSTRUMENT VALIDE — au moins un EPS passe. L'instrument "
+          "SUFFIT pour cette conclusion : qu'il discrimine ou non ne la "
+          "change pas, et la discrimination passe en DIAGNOSTIC."),
+    "ii": ("(ii) SONDE MUETTE sur EPS — AUCUN EPS ne passe, sur aucune "
+           "des deux vérités, et le balayage ne discrimine pas : "
+           "l'observable ne répond pas à EPS même sous péremption "
+           "minimale. AUTRE D'INSTRUMENT — ne rien régler, remonter."),
+    "iii": ("(iii) MÉCANISME DE REMONTÉE EN QUESTION — le balayage "
+            "DISCRIMINE mais aucun EPS ne passe, sur aucune des deux "
+            "vérités, 1e-5 compris. Ni sonde muette (elle discrimine), ni "
+            "retard coupable (retirer la frame de retard ne sauve aucun "
+            "EPS) : le résidu pointe AILLEURS."),
+    "iii-bis": ("(iii-bis) PÉREMPTION — aucun EPS ne passe sur vérité(n), "
+                "mais au moins un passe sur vérité(n−1). Retirer la seule "
+                "frame de retard suffirait donc à satisfaire la règle : "
+                "la cause est LE RETARD, pas le mécanisme. Le mécanisme "
+                "de remontée est EXONÉRÉ, et la décision passe à k — donc "
+                "au réveil σ_ω (R4), qui appartient à Romain."),
 }
 
 # Les deux attributions de la branche (iii) : NOMMÉES, NON ARMÉES.
@@ -524,74 +651,141 @@ ATTRIBUTIONS_MECANISME: dict = {
         "enonce": "le retard d'une frame suffit à lui seul",
         "falsificateur": ("comparer contre la vérité DÉCALÉE d'une "
                           "frame"),
-        "arme": False,
+        # ARMÉE depuis §A22 : le falsificateur de (a) EST la vérité(n−1),
+        # que la v2 reporte à chaque frame. La branche (iii-bis) en est
+        # la lecture pré-écrite — l'attribution (a) n'a plus besoin d'un
+        # bras dédié, elle est tranchée par la table.
+        "arme": True,
+        "arme_par": ("la vérité(n−1), reportée à chaque frame depuis la "
+                     "v2 : la branche (iii-bis) EST sa lecture"),
     },
     "b_derive_reference_incrementale": {
         "enonce": "la référence incrémentale DÉRIVE",
         "falsificateur": ("comparer contre une remontée PLEINE, non "
                           "incrémentale"),
         "arme": False,
+        "statut_du_bras": (
+            "run_f1_attribution_b.py existe mais reste GATÉ : il est bâti "
+            "sur l'observable v1, et son verrou d'invariant refusera de "
+            "prononcer. Le ré-armer sur l'observable corrigé est une "
+            "décision distincte, non prise ici."),
     },
-    "statut": ("NOMMÉES, NON ARMÉES — l'armement de l'une ou l'autre est "
-               "une décision de Romain à la lecture, jamais un "
-               "enchaînement. Ce driver ne mesure ni l'une ni l'autre."),
+    "statut": ("(a) est ARMÉE par la vérité(n−1) et tranchée par la "
+               "branche (iii-bis) ; (b) reste NOMMÉE, NON ARMÉE, son bras "
+               "étant gaté. Ce driver ne mesure pas (b)."),
 }
 
 
-def verifier_instrument(mesures_k1: list[dict]) -> tuple[bool, dict]:
-    """VÉRIFICATION D'INSTRUMENT (§A19-complément A) — bras k=1, même
-    balayage EPS, DUE AVANT toute lecture. Précédent §A14 : une sonde
-    muette se détecte AVANT, pas après.
+def eps_passants(mesures: list[dict], verite: str) -> list[float]:
+    """EPS dont le Δχ max DÉCIMÉ reste sous ic_bas, sur la vérité dite."""
+    return [m["eps"] for m in mesures
+            if m["delta_chi"]["par_verite"][verite]["delta_chi_max"]
+            < SEUIL_IC_BAS]
 
-    Elle répond à une seule question : l'observable RÉPOND-IL à EPS quand
-    la péremption est minimale ? Deux lectures PRÉ-ÉCRITES :
-      (i) k=1 DISCRIMINE — Δχ répond à EPS **et** au moins un EPS passe
-          sous le seuil ⇒ **instrument VALIDE**, et l'AUTRE éventuel à
-          k=4 est alors attribuable à la PÉREMPTION ;
-      (ii) k=1 ne discrimine pas non plus ⇒ **sonde MUETTE sur EPS,
-          AUTRE D'INSTRUMENT — ne rien régler, remonter.**
 
-    NOTA gravé : à k=1 subsiste la frame de retard du compteur (choix 6
-    de la borne L3, endossé). La vérification teste donc la
-    discrimination sous péremption MINIMALE, PAS NULLE — c'est une borne
-    inférieure de péremption, pas son absence.
+def brancher(mesures: list[dict], plancher: float | None) -> dict:
+    """ARBRE DE DÉCISION PRÉ-ENREGISTRÉ (§A22), appliqué sans
+    interprétation. Table COMPLÈTE et CLOSE : aucune lecture ne peut
+    tomber hors table.
 
-    Ce bras n'est PAS un balayage de k et ne décide aucun cadencement."""
-    discrimination = discrimination_du_balayage(mesures_k1)
-    passants = [m["eps"] for m in mesures_k1
-                if m["delta_chi"]["delta_chi_max"] < SEUIL_IC_BAS]
-    repond = discrimination["a_discrimine"]
-    valide = bool(repond and passants)
-    if valide:
+    **(C) LA DISCRIMINATION NE GATE QU'EN CAS D'ÉCHEC.** Si au moins un
+    EPS passe sur vérité(n), l'instrument SUFFIT pour cette conclusion :
+    qu'il discrimine ou non ne la change pas — un observable qui reste
+    sous le seuil est innocent quelle que soit sa pente. La discrimination
+    devient alors un DIAGNOSTIC. Elle ne gate que lorsque rien ne passe,
+    car c'est le seul cas où il faut savoir si l'on mesure quelque chose.
+
+    L'arbre, dans l'ordre :
+      1. un EPS passe sur vérité(n) ?            ⇒ **(i)**
+      2. sinon, un EPS passe sur vérité(n−1) ?   ⇒ **(iii-bis)**
+      3. sinon, le balayage discrimine ?         ⇒ **(iii)** / **(ii)**
+
+    ORDRE REMONTÉ COMME CHOIX (le gravé dit que (ii), (iii) et (iii-bis)
+    se séparent sous le gate, sans fixer leur ordre) : (iii-bis) est
+    évaluée AVANT la discrimination parce qu'elle repose sur une MESURE
+    DIRECTE — le prix de la frame de retard — et non sur la pente du
+    balayage. Si retirer la seule frame de retard suffit à faire passer un
+    EPS, alors ni « sonde muette » ni « mécanisme en question » ne
+    décrivent la situation : la cause est identifiée, et l'appeler
+    autrement serait moins informatif. Une sonde peut être muette sur EPS
+    tout en mesurant parfaitement le prix du retard : les deux axes sont
+    indépendants."""
+    passants_n = eps_passants(mesures, VERITE_COURANTE)
+    passants_n1 = eps_passants(mesures, VERITE_TRANSPORTEE)
+    discrimination = discrimination_du_balayage(mesures, plancher)
+
+    if passants_n:
         branche, label = "i", LABEL_INSTRUMENT_VALIDE
-    elif not repond:
-        branche, label = "ii", LABEL_SONDE_MUETTE
-    else:
+    elif passants_n1:
+        branche, label = "iii-bis", LABEL_PEREMPTION
+    elif discrimination["a_discrimine"]:
         branche, label = "iii", LABEL_MECANISME_EN_QUESTION
-    details = {
-        "cadence_verification": CADENCE_VERIFICATION,
-        "discrimination": discrimination,
-        "eps_passants_a_k1": passants,
-        "instrument_valide": valide,
+    else:
+        branche, label = "ii", LABEL_SONDE_MUETTE
+
+    gate = not passants_n
+    return {
         "branche": branche,
         "label": label,
         "lecture_preecrite": TABLE_BRANCHES[branche],
+        "eps_passants": {VERITE_COURANTE: passants_n,
+                         VERITE_TRANSPORTEE: passants_n1},
+        "discrimination": discrimination,
+        "discrimination_gate": gate,
+        "role_de_la_discrimination": (
+            "GATE — aucun EPS ne passe : il faut savoir si l'on mesure "
+            "quelque chose, et c'est là que (ii), (iii) et (iii-bis) se "
+            "séparent"
+            if gate else
+            "DIAGNOSTIC — au moins un EPS passe, l'instrument SUFFIT pour "
+            "cette conclusion : un observable sous le seuil est innocent "
+            "quelle que soit sa pente"),
         "attributions_branche_iii": (ATTRIBUTIONS_MECANISME
                                      if branche == "iii" else None),
         "table_close": (
-            "table complète et CLOSE (§A19-complément-2) : aucune lecture "
-            "ne peut tomber hors table — (i) discrimine + un EPS passe ; "
-            "(ii) ne discrimine pas ; (iii) discrimine sans qu'aucun EPS "
-            "ne passe"),
+            "table COMPLÈTE et CLOSE (§A22) : (i) un EPS passe sur "
+            "vérité(n) ; (iii-bis) aucun sur vérité(n) mais un sur "
+            "vérité(n−1) ; (iii) aucun sur les deux, mais le balayage "
+            "discrimine ; (ii) aucun sur les deux et pas de "
+            "discrimination. Les quatre issues sont exhaustives et "
+            "mutuellement exclusives."),
+    }
+
+
+def verifier_instrument(mesures_k1: list[dict],
+                        plancher: float | None = None
+                        ) -> tuple[bool, dict]:
+    """VÉRIFICATION D'INSTRUMENT — bras k=1, même balayage EPS, DUE AVANT
+    toute lecture. Précédent §A14 : une sonde muette se détecte AVANT,
+    pas après.
+
+    L'arbre pré-enregistré est celui de `brancher` ; l'instrument est tenu
+    pour VALIDE à la seule branche (i).
+
+    NOTA gravé : à k=1 subsiste la frame de retard du compteur (choix 6
+    de la borne L3, endossé). La vérification teste donc sous péremption
+    MINIMALE, PAS NULLE — c'est une borne inférieure de péremption, pas
+    son absence. C'est précisément ce qui rend (iii-bis) lisible à k=1 :
+    la seule péremption restante EST la frame de retard, et (iii-bis)
+    mesure exactement ce qu'elle coûte.
+
+    Ce bras n'est PAS un balayage de k et ne décide aucun cadencement."""
+    details = brancher(mesures_k1, plancher)
+    valide = bool(details["branche"] == "i")
+    details.update({
+        "cadence_verification": CADENCE_VERIFICATION,
+        "instrument_valide": valide,
+        "eps_passants_a_k1": details["eps_passants"][VERITE_COURANTE],
         "nota_peremption_minimale": (
             f"à k={CADENCE_VERIFICATION} subsiste la frame de retard du "
             "compteur (choix 6 de la borne L3, endossé) : la "
-            "vérification teste la discrimination sous péremption "
-            "MINIMALE, PAS NULLE"),
+            "vérification teste sous péremption MINIMALE, PAS NULLE — "
+            "c'est ce qui rend (iii-bis) lisible ici, la seule péremption "
+            "restante ÉTANT cette frame de retard"),
         "portee": (
             "ce bras n'est PAS un balayage de k et ne décide aucun "
             "cadencement ; toute DÉCISION sur k reste gatée σ_ω (R4)"),
-    }
+    })
     return valide, details
 
 
@@ -632,24 +826,32 @@ def lecture_innocuite(delta_chi_max: float) -> dict:
     }
 
 
-def branche_decision_k(instrument_valide: bool, eps_retenu: float | None
-                       ) -> dict:
-    """BRANCHE PRÉ-ÉCRITE (§A19-complément D) — REPORTÉE, jamais
-    déclenchée par ce driver.
+def branche_decision_k(instrument_valide: bool, eps_retenu: float | None,
+                       branche_mesure: str | None = None) -> dict:
+    """BRANCHE PRÉ-ÉCRITE (§A19-complément D, élargie §A22) — REPORTÉE,
+    jamais déclenchée par ce driver.
 
-    Si l'instrument est VALIDÉ mais qu'aucun EPS ne passe à k=4, alors la
-    décision passe à k, et le RÉVEIL σ_ω devient LA décision explicite à
+    Deux chemins y mènent, et le second est NEUF :
+      - instrument VALIDÉ mais aucun EPS ne passe à k=4 ;
+      - **branche (iii-bis) à la mesure** : aucun EPS ne passe sur
+        vérité(n) alors qu'au moins un passe sur vérité(n−1). C'est le
+        chemin le plus DIRECT, puisqu'il DÉSIGNE le retard comme cause :
+        la décision passe à k sans qu'aucune autre hypothèse ne subsiste.
+
+    Dans les deux cas le RÉVEIL σ_ω devient LA décision explicite à
     prendre (R4 : le cadencement se déciderait avec une question
-    perceptuelle en main). L'EPS retenu serait alors celui que k=1
-    valide ; le budget transferts se traite ensuite."""
-    applicable = bool(instrument_valide and eps_retenu is None)
+    perceptuelle en main). Le budget transferts se traite ensuite."""
+    par_iii_bis = bool(branche_mesure == "iii-bis")
+    applicable = bool((instrument_valide and eps_retenu is None)
+                      or par_iii_bis)
     return {
         "applicable": applicable,
+        "par_branche_iii_bis": par_iii_bis,
         "enonce": (
-            "instrument VALIDÉ + aucun EPS ne passe à k=4 ⇒ la décision "
-            "passe à k, et le RÉVEIL σ_ω devient LA décision explicite à "
-            "prendre (R4). L'EPS retenu serait celui que k=1 valide ; le "
-            "budget transferts se traite ensuite."),
+            "instrument VALIDÉ + aucun EPS ne passe à k=4, OU branche "
+            "(iii-bis) à la mesure (le retard DÉSIGNÉ comme cause) ⇒ la "
+            "décision passe à k, et le RÉVEIL σ_ω devient LA décision "
+            "explicite à prendre (R4). Le budget transferts ensuite."),
         "statut": (
             "REPORTÉE — ce driver ne la déclenche pas et ne réveille "
             "rien. Aucun réveil silencieux, aucune reformulation après "
@@ -658,13 +860,18 @@ def branche_decision_k(instrument_valide: bool, eps_retenu: float | None
 
 
 def lecture_mecanique(mesures: list[dict],
-                      verification: dict | None = None) -> dict:
+                      verification: dict | None = None,
+                      plancher: float | None = None) -> dict:
     """Règle Q2 appliquée SANS interprétation : le PLUS GRAND EPS dont le
-    Δχ **DÉCIMÉ** max de série reste < 0.0603. Si aucun ne satisfait,
-    AUTRE — et aucun EPS retenu par défaut.
+    Δχ **DÉCIMÉ** max de série, lu sur **vérité(n)**, reste < 0.0603. Si
+    aucun ne satisfait, AUTRE — et aucun EPS retenu par défaut.
 
     La vérification d'instrument (bras k=1) est DUE : sans son PASS/FAIL
-    enregistré, aucune lecture n'est produite (§A19-complément A)."""
+    enregistré, aucune lecture n'est produite (B9).
+
+    L'arbre de branches (§A22) est appliqué AUSSI à la cadence de MESURE :
+    c'est là que (iii-bis) porte le plus, puisqu'il s'y ajoute la
+    péremption L1 complète."""
     exiger_verification_instrument(verification)
     satisfaisants = [m for m in mesures
                      if m["delta_chi"]["delta_chi_max"] < SEUIL_IC_BAS]
@@ -672,6 +879,7 @@ def lecture_mecanique(mesures: list[dict],
     instrument_valide = bool(verification["instrument_valide"])
     pire = max((m["delta_chi"]["delta_chi_max"] for m in mesures),
                default=0.0)
+    branche_mesure = brancher(mesures, plancher)
     return {
         "seuil_ic_bas": SEUIL_IC_BAS,
         "regle": ("EPS retenu = le PLUS GRAND EPS dont le Δχ DÉCIMÉ max "
@@ -721,12 +929,16 @@ def lecture_mecanique(mesures: list[dict],
             "après courbe"),
         # (A) — la vérification d'instrument, DUE avant cette lecture.
         "verification_instrument": verification,
-        "discrimination_du_balayage": discrimination_du_balayage(mesures),
+        # (§A22) — l'arbre appliqué À LA MESURE, où (iii-bis) porte le
+        # plus : la péremption L1 complète s'y ajoute au retard d'une
+        # frame. La discrimination y est GATE ou DIAGNOSTIC selon (C).
+        "branche_a_la_mesure": branche_mesure,
+        "discrimination_du_balayage": branche_mesure["discrimination"],
         # (C) — logique du critère : innocuité, jamais nocivité.
         "innocuite": lecture_innocuite(pire),
         # (D) — branche pré-écrite, REPORTÉE et non déclenchée.
         "branche_preecrite_decision_k": branche_decision_k(
-            instrument_valide, retenu),
+            instrument_valide, retenu, branche_mesure["branche"]),
         "eps_en_vigueur": EPS_EN_VIGUEUR,
         "cadence_mesure": CADENCE_MESURE,
         "cadence_verification": CADENCE_VERIFICATION,
@@ -756,7 +968,14 @@ def main() -> None:
     print(f"sonde EPS : {len(EPS_BALAYAGE)} valeurs, décimation ×{facteur} "
           f"(fenêtre {geo.n_fov}² -> {N0_DEFAUT}²)", flush=True)
 
-    def balayer(k: int, etiquette: str) -> list[dict]:
+    def balayer(k: int, etiquette: str) -> tuple[list[dict], dict]:
+        """Le balayage, PLUS son réplicat de plancher de bruit (§A22).
+
+        Le réplicat rejoue la valeur EN VIGUEUR à l'identique : ce n'est
+        pas un point de balayage de plus, c'est l'étalon sans lequel « au
+        -dessus du bruit » n'a pas de sens. Une passe Δχ de plus sur
+        douze — le coût est marginal, l'absence de plancher ne l'était
+        pas."""
         exiger_cadence_admise(k)
         resultats: list[dict] = []
         for eps in EPS_BALAYAGE:
@@ -769,18 +988,29 @@ def main() -> None:
             liberer_vram(cp)
             resultats.append({"eps": eps, "chrono": chrono,
                               "delta_chi": observable})
-        return resultats
+        print(f"  [{etiquette} k={k}] RÉPLICAT à EPS={REPLICAT_EPS:g} "
+              f"(plancher de bruit MESURÉ) ...", flush=True)
+        replicat = mesurer_delta_chi(cp, REPLICAT_EPS, k, SERIE_FRAMES,
+                                     facteur)
+        liberer_vram(cp)
+        reference = next(m["delta_chi"] for m in resultats
+                         if m["eps"] == REPLICAT_EPS)
+        return resultats, plancher_bruit_replicat(reference, replicat)
 
     # (A) La VÉRIFICATION D'INSTRUMENT est DUE AVANT toute lecture : sans
     # son PASS/FAIL, `lecture_mecanique` refuse de produire quoi que ce
     # soit. Une sonde muette se détecte AVANT, pas après (§A14).
-    mesures_k1 = balayer(CADENCE_VERIFICATION, "VÉRIF")
-    instrument_valide, verification = verifier_instrument(mesures_k1)
+    mesures_k1, bruit_k1 = balayer(CADENCE_VERIFICATION, "VÉRIF")
+    instrument_valide, verification = verifier_instrument(
+        mesures_k1, bruit_k1["plancher_delta_chi"])
     print(f"  vérification d'instrument (k={CADENCE_VERIFICATION}) : "
-          f"{'VALIDE' if instrument_valide else 'SONDE MUETTE'}", flush=True)
+          f"branche ({verification['branche']}) {verification['label']}",
+          flush=True)
 
-    mesures = balayer(CADENCE_MESURE, "MESURE")
-    lecture = lecture_mecanique(mesures, verification)
+    mesures, bruit = balayer(CADENCE_MESURE, "MESURE")
+    lecture = lecture_mecanique(mesures, verification,
+                                bruit["plancher_delta_chi"])
+    lecture["plancher_bruit"] = {"mesure": bruit, "verification": bruit_k1}
     mempool = cp.get_default_memory_pool()
 
     document = {
@@ -862,17 +1092,24 @@ def main() -> None:
     print("=" * 78)
     print("F1 -- SONDE EPS (N1) : fidélité du niveau 0 vivant")
     print("=" * 78)
-    print(f"  {'EPS':>8}  {'Δχ max':>8} {'Δχ méd':>8}  "
-          f"{'octets/f':>10} {'transf':>7}  {'médiane':>8} {'p99':>8}")
+    print(f"  {'EPS':>8}  {'Δχ n':>8} {'Δχ n-1':>8} {'prix ret':>8}  "
+          f"{'octets/f':>10}  {'médiane':>8} {'p99':>8}")
     for mesure in mesures:
         observable, chrono = mesure["delta_chi"], mesure["chrono"]
         stats = chrono["frame_time"]
+        transportee = observable["par_verite"][VERITE_TRANSPORTEE]
         print(f"  {mesure['eps']:>8.0e}  "
-              f"{observable['delta_chi_max']:>8.4f} "
-              f"{observable['delta_chi_median']:>8.4f}  "
+              f"{observable['delta_chi_max']:>8.5f} "
+              f"{transportee['delta_chi_max']:>8.5f} "
+              f"{observable['prix_peremption_une_frame']:>+8.5f}  "
               f"{chrono['octets_par_frame_median']:>10.0f} "
-              f"{chrono['temps_transfert_median_ms']:>7.3f}  "
               f"{stats['mediane_ms']:>8.3f} {stats['p99_ms']:>8.3f}")
+    bruit = lecture["plancher_bruit"]["mesure"]
+    print(f"  plancher de bruit MESURÉ par réplicat (EPS="
+          f"{bruit['eps_du_replicat']:g}) = "
+          f"{bruit['plancher_delta_chi']:.3e}")
+    if bruit["deterministe"]:
+        print(f"    {bruit['note_si_nul']}")
     verif = lecture["verification_instrument"]
     print("-" * 78)
     print(f"  VÉRIFICATION D'INSTRUMENT (k={CADENCE_VERIFICATION}, DUE) : "
@@ -880,13 +1117,18 @@ def main() -> None:
     print(f"    {verif['lecture_preecrite']}")
     if verif["attributions_branche_iii"]:
         attributions = verif["attributions_branche_iii"]
-        print("    deux attributions NOMMÉES, NON ARMÉES :")
+        print("    attributions du mécanisme :")
         for cle in ("a_retard_dune_frame", "b_derive_reference_incrementale"):
             entree = attributions[cle]
             print(f"      - {entree['enonce']} ; falsificateur : "
-                  f"{entree['falsificateur']}")
+                  f"{entree['falsificateur']} ; armée = {entree['arme']}")
         print(f"      ({attributions['statut']})")
     print(f"    nota : {verif['nota_peremption_minimale']}")
+    mesure_branche = lecture["branche_a_la_mesure"]
+    print(f"  BRANCHE À LA MESURE (k={CADENCE_MESURE}) : "
+          f"({mesure_branche['branche']}) {mesure_branche['label']}")
+    print(f"    {mesure_branche['lecture_preecrite']}")
+    print(f"    discrimination : {mesure_branche['role_de_la_discrimination']}")
     print(f"  seuil ic_bas = {SEUIL_IC_BAS}  (règle : le PLUS GRAND EPS "
           f"dont Δχ DÉCIMÉ max < seuil ; le non décimé est un "
           f"DIAGNOSTIC)")
@@ -903,15 +1145,18 @@ def main() -> None:
         print(f"  -> EPS retenu = {lecture['eps_retenu']:g}  "
               f"(en vigueur : {EPS_EN_VIGUEUR:g})")
     discrimination = lecture["discrimination_du_balayage"]
-    print(f"  discrimination du balayage : Δχ varie de "
-          f"{discrimination['amplitude_relative']:.2%} pour un trafic ×"
-          f"{discrimination['rapport_octets'] or float('nan'):.0f}  -> "
+    print(f"  discrimination : forme {discrimination['amplitude_relative']:.2%} "
+          f"(>= {SEUIL_DISCRIMINATION_RELATIVE:.0%}) = "
+          f"{discrimination['critere_forme']} ; échelle "
+          f"{discrimination['amplitude_absolue']:.3e} > plancher "
+          f"{discrimination['plancher_bruit']:.3e} = "
+          f"{discrimination['critere_echelle']}  -> "
           f"a discriminé = {discrimination['a_discrimine']}")
     if not discrimination["a_discrimine"]:
-        print("     (Δχ insensible à EPS : l'observable ne VOIT pas le "
-              "seuil — un AUTRE ne dirait PAS « EPS trop grand ». "
-              "L'explication « péremption L1 » est FALSIFIÉE par k=1 ; "
-              "plancher structurel, D-1/D-2 tranchent.)")
+        print("     (Δχ ne répond pas à EPS au-dessus du bruit : "
+              "l'observable ne VOIT pas le seuil — un AUTRE ne dirait PAS "
+              "« EPS trop grand ». Aucune valeur de la v1 n'est "
+              "reconduite.)")
     branche = lecture["branche_preecrite_decision_k"]
     if branche["applicable"]:
         print("  BRANCHE PRÉ-ÉCRITE (D) APPLICABLE — REPORTÉE, non "
