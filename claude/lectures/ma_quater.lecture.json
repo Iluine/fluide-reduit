@@ -1,0 +1,186 @@
+{
+  "_note": "LECTURE versionnée (§A23 b6c8807, partie 2b) — M-a-quater à EPS_PRODUCTION=1e-2. Le driver REPORTE ; le verdict de V4 appartient à Romain. Tableaux transferts par-frame NON versionnés (sur disque, outputs/f1/).",
+  "meta": {
+    "mesure": "M-a-quater — pipeline complet V4 (achat B, §A18-lecture-borne-L3, pocCascade2phys 7c4a4ca)",
+    "candidat": {
+      "nom": "V4 emboîtée",
+      "n_slots": 11,
+      "n_blocs": 15,
+      "cout_predit_f_ms": 12.655,
+      "propriete_e": "arbre — zéro tour d'ancêtres"
+    },
+    "protocole": {
+      "geometrie": "EMBOÎTÉE : énergie aux quarts libres de la parente fovéale, offsets ±n_fov/2",
+      "prediction": "GPU-side parent→enfant, niveau 1 seul CPU",
+      "champs_echelle": "systèmes au-delà de c_parent : remplissage-ZÉRO exact (P2)",
+      "second_systeme": "MOUILLÉ dans le harnais — anti-minoration, −16.9 % mesuré",
+      "remontee": "kernel L3 INTOUCHÉ, L1 ÉTALÉE round-robin k=4",
+      "eps_production": "0.01 APPLIQUÉ (§A23, b6c8807) — trois portées : innocent≠optimal (balayage non borné par le haut) ; CANAL≠lointain (miroir CPU non mesuré) ; scopé à ce substrat",
+      "kernels": "F fusionné et L3 tel que mesuré à la borne — INTOUCHÉS (git diff + empreintes _SOURCE / _SOURCE_L3)",
+      "chrono": "B6 (cuda-Events, warmup exclu, médiane ET p99)"
+    },
+    "cellule": {
+      "n_fov": 512,
+      "n_niv": 10
+    },
+    "frames": {
+      "warmup_exclu": 30,
+      "serie": 300
+    },
+    "lancements_par_frame": 12,
+    "verifs_exigees": [
+      "vram_concordance",
+      "sensibilite_chrono"
+    ]
+  },
+  "frame_time": {
+    "n": 300,
+    "mediane_ms": 14.490032196044922,
+    "p99_ms": 16.85304395675659,
+    "min_ms": 13.549568176269531,
+    "max_ms": 18.26406478881836
+  },
+  "residence": {
+    "mempool_used_octets": 440402944,
+    "mempool_total_octets": 486540800,
+    "etat_prealloue_octets": 377487360,
+    "nvidia_smi_octets": 591396864,
+    "surcout_pingpong_octets": 125829120,
+    "gate_go": 1.35,
+    "note_pingpong": "le correctif §A21 (buffers d'émission en PING-PONG) double le dimensionnement au pire cas des buffers d'émission. Le surcoût est reporté À PART, jamais fondu dans le total ; le gate reste 1.35 Go."
+  },
+  "retard_transfert": {
+    "compacteurs": 2,
+    "tailles_par_groupe": [
+      {
+        "frames_observees": 330,
+        "taille_min": 62,
+        "taille_max": 38312,
+        "taille_mediane": 21611,
+        "tailles_stables": false,
+        "compteur_final_non_transfere": 0,
+        "octets_buffers": 134217728,
+        "note": "retard d'une frame (choix 6), buffers en PING-PONG (§A21) : données ET compteur viennent du même tour, donc tout ce qui est émis est transféré une fois et une seule. `tailles_stables` ne conditionne plus la complétude — il ne décrit plus que la variabilité de l'émission. Seule la dernière frame de la série reste en attente."
+      },
+      {
+        "frames_observees": 330,
+        "taille_min": 32,
+        "taille_max": 41879,
+        "taille_mediane": 25639,
+        "tailles_stables": false,
+        "compteur_final_non_transfere": 0,
+        "octets_buffers": 117440512,
+        "note": "retard d'une frame (choix 6), buffers en PING-PONG (§A21) : données ET compteur viennent du même tour, donc tout ce qui est émis est transféré une fois et une seule. `tailles_stables` ne conditionne plus la complétude — il ne décrit plus que la variabilité de l'émission. Seule la dernière frame de la série reste en attente."
+      }
+    ]
+  },
+  "lecture_mecanique": {
+    "mediane_frame_complete_ms": 14.490032196044922,
+    "p99_frame_complete_ms": 16.85304395675659,
+    "p99_en_evidence": {
+      "valeur_ms": 16.85304395675659,
+      "ecart_a_la_mediane_ms": 2.363011760711668,
+      "note": "REPORTÉE EN ÉVIDENCE : c'est là que se lirait un stutter. L1 est ÉTALÉE précisément pour qu'aucune frame ne concentre la remontée — une p99 très au-dessus de la médiane contredirait l'étalement."
+    },
+    "mort": {
+      "seuil_ms": 16.7,
+      "declenchee": false,
+      "branche_preecrite": "V4 mort ⇒ le repli 33.3 devient LA décision à prendre (jamais un enchaînement)"
+    },
+    "bande_modele": {
+      "bande_ms": [
+        14.2,
+        15.9
+      ],
+      "hors_bande": false,
+      "origine": "recalculée avec L1 k=4 (§A18-lecture-borne-L3), remplace [13.9, 17.2]",
+      "branche_preecrite_si_hors_bande": "AUTRE remonté"
+    },
+    "parts": {
+      "f_batche_ms": 12.655,
+      "remontee_l3_amortie_ms": 1.2805,
+      "transferts_ms": 0.11020799912512302,
+      "prediction_solde_ms": 0.4443241969197995,
+      "etiquette": "[DÉRIVÉ]",
+      "note": "F = ancre V4 (1.685/0.845) ; remontée = borne L3 5.122 amortie par k=4 ; transferts COMPTÉS ; prédiction = SOLDE. Aucun bras ajouté — la série de sondes reste close. La MORT porte sur la médiane MESURÉE, pas sur ces parts."
+    },
+    "prediction_gpu_side": {
+      "n_slots_gpu": 10,
+      "n_slots_cpu": 1,
+      "slots_gpu": [
+        {
+          "niveau": 2,
+          "slot": 0
+        },
+        {
+          "niveau": 3,
+          "slot": 0
+        },
+        {
+          "niveau": 4,
+          "slot": 0
+        },
+        {
+          "niveau": 5,
+          "slot": 0
+        },
+        {
+          "niveau": 6,
+          "slot": 0
+        },
+        {
+          "niveau": 7,
+          "slot": 0
+        },
+        {
+          "niveau": 8,
+          "slot": 0
+        },
+        {
+          "niveau": 9,
+          "slot": 0
+        },
+        {
+          "niveau": 9,
+          "slot": 1
+        },
+        {
+          "niveau": 9,
+          "slot": 2
+        }
+      ],
+      "slots_cpu": [
+        {
+          "niveau": 1,
+          "slot": 0
+        }
+      ],
+      "niveaux_a_champs_echelle": [
+        8
+      ],
+      "propriete_e_satisfaite": true,
+      "note": "la propriété E rend caducs les cinq replis de s3 : seul le niveau 1 reste CPU (son parent est le monde 0)"
+    },
+    "l1_round_robin": {
+      "k": 4,
+      "slots_total": 11,
+      "slots_par_tour": [
+        2,
+        3,
+        3,
+        3
+      ],
+      "aucune_frame_ne_remonte_tout": true,
+      "cycle_couvre_chaque_slot_une_fois": true,
+      "note": "L1 ÉTALÉE (consigne d'intégrité §A18-lecture-borne-L3) : une rafale ferait passer la MÉDIANE en laissant un stutter invisible au critère. Le round-robin lisse le coût — même amortissement, critère honnête. La p99 est reportée en évidence."
+    },
+    "assechement_champs_echelle": {
+      "colonnes_mises_a_zero": 165,
+      "colonnes_de_reference": 84480,
+      "fraction_asséchée": 0.001953125,
+      "ecart_sec_mouille_mesure": -0.169,
+      "note": "conformité P2 : les systèmes au-delà de c_parent sont nuls par définition. L'état du harnais reste MOUILLÉ (anti-minoration load-bearing) ; seul ce slot s'assèche par sa prédiction. ATTÉNUATION NOMMÉE : le chemin est vivant, F repropage depuis les voisins mouillés dès la frame suivante — la colonne prédite à zéro ne le reste pas. Le −16.9 % mesurait un système ENTIÈREMENT sec : il borne l'effet par le haut, il ne le décrit pas. Fraction et atténuation reportées, jamais corrigées."
+    },
+    "rappel_portee": "M-a-quater REPORTE. La décision — V4 vit, ou le repli 33.3 devient LA décision — revient à Romain à la lecture. Kernels F et L3 intouchés."
+  }
+}
