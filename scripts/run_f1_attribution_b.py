@@ -96,7 +96,19 @@ PORTÉE
 ────────────────────────────────────────────────────────────────────────
 EPS reste FIGÉ à 1e-4 pour le régime, k reste FIGÉ à 4, **rien n'est
 réglé**. Kernels F et L3, chrono, substrats, pyramide : INTOUCHÉS —
-empreinte kernel F e8fcaad47db0af010728d5c5d878e1629191bfef4e0382fa80aa3cefd9f27f04.
+preuve par `git diff` sur `src/`, et non par empreinte.
+
+Le seul sha256 réellement VERROUILLÉ par la suite, re-calculable par qui
+l'exige, est celui du kernel F :
+    sha256(src.f1_gpu.substrat_fusionne._SOURCE.encode()) =
+    e18015f57e14263414239b18c51d25cd335250f58dde2ccb892a6e2c1d6f30b4
+Il porte sur la CHAÎNE CUDA EXTRAITE (`_SOURCE`, 8223 caractères), PAS
+sur le fichier entier. Deux tests l'imposent
+(`test_f1_substrat_fusionne_s1.py`, `test_f1_substrat_l3.py`). Le kernel
+L3 (`_SOURCE_L3`) n'a PAS de verrou d'empreinte : il est tenu par
+l'équivalence structurelle (réutilisation du préfixe du fusionné) et par
+les verrous d'état bit-identique.
+
 Les primitives de readout et le reconstructeur de la sonde sont RÉUTILISÉS
 tels quels, jamais réécrits. Sortie JSON SANS timestamp.
 
@@ -532,9 +544,12 @@ def main() -> None:
             "cellule": {"n_fov": geo.n_fov, "n_niv": geo.n_niv,
                         "decimation": facteur},
             "frames": {"warmup_exclu": WARMUP_FRAMES, "serie": SERIE_FRAMES},
-            "kernels": ("F fusionné empreinte e8fcaad4...7f04 et L3 — "
-                        "INTOUCHÉS ; chrono, substrats, pyramide "
-                        "INTOUCHÉS"),
+            "kernels": ("F, L3, chrono, substrats, pyramide INTOUCHÉS — "
+                        "preuve par git diff sur src/, pas par empreinte. "
+                        "Seul sha256 réellement verrouillé, portant sur la "
+                        "chaîne CUDA EXTRAITE et non sur le fichier : "
+                        "sha256(substrat_fusionne._SOURCE) = e18015f5..."
+                        "f30b4"),
             "verifs_exigees": list(VERIFS_EXIGEES),
         },
         "bras": bras,
