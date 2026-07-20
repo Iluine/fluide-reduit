@@ -1,0 +1,128 @@
+{
+  "_note": "LECTURE versionnée (§A29-C2/C4/C5, run de T1). Le driver REPORTE ; le verdict appartient à Romain. Tableaux par-frame sur disque (outputs/f1/).",
+  "meta": {
+    "mesure": "M-b tranche-1 / T1 — F fidèle à l'échelle V4 (§A29-C1, pocCascade2phys c7df35c)",
+    "config": {
+      "n_fov": 512,
+      "n_blocs": 15,
+      "bord": "réfléchissant (mur, tranche-1)",
+      "cadence_exner": 2,
+      "dt_frame_ms": 16.666666666666668
+    },
+    "kernels": "F fidèle _SOURCE_FIDELE 6dd207ca (C1) INTOUCHÉ ; figés e18015f5/9533a130 intouchés ; Exner 3533fd0b",
+    "frames": {
+      "warmup_exclu": 30,
+      "serie": 300
+    },
+    "verifs_exigees": [
+      "vram_concordance",
+      "sensibilite_chrono"
+    ]
+  },
+  "chrono_f_fidele": {
+    "n": 300,
+    "mediane_ms": 11.695615768432617,
+    "p99_ms": 12.040283813476563,
+    "min_ms": 11.370495796203613,
+    "max_ms": 12.22655963897705
+  },
+  "chrono_frame_complete": {
+    "n": 300,
+    "mediane_ms": 11.941872119903564,
+    "p99_ms": 12.283945035934448,
+    "min_ms": 11.503680229187012,
+    "max_ms": 12.377087593078613
+  },
+  "residence": {
+    "mempool_total_octets": 62914560,
+    "nvidia_smi_octets": 167772160
+  },
+  "lecture_mecanique": {
+    "representativite": {
+      "f_fidele_ms": 11.695615768432617,
+      "f_proxy_ms": 12.655,
+      "rapport_f_fidele_sur_proxy": 0.924189313981242,
+      "note": "apples-to-apples de COÛT : F fidèle et proxy tous deux RÉFLÉCHISSANTS, échelle V4, 15 blocs × 512². Rapport ~1 ⇒ le figé était un proxy de COÛT fidèle ; > 1 ⇒ le moteur réel coûte plus. C'est la raison d'être originelle de T1 (§A29 amendement A).",
+      "portee": "PORTÉE, à porter AVEC le rapport : ≈1 dit qu'ils COÛTENT pareil, PAS qu'ils FONT pareil. Le proxy transporte 8 champs à fond PLAT (E4a jetable) ; le fidèle évolue 3 champs + reconstruction b-aware d'Audusse à terrain réel. Un rapport proche de 1 NE VALIDE PAS E4a — ce sont deux physiques différentes de coût voisin."
+    },
+    "t1": {
+      "verdict": "SANS MORT",
+      "mediane_frame_complete_ms": 13.331872119903563,
+      "mediane_mesuree_f_plus_exner_ms": 11.941872119903564,
+      "seuil_mort_ms": 16.7,
+      "seuil_reserve_ms": 15.7,
+      "mort": false,
+      "branches_preecrites": {
+        "MORT": "médiane > 16,7 ⇒ le repli 33.3 devient LA décision",
+        "SANS MORT SOUS RÉSERVE DE HALO": "médiane ∈ [15,7 ; 16,7] ⇒ le halo-parent de tranche-2 peut la porter au-dessus de 16,7",
+        "SANS MORT": "médiane < 15,7 ⇒ marge même sous la réserve de halo"
+      }
+    },
+    "p99_en_evidence": {
+      "valeur_ms": 12.283945035934448,
+      "ecart_a_la_mediane_ms": 0.3420729160308831,
+      "note": "REPORTÉE EN ÉVIDENCE (§A25) : le stutter suspendu au régime. Un pas de F bursty se lirait ici."
+    },
+    "reserve_halo": {
+      "reserve_ms": [
+        0.4,
+        1.0
+      ],
+      "seuil_glissant_ms": 15.7,
+      "verdict_sous_reserve": "si la médiane dépasse 15,7, le halo-parent de tranche-2 (+0,4–1,0 ms) peut à lui seul la porter au-dessus de 16,7",
+      "mediane_plus_reserve_haute_ms": 14.331872119903563,
+      "mort_sous_reserve": false
+    },
+    "bande_modele": {
+      "bande_ms": [
+        12.76,
+        18.27
+      ],
+      "hors_bande": false,
+      "postes": {
+        "f_fidele": [
+          10.8,
+          15.2
+        ],
+        "exner_amorti": [
+          0.75,
+          1.5
+        ],
+        "remontee_l3_amortie": 1.28,
+        "transferts": 0.11,
+        "derive_machine": 0.18
+      },
+      "note": "LARGE et peu falsifiable (§A29) — au second rang. Hors bande ⇒ AUTRE (modèle de coût faux), distinct du verdict de mort. Exner amorti par la cadence DÉRIVÉE ÷2.",
+      "cadence_exner": {
+        "save_every": 2,
+        "n_wetdry_par_episode": 600,
+        "n_exner_par_episode": 300,
+        "cadence_exner_sur_wetdry": 0.5,
+        "un_exner_tous_les": 2,
+        "source": "SedimentParams.save_every (rederive), non choisie (§A29-C1)"
+      }
+    },
+    "regime": {
+      "pass": true,
+      "n_frames": 301,
+      "marge_cfl_min": 5.209440277270186,
+      "marge_cfl_max": 6.92150407761292,
+      "marge_cfl_effondree": false,
+      "fraction_wet_min": 0.4478607177734375,
+      "fraction_wet_max": 0.456512451171875,
+      "fronts_partout": true,
+      "bornes": {
+        "marge": [
+          4.0,
+          12.0
+        ],
+        "fraction_wet": [
+          0.2,
+          0.8
+        ]
+      },
+      "motif": "régime exercé sur toute la série"
+    },
+    "rappel_portee": "T1 REPORTE une mesure de TEMPS. La fidélité (MORT-b) est tranche-2 ; le rederive n'est pas appelé. La décision — V4-b vit ou le repli 33.3 — revient à Romain."
+  }
+}

@@ -93,6 +93,26 @@ BANDE_T1_MS: tuple[float, float] = (
 RESERVE_HALO_MS: tuple[float, float] = (0.4, 1.0)
 SEUIL_RESERVE_MS: float = SEUIL_MORT_MS - RESERVE_HALO_MS[1]   # 15,7
 
+# VERDICT À TROIS VALEURS PRÉ-ÉCRITES (§A29-C2/C4/C5) — le LABEL vit DANS le
+# champ verdict, pas à côté : la réserve était reportée à côté, l'info y
+# était mais pas le cadrage. C'est le cadrage qui rend un chiffre lisible en
+# diagonale (le 16,589 de M-a-quater comme succès).
+LABEL_MORT: str = "MORT"
+LABEL_SOUS_RESERVE: str = "SANS MORT SOUS RÉSERVE DE HALO"
+LABEL_SANS_MORT: str = "SANS MORT"
+
+
+def verdict_t1(mediane_ms: float) -> str:
+    """Les trois branches gravées, appliquées SANS interprétation :
+      médiane > 16,7            ⇒ MORT
+      médiane ∈ [15,7 ; 16,7]   ⇒ SANS MORT SOUS RÉSERVE DE HALO
+      médiane < 15,7            ⇒ SANS MORT."""
+    if mediane_ms > SEUIL_MORT_MS:
+        return LABEL_MORT
+    if mediane_ms >= SEUIL_RESERVE_MS:
+        return LABEL_SOUS_RESERVE
+    return LABEL_SANS_MORT
+
 
 def etat_synthetise_v4(cp, graine: int = 101):
     """État à l'échelle V4 : 15 blocs × 512², chacun exerçant le régime
@@ -172,20 +192,36 @@ def lecture_t1(f_fidele: dict, frame_complete: dict,
             "f_fidele_ms": f_fidele_med,
             "f_proxy_ms": F_PROXY_MS,
             "rapport_f_fidele_sur_proxy": f_fidele_med / F_PROXY_MS,
-            "note": ("apples-to-apples : F fidèle et proxy tous deux "
+            "note": ("apples-to-apples de COÛT : F fidèle et proxy tous deux "
                      "RÉFLÉCHISSANTS, échelle V4, 15 blocs × 512². Rapport "
-                     "~1 ⇒ le figé était un proxy fidèle ; > 1 ⇒ le moteur "
-                     "réel coûte plus que le motif. C'est la raison d'être "
+                     "~1 ⇒ le figé était un proxy de COÛT fidèle ; > 1 ⇒ le "
+                     "moteur réel coûte plus. C'est la raison d'être "
                      "originelle de T1 (§A29 amendement A)."),
+            "portee": (
+                "PORTÉE, à porter AVEC le rapport : ≈1 dit qu'ils COÛTENT "
+                "pareil, PAS qu'ils FONT pareil. Le proxy transporte 8 "
+                "champs à fond PLAT (E4a jetable) ; le fidèle évolue 3 "
+                "champs + reconstruction b-aware d'Audusse à terrain réel. "
+                "Un rapport proche de 1 NE VALIDE PAS E4a — ce sont deux "
+                "physiques différentes de coût voisin."),
         },
-        # ── VERDICT T1 : médiane frame complète ──
+        # ── VERDICT T1 : trois valeurs pré-écrites DANS le champ ──
         "t1": {
+            "verdict": verdict_t1(mediane_complete),
             "mediane_frame_complete_ms": mediane_complete,
             "mediane_mesuree_f_plus_exner_ms": mediane,
             "seuil_mort_ms": SEUIL_MORT_MS,
+            "seuil_reserve_ms": SEUIL_RESERVE_MS,
             "mort": bool(mediane_complete > SEUIL_MORT_MS),
-            "branche_preecrite": (
-                "V4-b mort par T1 ⇒ le repli 33.3 devient LA décision"),
+            "branches_preecrites": {
+                LABEL_MORT: "médiane > 16,7 ⇒ le repli 33.3 devient LA "
+                            "décision",
+                LABEL_SOUS_RESERVE: "médiane ∈ [15,7 ; 16,7] ⇒ le "
+                                    "halo-parent de tranche-2 peut la porter "
+                                    "au-dessus de 16,7",
+                LABEL_SANS_MORT: "médiane < 15,7 ⇒ marge même sous la "
+                                 "réserve de halo",
+            },
         },
         "p99_en_evidence": {
             "valeur_ms": p99,
@@ -288,8 +324,10 @@ def main() -> None:
     print("=" * 78)
     print(f"  [EN TÊTE] F_fidèle/F_proxy = {rep['f_fidele_ms']:.3f} / "
           f"{rep['f_proxy_ms']} = {rep['rapport_f_fidele_sur_proxy']:.3f}")
+    print(f"    portée : {rep['portee']}")
     print(f"  T1 : médiane frame complète = "
-          f"{t1['mediane_frame_complete_ms']:.3f} ms  -> MORT = {t1['mort']}")
+          f"{t1['mediane_frame_complete_ms']:.3f} ms")
+    print(f"    VERDICT (trois valeurs pré-écrites) : {t1['verdict']}")
     print(f"  p99 (évidence) = {lecture['p99_en_evidence']['valeur_ms']:.3f} ms")
     rh = lecture["reserve_halo"]
     print(f"  réserve halo : médiane + {RESERVE_HALO_MS[1]} = "

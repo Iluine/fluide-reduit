@@ -16,12 +16,16 @@ from scripts.run_f1_mb_t1 import (
     BANDE_T1_MS,
     CADENCE_EXNER,
     F_PROXY_MS,
+    LABEL_MORT,
+    LABEL_SANS_MORT,
+    LABEL_SOUS_RESERVE,
     POSTE_EXNER_AMORTI,
     POSTE_F_FIDELE,
     RESERVE_HALO_MS,
     SEUIL_MORT_MS,
     SEUIL_RESERVE_MS,
     lecture_t1,
+    verdict_t1,
 )
 
 REGIME_OK = {"pass": True, "n_frames": 330, "marge_cfl_min": 5.0,
@@ -61,19 +65,50 @@ def test_representativite_en_tete():
     rep = lec["representativite"]
     assert rep["f_proxy_ms"] == F_PROXY_MS == 12.655
     assert rep["rapport_f_fidele_sur_proxy"] == pytest.approx(13.2 / 12.655)
-    assert "apples-to-apples" in rep["note"]
+    assert "COÛT" in rep["note"]
 
 
-# ----- 3. verdict T1 sur la médiane -----
+def test_le_rapport_porte_sa_portee_ne_valide_pas_e4a():
+    """§A29 : ≈1 dit qu'ils COÛTENT pareil, pas qu'ils FONT pareil. La
+    portée voyage AVEC le rapport (proxy 8 champs fond plat ; fidèle 3 +
+    b-aware) — un rapport proche de 1 NE VALIDE PAS E4a."""
+    portee = _lecture(12.7, 14.4)["representativite"]["portee"]
+    assert "COÛTENT pareil, PAS qu'ils FONT pareil" in portee
+    assert "NE VALIDE PAS E4a" in portee
+    assert "b-aware" in portee
 
-def test_t1_mort_sur_la_mediane_frame_complete():
-    """médiane complète = mesurée (F+Exner) + remontée 1,28 + transferts 0,11."""
-    lec = _lecture(13.0, 15.5)          # 15,5 + 1,28 + 0,11 = 16,89 > 16,7
+
+# ----- 3. verdict T1 : trois valeurs pré-écrites DANS le champ -----
+
+def test_verdict_trois_valeurs_dans_le_champ():
+    """§A29 : le label vit DANS le verdict, pas à côté. Les trois branches
+    gravées, couvertes : > 16,7 MORT ; [15,7;16,7] SOUS RÉSERVE ; < 15,7
+    SANS MORT."""
+    assert verdict_t1(16.8) == LABEL_MORT
+    assert verdict_t1(16.71) == LABEL_MORT
+    assert verdict_t1(16.7) == LABEL_SOUS_RESERVE          # borne incluse
+    assert verdict_t1(16.2) == LABEL_SOUS_RESERVE
+    assert verdict_t1(15.7) == LABEL_SOUS_RESERVE          # borne incluse
+    assert verdict_t1(15.69) == LABEL_SANS_MORT
+    assert verdict_t1(14.0) == LABEL_SANS_MORT
+
+
+def test_t1_mediane_complete_et_verdict_porte_le_label():
+    """médiane complète = mesurée (F+Exner) + remontée 1,28 + transferts 0,11,
+    et le VERDICT (label) est DANS le champ t1, sur cette médiane."""
+    lec = _lecture(13.0, 15.5)          # 15,5 + 1,39 = 16,89 > 16,7
     assert lec["t1"]["mediane_frame_complete_ms"] == pytest.approx(16.89)
+    assert lec["t1"]["verdict"] == LABEL_MORT
     assert lec["t1"]["mort"] is True
     assert lec["t1"]["seuil_mort_ms"] == SEUIL_MORT_MS
-    lec2 = _lecture(13.0, 14.0)         # 14,0 + 1,39 = 15,39 < 16,7
-    assert lec2["t1"]["mort"] is False
+    assert lec["t1"]["seuil_reserve_ms"] == SEUIL_RESERVE_MS
+    assert set(lec["t1"]["branches_preecrites"]) == {
+        LABEL_MORT, LABEL_SOUS_RESERVE, LABEL_SANS_MORT}
+    lec_res = _lecture(13.2, 14.4)      # 14,4 + 1,39 = 15,79 ∈ [15,7;16,7]
+    assert lec_res["t1"]["verdict"] == LABEL_SOUS_RESERVE
+    assert lec_res["t1"]["mort"] is False
+    lec_ok = _lecture(11.0, 13.0)       # 13 + 1,39 = 14,39 < 15,7
+    assert lec_ok["t1"]["verdict"] == LABEL_SANS_MORT
 
 
 # ----- 4. réserve de halo -----
