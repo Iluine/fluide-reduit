@@ -228,23 +228,31 @@ CADENCE_FIGEE: int = CADENCE_MESURE        # nom historique, conservé
 
 CHAMP_SEDIMENT: int = 3          # (h, hu, hv, s) — s porte le readout
 
-# Le pré-enregistrement v2 est REMONTÉ, pas encore endossé. Tant que ce
-# drapeau est faux, le driver REFUSE de tourner : « aucun run avant
-# endossement » devient mécanique au lieu d'être une promesse. C'est
-# Romain qui le lève, avec le commit qui endosse.
-ENDOSSEMENT_PREREG_V2: bool = False
+# ENDOSSÉ. Le drapeau dit DE QUELLE DÉCISION il procède, faute de quoi il
+# ne serait qu'un interrupteur : pré-enregistrement v2 endossé par Romain
+# au **§A22-complément (pocCascade2phys a4e06f6)**, après trois
+# amendements intégrés (§A22, a0a305a) et le dernier — plancher à trois
+# répétitions et règle d'indétermination — porté ici.
+#
+# Ce qu'il autorise et rien de plus : le balayage peut TOURNER. La règle
+# Q2 PROPOSE un EPS ; elle ne l'applique pas. EPS_EN_VIGUEUR reste 1e-4
+# et k reste 4 tant qu'une décision explicite ne les change pas.
+ENDOSSEMENT_PREREG_V2: bool = True
 
 
 def exiger_endossement() -> None:
     """Verrou de procédure : un pré-enregistrement remonté n'est pas un
     pré-enregistrement endossé. Mesurer avant endossement laisserait la
-    règle se former après la donnée."""
+    règle se former après la donnée.
+
+    LEVÉ au §A22-complément (a4e06f6). Le verrou reste en place — il dira
+    non de nouveau si quelqu'un rabaisse le drapeau."""
     if not ENDOSSEMENT_PREREG_V2:
         raise RuntimeError(
-            "SONDE EPS v2 : pré-enregistrement REMONTÉ, NON ENDOSSÉ "
-            "(§A21-complément). Aucun run n'est produit avant endossement "
-            "— l'ancien pré-enregistrement est superseded et la règle ne "
-            "doit pas pouvoir se former après la donnée. Lever "
+            "SONDE EPS v2 : pré-enregistrement REMONTÉ, NON ENDOSSÉ. "
+            "Aucun run n'est produit avant endossement — l'ancien "
+            "pré-enregistrement est superseded et la règle ne doit pas "
+            "pouvoir se former après la donnée. Lever "
             "ENDOSSEMENT_PREREG_V2 est une décision de Romain.")
 
 
@@ -517,41 +525,61 @@ def mesurer_delta_chi(cp, eps: float, k: int, frames: int,
 # un critère d'ÉCHELLE qui, lui, est MESURÉ.
 SEUIL_DISCRIMINATION_RELATIVE: float = 0.05    # 5 % d'amplitude, FORME
 
-# Le réplicat qui MESURE le plancher : le même EPS joué DEUX FOIS, tout
-# identique. Discipline reprise de l'attribution (b) — un plancher supposé
-# est un seuil qu'on ajuste après coup. La valeur employée est celle EN
-# VIGUEUR (1e-4) : ce n'est pas un choix, c'est le régime.
+# Le réplicat qui MESURE le plancher : le même EPS joué TROIS FOIS, tout
+# identique (§A22-complément — deux passes ne bornaient pas la dispersion,
+# elles n'en donnaient qu'un tirage). Discipline reprise de l'attribution
+# (b) : un plancher supposé est un seuil qu'on ajuste après coup. La
+# valeur employée est celle EN VIGUEUR (1e-4) — ce n'est pas un choix,
+# c'est le régime.
 REPLICAT_EPS: float = EPS_EN_VIGUEUR
+N_REPETITIONS_PLANCHER: int = 3
+
+# RÈGLE PRÉ-ÉCRITE (§A22-complément, tranchée AVANT les chiffres) : si
+# l'amplitude du balayage n'atteint pas TROIS fois le plancher, la chaîne
+# n'a rien résolu et AUCUNE branche n'est prononçable.
+FACTEUR_INDETERMINATION: float = 3.0
 
 
-def plancher_bruit_replicat(mesure: dict, replicat: dict) -> dict:
-    """Plancher de bruit de l'observable, MESURÉ par réplicat.
+def plancher_bruit_replicat(repetitions: list[dict]) -> dict:
+    """Plancher de bruit de l'observable, MESURÉ par RÉPÉTITIONS.
 
-    Deux passes Δχ à graine, géométrie, cadence et série identiques : tout
-    ce qui les sépare est du bruit par définition. Le plancher retenu est
-    le plus grand écart observé, sur LES DEUX vérités — la règle lit l'une,
-    la branche (iii-bis) lit l'autre, aucune ne doit être jugée sous son
-    propre bruit.
+    TROIS passes Δχ à graine, géométrie, cadence et série identiques : tout
+    ce qui les sépare est du bruit par définition. Deux passes ne
+    donnaient qu'UN tirage de la dispersion ; trois la bornent (§A22-
+    complément).
 
-    Un plancher NUL dirait que la chaîne est DÉTERMINISTE, pas qu'elle est
-    infiniment précise : le critère relatif porterait alors seul, et c'est
-    dit plutôt que tu."""
+    Le plancher retenu est le plus grand écart observé — la DISPERSION
+    (max − min) de chaque grandeur, prise sur LES DEUX vérités : la règle
+    lit l'une, la branche (iii-bis) lit l'autre, aucune ne doit être jugée
+    sous son propre bruit.
+
+    Un plancher NUL dit que la chaîne est DÉTERMINISTE, pas qu'elle est
+    infiniment précise — et c'est dit plutôt que tu."""
+    if len(repetitions) < N_REPETITIONS_PLANCHER:
+        raise RuntimeError(
+            f"plancher de bruit : {len(repetitions)} répétition(s) < "
+            f"{N_REPETITIONS_PLANCHER} exigées (§A22-complément). Sans "
+            "elles, « au-dessus du bruit » n'a pas de sens et aucune "
+            "branche n'est prononçable.")
     ecarts: dict[str, float] = {}
     for verite in (VERITE_COURANTE, VERITE_TRANSPORTEE):
         for grandeur in ("delta_chi_max", "delta_chi_max_sans_decimation"):
-            a = mesure["par_verite"][verite][grandeur]
-            b = replicat["par_verite"][verite][grandeur]
-            ecarts[f"{verite}.{grandeur}"] = abs(a - b)
+            valeurs = [r["par_verite"][verite][grandeur]
+                       for r in repetitions]
+            ecarts[f"{verite}.{grandeur}"] = max(valeurs) - min(valeurs)
     plancher = max(ecarts.values()) if ecarts else 0.0
     return {
         "plancher_delta_chi": float(plancher),
         "eps_du_replicat": REPLICAT_EPS,
+        "n_repetitions": len(repetitions),
         "ecarts_observes": ecarts,
-        "mesure": "réplicat : même EPS, tout identique, deux passes",
+        "mesure": (f"{len(repetitions)} répétitions du MÊME EPS, tout "
+                   "identique ; plancher = plus grand écart observé"),
         "justification": (
             "un plancher SUPPOSÉ est un seuil qu'on ajuste après coup. "
             "Celui-ci est mesuré sur la chaîne elle-même, aux deux "
-            "vérités, avant toute lecture."),
+            "vérités, avant toute lecture. Trois passes plutôt que deux : "
+            "deux ne donnaient qu'un tirage de la dispersion."),
         "note_si_nul": (
             "un plancher NUL dit que la chaîne est DÉTERMINISTE, pas "
             "qu'elle est infiniment précise : le critère RELATIF porte "
@@ -621,8 +649,15 @@ LABEL_INSTRUMENT_VALIDE: str = "INSTRUMENT VALIDE"
 LABEL_SONDE_MUETTE: str = "SONDE MUETTE sur EPS"
 LABEL_MECANISME_EN_QUESTION: str = "MÉCANISME DE REMONTÉE EN QUESTION"
 LABEL_PEREMPTION: str = "PÉREMPTION"
+LABEL_INDETERMINE: str = "INDÉTERMINÉ-INSTRUMENT"
 
 TABLE_BRANCHES: dict[str, str] = {
+    "indetermine": (
+        "(indetermine) INDÉTERMINÉ-INSTRUMENT — l'amplitude du balayage "
+        f"n'atteint pas {FACTEUR_INDETERMINATION:g} fois le plancher de "
+        "bruit mesuré : la chaîne n'a RIEN RÉSOLU sur ce balayage. AUCUNE "
+        "branche n'est prononcée — ni valide, ni muette, ni mécanisme, ni "
+        "péremption. Remonter."),
     "i": ("(i) INSTRUMENT VALIDE — au moins un EPS passe. L'instrument "
           "SUFFIT pour cette conclusion : qu'il discrimine ou non ne la "
           "change pas, et la discrimination passe en DIAGNOSTIC."),
@@ -700,6 +735,25 @@ def brancher(mesures: list[dict], plancher: float | None) -> dict:
       2. sinon, un EPS passe sur vérité(n−1) ?   ⇒ **(iii-bis)**
       3. sinon, le balayage discrimine ?         ⇒ **(iii)** / **(ii)**
 
+    **RÈGLE D'INDÉTERMINATION (§A22-complément), EN TÊTE DE TOUT** :
+    amplitude du balayage < 3 × plancher ⇒ **INDÉTERMINÉ-INSTRUMENT**, et
+    AUCUNE des quatre branches n'est prononcée. Elle précède même le
+    test (1), et c'est délibéré : si le balayage entier tient dans le
+    bruit, on ne sait pas que la chaîne a mesuré quoi que ce soit, et
+    « instrument valide » serait un verdict tiré d'un instrument dont
+    rien n'atteste qu'il ait répondu.
+
+    TENSION AVEC (C), REMONTÉE : (C) posait qu'un EPS passant suffit,
+    quelle que soit la pente. La règle d'indétermination la RECOUVRE dans
+    un cas — balayage dans le bruit ET un EPS sous le seuil — où (C)
+    aurait dit (i). Le gravé §A22-complément est catégorique (« AUCUNE
+    branche prononcée ») et il a été tranché AVANT les chiffres : il
+    prime. Le prix est nommé : on renonce alors à une conclusion
+    d'innocuité qui pourrait être robuste (Δχ ≈ 1e-4 contre un seuil de
+    0.0603 ne dépend pas de la pente). C'est le sens conservateur de
+    l'erreur, et il reste amendable — mais pas par moi, et pas après
+    lecture des chiffres.
+
     ORDRE REMONTÉ COMME CHOIX (le gravé dit que (ii), (iii) et (iii-bis)
     se séparent sous le gate, sans fixer leur ordre) : (iii-bis) est
     évaluée AVANT la discrimination parce qu'elle repose sur une MESURE
@@ -713,8 +767,21 @@ def brancher(mesures: list[dict], plancher: float | None) -> dict:
     passants_n = eps_passants(mesures, VERITE_COURANTE)
     passants_n1 = eps_passants(mesures, VERITE_TRANSPORTEE)
     discrimination = discrimination_du_balayage(mesures, plancher)
+    amplitude = discrimination["amplitude_absolue"]
 
-    if passants_n:
+    # RÈGLE D'INDÉTERMINATION (§A22-complément), en TÊTE de l'arbre et
+    # tranchée AVANT les chiffres : si le balayage entier tient dans
+    # trois fois le bruit, la chaîne n'a rien résolu et AUCUNE branche
+    # n'est prononçable. Sans plancher évalué, l'indétermination
+    # s'impose de même — on ne prononce pas sur un bruit inconnu.
+    seuil_indetermination = (None if plancher is None
+                             else FACTEUR_INDETERMINATION * plancher)
+    indetermine = bool(plancher is None
+                       or amplitude < seuil_indetermination)
+
+    if indetermine:
+        branche, label = "indetermine", LABEL_INDETERMINE
+    elif passants_n:
         branche, label = "i", LABEL_INSTRUMENT_VALIDE
     elif passants_n1:
         branche, label = "iii-bis", LABEL_PEREMPTION
@@ -723,8 +790,30 @@ def brancher(mesures: list[dict], plancher: float | None) -> dict:
     else:
         branche, label = "ii", LABEL_SONDE_MUETTE
 
-    gate = not passants_n
+    gate = bool(not indetermine and not passants_n)
     return {
+        "indetermination": {
+            "amplitude_balayage": amplitude,
+            "plancher_bruit": plancher,
+            "facteur": FACTEUR_INDETERMINATION,
+            "seuil": seuil_indetermination,
+            "declenchee": indetermine,
+            "motif": ("aucun plancher évalué — on ne prononce pas sur un "
+                      "bruit inconnu"
+                      if plancher is None else
+                      f"amplitude {amplitude:.3e} < "
+                      f"{FACTEUR_INDETERMINATION:g} × plancher "
+                      f"{plancher:.3e}"
+                      if indetermine else
+                      f"amplitude {amplitude:.3e} >= "
+                      f"{FACTEUR_INDETERMINATION:g} × plancher "
+                      f"{plancher:.3e}"),
+            "regle": (
+                "PRÉ-ÉCRITE §A22-complément, tranchée AVANT les chiffres : "
+                f"amplitude du balayage < {FACTEUR_INDETERMINATION:g} × "
+                "plancher ⇒ INDÉTERMINÉ-INSTRUMENT, AUCUNE branche "
+                "prononcée."),
+        },
         "branche": branche,
         "label": label,
         "lecture_preecrite": TABLE_BRANCHES[branche],
@@ -924,6 +1013,12 @@ def lecture_mecanique(mesures: list[dict],
         "eps_retenu": retenu,
         "eps_satisfaisants": [m["eps"] for m in satisfaisants],
         "autre_remonte": bool(retenu is None),
+        "eps_propose_jamais_applique": (
+            "la règle Q2 PROPOSE un EPS ; ce driver ne l'APPLIQUE pas. "
+            f"EPS_EN_VIGUEUR reste {EPS_EN_VIGUEUR:g} et la cadence reste "
+            f"{CADENCE_MESURE} tant qu'une décision explicite ne les "
+            "change pas — appliquer une proposition au fil d'un run "
+            "serait décider sans l'avoir dit."),
         "branche_preecrite_si_aucun": (
             "AUTRE remonté, AUCUN EPS retenu par défaut — jamais de choix "
             "après courbe"),
@@ -988,14 +1083,19 @@ def main() -> None:
             liberer_vram(cp)
             resultats.append({"eps": eps, "chrono": chrono,
                               "delta_chi": observable})
-        print(f"  [{etiquette} k={k}] RÉPLICAT à EPS={REPLICAT_EPS:g} "
-              f"(plancher de bruit MESURÉ) ...", flush=True)
-        replicat = mesurer_delta_chi(cp, REPLICAT_EPS, k, SERIE_FRAMES,
-                                     facteur)
-        liberer_vram(cp)
-        reference = next(m["delta_chi"] for m in resultats
-                         if m["eps"] == REPLICAT_EPS)
-        return resultats, plancher_bruit_replicat(reference, replicat)
+        # La passe déjà jouée à EPS_EN_VIGUEUR compte pour la première
+        # répétition ; les suivantes la rejouent à l'identique.
+        repetitions = [next(m["delta_chi"] for m in resultats
+                            if m["eps"] == REPLICAT_EPS)]
+        while len(repetitions) < N_REPETITIONS_PLANCHER:
+            numero = len(repetitions) + 1
+            print(f"  [{etiquette} k={k}] RÉPÉTITION {numero}/"
+                  f"{N_REPETITIONS_PLANCHER} à EPS={REPLICAT_EPS:g} "
+                  f"(plancher de bruit MESURÉ) ...", flush=True)
+            repetitions.append(mesurer_delta_chi(cp, REPLICAT_EPS, k,
+                                                 SERIE_FRAMES, facteur))
+            liberer_vram(cp)
+        return resultats, plancher_bruit_replicat(repetitions)
 
     # (A) La VÉRIFICATION D'INSTRUMENT est DUE AVANT toute lecture : sans
     # son PASS/FAIL, `lecture_mecanique` refuse de produire quoi que ce
@@ -1142,8 +1242,12 @@ def main() -> None:
         print("  -> AUCUN EPS ne satisfait : AUTRE remonté, aucun EPS "
               "retenu par défaut.")
     else:
-        print(f"  -> EPS retenu = {lecture['eps_retenu']:g}  "
-              f"(en vigueur : {EPS_EN_VIGUEUR:g})")
+        print(f"  -> EPS PROPOSÉ = {lecture['eps_retenu']:g}  "
+              f"(en vigueur, INCHANGÉ : {EPS_EN_VIGUEUR:g})")
+        print("     (la règle PROPOSE ; ce driver n'applique rien)")
+    indet = lecture["branche_a_la_mesure"]["indetermination"]
+    print(f"  indétermination : {indet['motif']}  -> déclenchée = "
+          f"{indet['declenchee']}")
     discrimination = lecture["discrimination_du_balayage"]
     print(f"  discrimination : forme {discrimination['amplitude_relative']:.2%} "
           f"(>= {SEUIL_DISCRIMINATION_RELATIVE:.0%}) = "

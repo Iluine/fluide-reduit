@@ -21,8 +21,11 @@ from scripts.run_f1_sonde_eps import (
     CADENCE_MESURE,
     CADENCE_VERIFICATION,
     CADENCES_ADMISES,
+    FACTEUR_INDETERMINATION,
+    LABEL_INDETERMINE,
     LABEL_MECANISME_EN_QUESTION,
     LABEL_PEREMPTION,
+    N_REPETITIONS_PLANCHER,
     SEUIL_DISCRIMINATION_RELATIVE,
     TABLE_BRANCHES,
     VERITE_COURANTE,
@@ -42,6 +45,7 @@ from scripts.run_f1_sonde_eps import (
     exiger_verification_instrument,
     lecture_innocuite,
     lecture_mecanique,
+    plancher_bruit_replicat,
     verifier_instrument,
 )
 from src.albedo import albedo, delta_chi
@@ -236,8 +240,8 @@ def test_aucune_lecture_sans_verification_enregistree():
 
 def test_instrument_valide_si_k1_discrimine_et_un_eps_passe():
     """Lecture pré-écrite (i) : Δχ répond à EPS ET au moins un EPS passe."""
-    valide, details = verifier_instrument([
-        _mesure(1e-5, 0.010), _mesure(1e-2, 0.090)])
+    valide, details = verifier_instrument(
+        [_mesure(1e-5, 0.010), _mesure(1e-2, 0.090)], plancher=0.0)
     assert valide is True
     assert details["instrument_valide"] is True
     assert details["eps_passants_a_k1"] == [1e-5]
@@ -248,8 +252,8 @@ def test_instrument_valide_si_k1_discrimine_et_un_eps_passe():
 
 def test_sonde_muette_si_k1_ne_discrimine_pas():
     """Lecture pré-écrite (ii) : AUTRE D'INSTRUMENT — ne rien régler."""
-    valide, details = verifier_instrument([
-        _mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)])
+    valide, details = verifier_instrument(
+        [_mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)], plancher=0.0)
     assert valide is False
     assert "MUETTE" in details["lecture_preecrite"]
     assert "ne rien régler" in details["lecture_preecrite"].lower()
@@ -351,25 +355,103 @@ def test_les_attributions_nexistent_que_pour_la_branche_iii():
         assert details["attributions_branche_iii"] is None
 
 
-def test_la_table_de_branches_est_close_sur_quatre_issues():
-    """Les QUATRE issues sont exhaustives et mutuellement exclusives, et
-    le test les exerce toutes (§A22)."""
+def test_la_table_de_branches_est_close_sur_cinq_issues():
+    """Les CINQ issues sont exhaustives et mutuellement exclusives, et le
+    test les exerce TOUTES (§A22-complément).
+
+    Le plancher vaut 0 partout sauf pour l'indétermination, où il est
+    choisi assez grand pour que le balayage entier tienne dans 3× le
+    bruit."""
     cas = {
-        # (passe sur n, passe sur n−1, discrimine) -> branche
-        "i": ([_mesure(1e-5, 0.010), _mesure(1e-2, 0.090)], None),
+        "i": ([_mesure(1e-5, 0.010), _mesure(1e-2, 0.090)], 0.0),
         "iii-bis": ([_mesure(1e-5, 0.070, dchi_max_n1=0.010),
-                     _mesure(1e-2, 0.200, dchi_max_n1=0.150)], None),
-        "iii": ([_mesure(1e-5, 0.070), _mesure(1e-2, 0.200)], None),
-        "ii": ([_mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)], None),
+                     _mesure(1e-2, 0.200, dchi_max_n1=0.150)], 0.0),
+        "iii": ([_mesure(1e-5, 0.070), _mesure(1e-2, 0.200)], 0.0),
+        "ii": ([_mesure(1e-5, 0.0806), _mesure(1e-2, 0.0805)], 0.0),
+        # amplitude 0.08 < 3 × 0.05 = 0.15 : rien n'est résolu.
+        "indetermine": ([_mesure(1e-5, 0.010), _mesure(1e-2, 0.090)], 0.05),
     }
     observees = set()
-    for attendue, (mesures, _) in cas.items():
-        _, details = verifier_instrument(mesures, plancher=0.0)
+    for attendue, (mesures, plancher) in cas.items():
+        _, details = verifier_instrument(mesures, plancher=plancher)
         assert details["branche"] == attendue, attendue
         assert details["label"] in TABLE_BRANCHES[attendue]
         observees.add(details["branche"])
-    assert observees == {"i", "ii", "iii", "iii-bis"}
-    assert set(TABLE_BRANCHES) == {"i", "ii", "iii", "iii-bis"}
+    assert observees == {"i", "ii", "iii", "iii-bis", "indetermine"}
+    assert set(TABLE_BRANCHES) == {"i", "ii", "iii", "iii-bis",
+                                   "indetermine"}
+
+
+def test_lindetermination_precede_toutes_les_branches():
+    """La règle est en TÊTE de l'arbre : elle recouvre même (i). Le MÊME
+    jeu de mesures — où un EPS passe — bascule d'INSTRUMENT VALIDE à
+    INDÉTERMINÉ selon le seul plancher."""
+    mesures = [_mesure(1e-5, 0.010), _mesure(1e-2, 0.090)]
+    _, tranche = verifier_instrument(mesures, plancher=0.0)
+    assert tranche["branche"] == "i"
+    _, noye = verifier_instrument(mesures, plancher=0.05)
+    assert noye["branche"] == "indetermine"
+    assert noye["label"] == LABEL_INDETERMINE
+    assert noye["instrument_valide"] is False
+    assert "AUCUNE branche" in noye["lecture_preecrite"]
+    # ... et les attributions de mécanisme ne sont pas portées non plus.
+    assert noye["attributions_branche_iii"] is None
+
+
+def test_le_seuil_dindetermination_vaut_trois_fois_le_plancher():
+    """Frontière exacte, fixée AVANT les chiffres : strictement en deçà
+    de 3 × plancher, on ne prononce pas ; à partir de 3 ×, on prononce."""
+    assert FACTEUR_INDETERMINATION == 3.0
+    plancher = 0.01
+    juste_en_deca = [_mesure(1e-5, 0.010),
+                     _mesure(1e-2, 0.010 + 3 * plancher - 1e-9)]
+    juste_au_dela = [_mesure(1e-5, 0.010),
+                     _mesure(1e-2, 0.010 + 3 * plancher)]
+    _, a = verifier_instrument(juste_en_deca, plancher=plancher)
+    _, b = verifier_instrument(juste_au_dela, plancher=plancher)
+    assert a["branche"] == "indetermine"
+    assert b["branche"] != "indetermine"
+
+
+def test_sans_plancher_evalue_rien_nest_prononce():
+    """On ne prononce pas sur un bruit inconnu : l'absence de plancher
+    donne INDÉTERMINÉ, pas une branche par défaut."""
+    _, details = verifier_instrument(
+        [_mesure(1e-5, 0.010), _mesure(1e-2, 0.090)])
+    assert details["branche"] == "indetermine"
+    assert "bruit inconnu" in details["indetermination"]["motif"]
+
+
+def test_le_plancher_exige_trois_repetitions():
+    """Deux passes ne donnaient qu'UN tirage de la dispersion. Le driver
+    refuse fail-loud en deçà de trois (§A22-complément)."""
+    assert N_REPETITIONS_PLANCHER == 3
+    repetition = _mesure(1e-4, 0.010)["delta_chi"]
+    for n in (1, 2):
+        with pytest.raises(RuntimeError, match="répétition"):
+            plancher_bruit_replicat([repetition] * n)
+
+
+def test_le_plancher_est_la_dispersion_des_repetitions():
+    """Plancher = plus grand écart observé : la DISPERSION (max − min) de
+    chaque grandeur, prise sur les deux vérités."""
+    bruit = plancher_bruit_replicat([
+        _mesure(1e-4, 0.0100)["delta_chi"],
+        _mesure(1e-4, 0.0104)["delta_chi"],
+        _mesure(1e-4, 0.0101)["delta_chi"]])
+    assert bruit["plancher_delta_chi"] == pytest.approx(0.0004, abs=1e-12)
+    assert bruit["n_repetitions"] == 3
+    assert bruit["deterministe"] is False
+
+
+def test_un_plancher_nul_est_dit_deterministe():
+    """Trois passes identiques : la chaîne est DÉTERMINISTE, ce qui ne
+    veut pas dire infiniment précise — et c'est dit."""
+    identique = _mesure(1e-4, 0.010)["delta_chi"]
+    bruit = plancher_bruit_replicat([identique] * 3)
+    assert bruit["plancher_delta_chi"] == 0.0
+    assert bruit["deterministe"] is True
+    assert "DÉTERMINISTE" in bruit["note_si_nul"]
 
 
 def test_chaque_branche_porte_sa_lecture_preecrite():

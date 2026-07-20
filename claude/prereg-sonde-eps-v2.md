@@ -1,14 +1,21 @@
 # Pré-enregistrement — SONDE EPS (N1), version 2
 
-**Statut : ENDOSSÉ §A22 sous trois amendements, INTÉGRÉS ci-dessous.
-REMONTÉ pour endossement du texte FINAL. Aucun run avant.**
-Sources : pocCascade2phys PREREGISTRATION.md §A21-complément (f943e9a) et
+**Statut : ENDOSSÉ. Le balayage peut tourner.**
+Sources : pocCascade2phys PREREGISTRATION.md §A21-complément (f943e9a),
 **§A22 (a0a305a)** — amendements (A) critère de discrimination et plancher
 de bruit, (B) branche (iii-bis) péremption, (C) la discrimination ne gate
-qu'en cas d'échec.
-Verrou mécanique : `ENDOSSEMENT_PREREG_V2 = False` dans
-`scripts/run_f1_sonde_eps.py` — le driver refuse fail-loud avant même de
-toucher au device. Le lever est la décision d'endossement.
+qu'en cas d'échec — et **§A22-complément (a4e06f6)** : plancher à trois
+répétitions et règle d'indétermination.
+
+Verrou mécanique : `ENDOSSEMENT_PREREG_V2` dans
+`scripts/run_f1_sonde_eps.py`, **levé au §A22-complément (a4e06f6)**. Le
+commentaire qui l'accompagne cite cette décision : un drapeau qui ne dit pas
+d'où il vient n'est qu'un interrupteur. Le verrou reste en place et redira
+non si quelqu'un le rabaisse.
+
+**Ce qu'il autorise, et rien de plus** : le balayage peut TOURNER. La règle
+Q2 **propose** un EPS ; elle ne l'applique pas. `EPS_EN_VIGUEUR` reste 1e-4
+et k reste 4 tant qu'une décision explicite ne les change pas.
 
 ---
 
@@ -120,9 +127,9 @@ Le critère entre au pré-enregistrement, et il a **deux conditions** :
 
 **Le plancher est mesuré, pas supposé.** Le même EPS — celui *en vigueur*,
 donc pas un choix — est rejoué à l'identique : graine, géométrie, cadence,
-série. Tout ce qui sépare les deux passes est du bruit par définition. Le
-plancher retenu est le plus grand écart observé **sur les deux vérités**, la
-règle lisant l'une et (iii-bis) l'autre. Coût : une passe Δχ sur douze.
+série. Tout ce qui sépare les passes est du bruit par définition. Le plancher
+retenu est le plus grand écart observé **sur les deux vérités**, la règle
+lisant l'une et (iii-bis) l'autre. Coût : deux passes Δχ de plus par cadence.
 
 **Pourquoi le seuil relatif de 5 % est conservé, et pourquoi c'est un choix.**
 Une amplitude relative est **sans échelle** : elle ne devient pas fausse
@@ -136,11 +143,38 @@ l'échelle de l'observable* : un seuil formé avec la donnée en vue. On garde
 donc le critère de forme tel quel, et on lui adjoint un critère d'échelle qui,
 lui, est mesuré.
 
+**Le plancher est mesuré sur TROIS répétitions** (§A22-complément), pas
+deux : deux passes ne donnaient qu'*un* tirage de la dispersion, trois la
+bornent. Plancher = **plus grand écart observé**, c'est-à-dire la dispersion
+(max − min) de chaque grandeur, prise sur les deux vérités. Le driver refuse
+fail-loud en deçà de trois.
+
 **Si le plancher ressort nul**, cela dit que la chaîne est déterministe, pas
 qu'elle est infiniment précise : le critère relatif porte alors seul, et le
-driver le dit plutôt que d'en profiter. **Sans plancher évalué**, la
-discrimination reste *indéterminée* — jamais prononcée sur la forme seule,
-qui fut la faute de la v1.
+driver le dit plutôt que d'en profiter.
+
+### La règle d'indétermination — tranchée AVANT les chiffres
+
+> **amplitude du balayage < 3 × plancher ⇒ INDÉTERMINÉ-INSTRUMENT, et
+> AUCUNE branche n'est prononcée.**
+
+Si le balayage entier tient dans trois fois le bruit, la chaîne n'a rien
+résolu : ni « valide », ni « muette », ni « mécanisme », ni « péremption ».
+On remonte. **Sans plancher évalué**, l'indétermination s'impose de même —
+on ne prononce pas sur un bruit inconnu.
+
+C'est la réserve que j'avais inscrite sans la préempter ; Romain l'a tranchée
+avant la donnée, ce qui est la seule façon de le faire.
+
+**Tension avec (C), nommée.** La règle est **en tête de l'arbre** : elle
+recouvre même (i). Dans un cas — balayage dans le bruit *et* un EPS sous le
+seuil — (C) aurait dit « instrument valide », et l'indétermination dit « rien
+n'est prononcé ». Le gravé est catégorique et antérieur aux chiffres : il
+prime. **Le prix est nommé** : on renonce alors à une conclusion d'innocuité
+qui pourrait être robuste, puisque Δχ ≈ 1e-4 contre un seuil de 0.0603 ne
+dépend pas de la pente du balayage. C'est le sens conservateur de l'erreur —
+on préfère « je ne sais pas » à un « valide » qu'aucun signal n'atteste. Il
+reste amendable, mais pas par moi et pas après lecture des chiffres.
 
 ---
 
@@ -157,17 +191,18 @@ soit sa pente. La discrimination devient alors un **diagnostic**. Elle ne
 **gate** que lorsque rien ne passe — le seul cas où il faut savoir si l'on
 mesure quelque chose, et c'est là que (ii), (iii) et (iii-bis) se séparent.
 
-### La table, close sur quatre issues
+### La table, close sur cinq issues
 
 | | condition | lecture |
 |---|---|---|
+| **INDÉTERMINÉ** | amplitude < 3 × plancher, ou plancher non évalué | **INDÉTERMINÉ-INSTRUMENT** — aucune branche |
 | **(i)** | un EPS passe sur vérité(n) | **INSTRUMENT VALIDE** |
 | **(iii-bis)** | aucun sur vérité(n), au moins un sur vérité(n−1) | **PÉREMPTION** |
 | **(iii)** | aucun sur les deux, mais le balayage discrimine | **MÉCANISME DE REMONTÉE EN QUESTION** |
 | **(ii)** | aucun sur les deux, pas de discrimination | **SONDE MUETTE sur EPS** |
 
 Exhaustives et mutuellement exclusives ; un test de couverture exerce les
-quatre.
+**cinq**, l'indétermination étant évaluée en tête.
 
 ### (B) La branche (iii-bis) — PÉREMPTION
 
@@ -242,9 +277,13 @@ croire la v1 seulement imprécise.
 
 ---
 
-## 8. Ce qui est figé tant que rien n'est endossé
+## 8. Ce qui reste figé APRÈS endossement
 
-- **EPS reste 1e-4, k reste 4, rien n'est réglé.**
+L'endossement autorise le RUN, pas un réglage.
+
+- **EPS reste 1e-4, k reste 4.** La règle Q2 **propose** ; elle n'applique
+  pas. Appliquer une proposition au fil d'un run serait décider sans l'avoir
+  dit.
 - Kernels F et L3 **intouchés** dans leur code CUDA. Empreintes sur la chaîne
   extraite, re-calculables :
   - `sha256(substrat_fusionne._SOURCE)` = `e18015f5…f30b4` (8223 car.)
@@ -254,14 +293,10 @@ croire la v1 seulement imprécise.
 
 ---
 
-## 9. Ce qui est demandé
+## 9. Ce qui reste ouvert à la lecture
 
-**Endosser ce texte final**, ou le renvoyer amendé. Les trois amendements de
-§A22 y sont intégrés (§ 4bis pour A, § 5 pour B et C). Sur endossement,
-`ENDOSSEMENT_PREREG_V2` est levé — par Romain, pas par moi — et le balayage
-peut tourner.
-
-Trois conséquences à connaître avant de trancher, aucune traitée ici :
+Le texte est endossé et le run autorisé. Trois choses à connaître en lisant
+les chiffres, aucune traitée par le driver :
 
 1. **`run_f1_attribution_b.py` reste gaté** — il est bâti sur l'observable v1
    et son verrou d'invariant refusera de prononcer. Le ré-armer sur
@@ -273,13 +308,16 @@ Trois conséquences à connaître avant de trancher, aucune traitée ici :
    attribués à l'appareil de sonde. Ce n'est pas une re-mesure, seulement une
    cohérence à noter.
 
-### Un choix, et une chose que je n'ai pas su trancher seul
+### Les deux choix que j'ai remontés, et qui sont endossés
 
-- **Choix remonté** : l'ordre d'évaluation de (iii-bis) avant la
-  discrimination (§ 5). Le gravé fixe que les trois se séparent sous le gate,
-  pas leur ordre.
-- **Point à surveiller à la lecture** : le plancher mesuré par réplicat n'a
-  qu'**un** réplicat. S'il ressort très petit devant l'amplitude du balayage,
-  la question ne se pose pas. S'il en est du même ordre, un réplicat unique ne
-  suffira pas à trancher, et il faudra en jouer plusieurs — décision qui
-  appartiendra à Romain à la lecture, pas au driver.
+- **L'ordre d'évaluation** de (iii-bis) avant la discrimination (§ 5) : le
+  gravé fixait que les trois se séparent sous le gate, pas leur ordre.
+- **Le seuil relatif de 5 %**, conservé plutôt que reformé : en changer en
+  connaissant l'échelle de la donnée aurait été le former après coup.
+
+### Ce que la règle d'indétermination coûte, s'il faut le relire
+
+Elle recouvre (i). Si le balayage tient dans le bruit alors qu'un EPS passe,
+on renonce à une conclusion d'innocuité qui pourrait être robuste. Ce prix a
+été accepté avant les chiffres ; le relire après une lecture serait
+exactement ce que la discipline interdit.

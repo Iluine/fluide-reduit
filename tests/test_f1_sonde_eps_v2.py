@@ -262,13 +262,37 @@ def test_la_connaissance_declare_sa_limite():
 
 # ----- 4. rien ne tourne avant endossement -----
 
-def test_le_prereg_v2_nest_pas_encore_endosse():
-    """Le pré-enregistrement est REMONTÉ. Tant qu'il n'est pas endossé,
-    le driver refuse fail-loud : la règle ne peut pas se former après la
-    donnée."""
-    assert ENDOSSEMENT_PREREG_V2 is False
-    with pytest.raises(RuntimeError, match="NON ENDOSSÉ"):
-        exiger_endossement()
+def test_le_prereg_v2_est_endosse_et_le_verrou_reste_armé():
+    """ENDOSSÉ au §A22-complément (a4e06f6) : le drapeau est levé, et le
+    verrou reste EN PLACE — il redira non si quelqu'un le rabaisse. Un
+    verrou qu'on retire après usage ne protège plus rien."""
+    import scripts.run_f1_sonde_eps as sonde
+
+    assert ENDOSSEMENT_PREREG_V2 is True
+    exiger_endossement()                       # ne lève plus
+
+    ancien = sonde.ENDOSSEMENT_PREREG_V2
+    try:
+        sonde.ENDOSSEMENT_PREREG_V2 = False
+        with pytest.raises(RuntimeError, match="NON ENDOSSÉ"):
+            sonde.exiger_endossement()
+    finally:
+        sonde.ENDOSSEMENT_PREREG_V2 = ancien
+
+
+def test_le_verrou_dit_de_quelle_decision_il_procede():
+    """Un drapeau qui ne dit pas d'où il vient n'est qu'un interrupteur :
+    le commentaire qui l'accompagne doit citer la décision."""
+    import inspect
+
+    from scripts import run_f1_sonde_eps
+
+    source = inspect.getsource(run_f1_sonde_eps)
+    tete = source[:source.index("ENDOSSEMENT_PREREG_V2: bool")]
+    contexte = tete[-700:]
+    assert "a4e06f6" in contexte
+    assert "§A22-complément" in contexte
+    assert "PROPOSE" in contexte      # ce qu'il autorise, et rien de plus
 
 
 def test_le_verrou_dendossement_precede_toute_allocation():
