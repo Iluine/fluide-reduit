@@ -37,6 +37,7 @@ POINT D'ARRÊT OBLIGATOIRE AVANT LE RUN (§A31) : ce driver est CONSTRUIT mais
 NON LANCÉ tant que l'assemblage n'est pas endossé."""
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -160,6 +161,52 @@ def lecture_t2(par_seed: dict[int, dict]) -> dict:
     }
 
 
+def empreinte_config() -> str:
+    """Ce qui rendrait deux seeds INCOMPARABLES s'il bougeait entre deux
+    runs : le seuil du canal, la géométrie fovéale, la cadence Exner, la
+    cellule, et les empreintes des kernels. Une reprise n'est licite que sous
+    empreinte identique."""
+    from src.f1_gpu.exner_gpu import _SOURCE_EXNER
+    from src.f1_gpu.substrat_fidele import _SOURCE_FIDELE
+    graine = json.dumps({
+        "eps": EPS_PRODUCTION, "n_fovea": N_FOVEA,
+        "cadence_exner": CADENCE_EXNER, "n_episodes": N_EPISODES,
+        "emissions": list(EMISSIONS), "graines": list(GRAINES),
+        "cap": CAP_COMMIT,
+        "kernels": [hashlib.sha256(s.encode()).hexdigest()
+                    for s in (_SOURCE_FIDELE, _SOURCE_EXNER)],
+    }, sort_keys=True)
+    return hashlib.sha256(graine.encode()).hexdigest()[:16]
+
+
+def seeds_a_mesurer(document_existant: dict | None,
+                    empreinte: str) -> tuple[list[int], dict]:
+    """Reprise après coupure : quels seeds restent à mesurer, et lesquels
+    sont repris. Un report d'une AUTRE config est ignoré en bloc — mélanger
+    des seeds mesurés sous deux configs produirait une lecture fausse."""
+    if not document_existant or document_existant.get("empreinte") != empreinte:
+        return list(GRAINES), {}
+    repris = {int(s): m
+              for s, m in (document_existant.get("par_seed") or {}).items()
+              if int(s) in GRAINES}
+    return [s for s in GRAINES if s not in repris], repris
+
+
+def document_partiel(par_seed: dict[int, dict], empreinte: str) -> dict:
+    """Report d'un run INCOMPLET. Il ne porte AUCUNE lecture : un verdict lu
+    sur 2 seeds sur 3 serait faux (MORT-b est par-seed — le seed manquant
+    peut être celui qui traverse). Le statut le dit en toutes lettres."""
+    return {
+        "statut": (f"PARTIEL — {len(par_seed)}/{len(GRAINES)} seeds mesurés, "
+                   "AUCUNE lecture prononcée (MORT-b est par-seed : un seed "
+                   "manquant peut être celui qui traverse). Relancer le "
+                   "driver reprend les seeds manquants."),
+        "empreinte": empreinte,
+        "par_seed": {str(s): m for s, m in par_seed.items()},
+        "lecture_mecanique": None,
+    }
+
+
 def document_t2(par_seed: dict[int, dict], lecture: dict) -> dict:
     """Le report. EXTRAIT de `main` à dessein : il s'exécute APRÈS la mesure,
     donc une faute ici détruirait un run déjà payé — il doit être exerçable à
@@ -176,6 +223,8 @@ def document_t2(par_seed: dict[int, dict], lecture: dict) -> dict:
                        "bord_grossier": "réfléchissant (vrai bord, = rederive)"},
             "verifs_exigees": list(VERIFS_EXIGEES),
         },
+        "statut": f"COMPLET — {len(par_seed)}/{len(GRAINES)} seeds mesurés",
+        "empreinte": empreinte_config(),
         "par_seed": {str(s): m for s, m in par_seed.items()},
         "lecture_mecanique": lecture,
     }
@@ -207,20 +256,36 @@ def main() -> None:
     """Le run de T2. GATÉ : n'est lancé qu'après endossement de l'assemblage.
 
     Ordre voulu : le gate d'instrument AVANT toute mesure (une tranche muette
-    ne doit pas coûter les 3,5 min), le report écrit AVANT l'affichage (la
-    mesure est sauvée même si l'affichage fâche)."""
+    ne doit pas coûter les minutes de run), le report écrit APRÈS CHAQUE SEED
+    (une coupure ne coûte plus qu'un seed, et relancer reprend là où ça s'est
+    arrêté), l'affichage en dernier (la mesure est sauvée même s'il fâche).
+
+    Un run repris ne prononce de lecture QUE complet : MORT-b est par-seed,
+    le seed manquant peut être celui qui traverse."""
     cp = exiger_cupy()
     exiger_pass(VERIFS_EXIGEES)
     b0 = default_terrain(GridConfig()).astype("float32")
 
-    par_seed: dict[int, dict] = {}
-    for seed in GRAINES:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    empreinte = empreinte_config()
+    existant = (json.loads(OUT_JSON_PATH.read_text(encoding="utf-8"))
+                if OUT_JSON_PATH.exists() else None)
+    a_faire, par_seed = seeds_a_mesurer(existant, empreinte)
+    if par_seed:
+        print(f"  [reprise] seeds déjà mesurés sous la même empreinte "
+              f"{empreinte} : {sorted(par_seed)}", flush=True)
+
+    for seed in a_faire:
         print(f"  seed {seed} : rederive + production + témoin "
               f"({N_EPISODES} épisodes) ...", flush=True)
         par_seed[seed] = mesurer_seed(seed, b0, cp)
+        # report AVANT le seed suivant : une coupure ne perd plus le mesuré
+        OUT_JSON_PATH.write_text(
+            json.dumps(document_partiel(par_seed, empreinte), indent=2,
+                       ensure_ascii=False), encoding="utf-8")
+        cp.get_default_memory_pool().free_all_blocks()
 
     lecture = lecture_t2(par_seed)
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
     OUT_JSON_PATH.write_text(
         json.dumps(document_t2(par_seed, lecture), indent=2,
                    ensure_ascii=False), encoding="utf-8")

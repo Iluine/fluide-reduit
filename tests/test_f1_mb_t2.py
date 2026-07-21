@@ -162,6 +162,71 @@ def test_le_report_porte_les_anomalies_si_il_y_en_a():
     imprimer_lecture(lec)
 
 
+# ----- 5. survivre à une coupure : reprise par seed -----
+
+def test_un_run_partiel_ne_prononce_AUCUNE_lecture():
+    """Le danger d'un report incrémental : qu'un run coupé laisse un document
+    qui SE LIT comme un verdict. Un partiel porte donc `lecture_mecanique =
+    None` et un statut explicite — jamais une lecture sur 2 seeds sur 3."""
+    from scripts.run_f1_mb_t2 import document_partiel
+    doc = document_partiel({101: {"production": 0.01, "temoin": 0.001}},
+                           "empreinte-x")
+    assert doc["lecture_mecanique"] is None
+    assert "PARTIEL" in doc["statut"] and "1/3" in doc["statut"]
+    assert "AUCUNE lecture" in doc["statut"]
+
+
+def test_reprise_reutilise_les_seeds_deja_mesures():
+    from scripts.run_f1_mb_t2 import seeds_a_mesurer
+    deja = {"empreinte": "abc",
+            "par_seed": {"101": {"production": 0.01, "temoin": 0.001}}}
+    a_faire, repris = seeds_a_mesurer(deja, "abc")
+    assert a_faire == [102, 103]
+    assert set(repris) == {101}
+
+
+def test_reprise_refuse_une_empreinte_differente():
+    """Si la config a bougé (EPS, fovéa, kernels), les mesures d'avant ne
+    sont plus comparables : on recalcule TOUT plutôt que de mélanger."""
+    from scripts.run_f1_mb_t2 import seeds_a_mesurer
+    deja = {"empreinte": "abc",
+            "par_seed": {"101": {"production": 0.01, "temoin": 0.001}}}
+    a_faire, repris = seeds_a_mesurer(deja, "AUTRE")
+    assert a_faire == list(GRAINES) and repris == {}
+
+
+def test_reprise_sur_document_absent_mesure_tout():
+    from scripts.run_f1_mb_t2 import seeds_a_mesurer
+    a_faire, repris = seeds_a_mesurer(None, "abc")
+    assert a_faire == list(GRAINES) and repris == {}
+
+
+def test_round_trip_coupure_puis_reprise():
+    """Le vrai contrat : ce que le driver ÉCRIT après une coupure doit être
+    ce qu'il SAIT relire. Testé par le JSON, comme en vrai — les clés seed y
+    deviennent des chaînes, et c'est là que ça casserait."""
+    from scripts.run_f1_mb_t2 import (
+        document_partiel,
+        empreinte_config,
+        seeds_a_mesurer,
+    )
+    emp = empreinte_config()
+    coupe = {101: {"production": 0.01, "temoin": 0.001},
+             102: {"production": 0.02, "temoin": 0.002}}
+    relu = json.loads(json.dumps(document_partiel(coupe, emp)))
+    a_faire, repris = seeds_a_mesurer(relu, emp)
+    assert a_faire == [103]
+    assert set(repris) == {101, 102}
+    assert repris[101]["production"] == 0.01     # valeurs intactes
+
+
+def test_empreinte_config_bouge_avec_ce_qui_compte():
+    """L'empreinte doit lier ce qui rendrait deux seeds incomparables."""
+    from scripts.run_f1_mb_t2 import empreinte_config
+    e = empreinte_config()
+    assert isinstance(e, str) and len(e) >= 8
+
+
 def test_lecture_t2_declare_les_verrous():
     par_seed = {s: {"production": 0.01, "temoin": 0.01} for s in GRAINES}
     v = lecture_t2(par_seed)["verrous"]
