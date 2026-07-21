@@ -8,6 +8,8 @@ Ce que ces tests protègent :
   3. la lecture porte ses portées, dont le RE-SCOPE du gate (iii) : un PASS
      ne s'énonce PAS « le contrat tient à l'échelle V4 » ;
   4. construit-NON-LANCÉ : rien ne tourne à l'import."""
+import json
+
 import numpy as np
 import pytest
 
@@ -117,6 +119,47 @@ def test_un_pass_ne_s_enonce_pas_a_l_echelle_v4():
     assert "64²" in lec["ce_que_ce_pass_dit"]
     assert "V4" in lec["ce_que_ce_pass_dit"]
     assert "PAS" in lec["ce_que_ce_pass_dit"]
+
+
+def test_verif_exigee_existe_dans_le_registre_et_est_la_bonne():
+    """`exiger_pass` ne valide PAS les noms : un nom INVENTÉ y est
+    indiscernable d'une vérification manquante, et n'échoue qu'au RUN. Ce
+    test tue la classe au build.
+
+    T2 mesure la FIDÉLITÉ contre le rederive CPU f64 : la vérification
+    load-bearing est `gel_bit_exact` (« le chemin rederive reproduit le gel
+    bit-exact sur la machine ») — si le rederive avait bougé ici, la
+    vérité-sol serait fausse et Δχ ne voudrait rien dire. Les instruments de
+    TEMPS (vram, chrono) sont ceux de T1, pas de T2."""
+    from scripts.run_f1_mb_t2 import VERIFS_EXIGEES
+    from src.f1_gpu.verifs import NOMS_VERIFS
+    assert set(VERIFS_EXIGEES) <= set(NOMS_VERIFS)
+    assert "gel_bit_exact" in VERIFS_EXIGEES
+
+
+def test_le_chemin_post_mesure_ne_peut_pas_perdre_le_run():
+    """Le report et l'affichage viennent APRÈS la mesure : une faute là
+    détruirait un run déjà payé. Ils sont donc exercés à vide, sur des
+    valeurs factices, avec la MÊME structure que le vrai."""
+    from scripts.run_f1_mb_t2 import document_t2, imprimer_lecture
+    par_seed = {s: {"production": 0.01, "temoin": 0.001,
+                    "par_emission": {n: {"production": 0.01, "temoin": 0.001}
+                                     for n in EMISSIONS}}
+                for s in GRAINES}
+    lec = lecture_t2(par_seed)
+    doc = document_t2(par_seed, lec)
+    json.loads(json.dumps(doc, ensure_ascii=False))     # sérialisable
+    imprimer_lecture(lec)                               # n'explose pas
+
+
+def test_le_report_porte_les_anomalies_si_il_y_en_a():
+    par_seed = {101: {"production": 0.01, "temoin": 0.2},   # anomalie
+                102: {"production": 0.01, "temoin": 0.01},
+                103: {"production": 0.01, "temoin": 0.01}}
+    from scripts.run_f1_mb_t2 import imprimer_lecture
+    lec = lecture_t2(par_seed)
+    assert lec["mort_b"]["anomalies"] == [101]
+    imprimer_lecture(lec)
 
 
 def test_lecture_t2_declare_les_verrous():

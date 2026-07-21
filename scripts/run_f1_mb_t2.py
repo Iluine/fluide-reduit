@@ -73,7 +73,12 @@ from src.sediment import SedimentParams, default_terrain, run_history  # noqa: E
 OUT_DIR = ROOT / "outputs" / "f1"
 OUT_JSON_PATH = OUT_DIR / "mb_t2.json"
 
-VERIFS_EXIGEES: tuple[str, ...] = ("rederive_bit_exact",)
+# T2 mesure la FIDÉLITÉ contre le rederive CPU f64 : la vérification
+# load-bearing est le GEL BIT-EXACT du chemin rederive sur CETTE machine
+# (vérif #3, §A15). Si le rederive avait bougé ici, la vérité-sol serait
+# fausse et Δχ ne voudrait rien dire. Les instruments de TEMPS (vram,
+# chrono, PCIe) sont ceux de T1 — les exiger ici sur-gaterait.
+VERIFS_EXIGEES: tuple[str, ...] = ("gel_bit_exact",)
 
 
 def maxima_de_serie(production: dict, temoin: dict, rederive: dict) -> dict:
@@ -155,20 +160,11 @@ def lecture_t2(par_seed: dict[int, dict]) -> dict:
     }
 
 
-def main() -> None:
-    """Le run de T2. GATÉ : n'est lancé qu'après endossement de l'assemblage."""
-    cp = exiger_cupy()
-    exiger_pass(VERIFS_EXIGEES)
-    b0 = default_terrain(GridConfig()).astype("float32")
-
-    par_seed: dict[int, dict] = {}
-    for seed in GRAINES:
-        print(f"  seed {seed} : rederive + production + témoin "
-              f"({N_EPISODES} épisodes) ...", flush=True)
-        par_seed[seed] = mesurer_seed(seed, b0, cp)
-
-    lecture = lecture_t2(par_seed)
-    document = {
+def document_t2(par_seed: dict[int, dict], lecture: dict) -> dict:
+    """Le report. EXTRAIT de `main` à dessein : il s'exécute APRÈS la mesure,
+    donc une faute ici détruirait un run déjà payé — il doit être exerçable à
+    vide (cf. tests)."""
+    return {
         "meta": {
             "mesure": ("M-b tranche-2 / gate (iii) — fidélité à 64², "
                        "fovéation 2-niveaux (§A31, pocCascade2phys a8a7639 ; "
@@ -183,10 +179,11 @@ def main() -> None:
         "par_seed": {str(s): m for s, m in par_seed.items()},
         "lecture_mecanique": lecture,
     }
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    OUT_JSON_PATH.write_text(
-        json.dumps(document, indent=2, ensure_ascii=False), encoding="utf-8")
 
+
+def imprimer_lecture(lecture: dict) -> None:
+    """L'affichage de la lecture. EXTRAIT de `main` pour la même raison que
+    `document_t2` : il vient après la mesure et doit être exerçable à vide."""
     mb = lecture["mort_b"]
     print("=" * 78)
     print("F1 -- M-b TRANCHE-2 / gate (iii) (lecture mécanique)")
@@ -204,6 +201,30 @@ def main() -> None:
         print(f"  ANOMALIES à remonter : {mb['anomalies']}")
     print(f"  [portée] {lecture['ce_que_ce_pass_dit']}")
     print("  Le driver REPORTE — la décision revient à Romain.")
+
+
+def main() -> None:
+    """Le run de T2. GATÉ : n'est lancé qu'après endossement de l'assemblage.
+
+    Ordre voulu : le gate d'instrument AVANT toute mesure (une tranche muette
+    ne doit pas coûter les 3,5 min), le report écrit AVANT l'affichage (la
+    mesure est sauvée même si l'affichage fâche)."""
+    cp = exiger_cupy()
+    exiger_pass(VERIFS_EXIGEES)
+    b0 = default_terrain(GridConfig()).astype("float32")
+
+    par_seed: dict[int, dict] = {}
+    for seed in GRAINES:
+        print(f"  seed {seed} : rederive + production + témoin "
+              f"({N_EPISODES} épisodes) ...", flush=True)
+        par_seed[seed] = mesurer_seed(seed, b0, cp)
+
+    lecture = lecture_t2(par_seed)
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    OUT_JSON_PATH.write_text(
+        json.dumps(document_t2(par_seed, lecture), indent=2,
+                   ensure_ascii=False), encoding="utf-8")
+    imprimer_lecture(lecture)
     print(f"[REPORT] -> {OUT_JSON_PATH}")
     print("POINT D'ARRÊT OBLIGATOIRE : lecture remontée à Romain.")
 
