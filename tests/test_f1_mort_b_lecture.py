@@ -118,3 +118,30 @@ def test_portees_portees_dans_la_lecture():
     assert "~24 cellules" in p["colonnes_entrantes_dominantes"]
     assert "un TIERS" in p["colonnes_entrantes_dominantes"]
     assert "colonnes ENTRANTES" in p["colonnes_entrantes_dominantes"]
+
+
+def test_gate_iii_re_scope_voyage_dans_la_lecture():
+    """§A31-build : le gate (iii) est RE-SCOPÉ AVANT le run — « M-b sans mort
+    À 64², sur fovéation 2-niveaux ». Le contrat à l'échelle V4 devient une
+    TRANSPOSITION NOMMÉE, non mesurée. Un PASS ne peut donc PAS s'énoncer
+    « le contrat tient à l'échelle V4 » — et cette limite voyage DANS la
+    lecture, comme les deux portées."""
+    p = portees_de_la_mesure()
+    g = p["gate_iii_re_scope_a_64"]
+    assert "64²" in g and "2-niveaux" in g
+    assert "TRANSPOSITION NOMMÉE" in g
+    assert "ne peut PAS s'énoncer" in g
+    assert "rederive" in g and "intouché" in g
+
+
+def test_reserve_temoin_6e5_est_un_etat_pas_la_mesure():
+    """§A31-build : le témoin a montré (a) = 6e-5 au BUILD, trois ordres sous
+    le seuil — la branche « les deux traversent » devient très improbable.
+    Mais 6e-5 est une vérification d'ÉTAT, PAS la mesure Δχ pré-enregistrée :
+    l'instrument n'est pas le même, le témoin doit tourner comme prévu."""
+    p = portees_de_la_mesure()
+    r = p["reserve_temoin_etat_vs_mesure"]
+    assert "6e-5" in r
+    assert "vérification d'ÉTAT" in r
+    assert "PAS la mesure Δχ" in r
+    assert "doit tourner" in r

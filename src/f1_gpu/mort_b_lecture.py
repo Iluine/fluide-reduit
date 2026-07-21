@@ -109,9 +109,10 @@ def lecture_mort_b(par_seed: dict[int, dict]) -> dict:
 
 
 def portees_de_la_mesure() -> dict:
-    """Deux portées à PORTER DANS la lecture (§A31), pas seulement au
-    docstring : ce que la mesure à 64²/2-niveaux ne valide pas, et l'effet
-    dominant des colonnes entrantes."""
+    """Les portées à PORTER DANS la lecture (§A31, §A31-build), pas seulement
+    au docstring : ce que la mesure à 64²/2-niveaux ne valide pas, l'effet
+    dominant des colonnes entrantes, le RE-SCOPE du gate (iii), et la réserve
+    sur ce que le témoin a déjà montré au build."""
     return {
         "l1_l3_non_validees_a_v4": (
             "à 64² sur DEUX niveaux, L1 étalée et L3 ne sont exercées que "
@@ -124,4 +125,23 @@ def portees_de_la_mesure() -> dict:
             "ENTRANTES (prédites depuis le grossier à chaque déplacement) y "
             "est FORTE — l'écart mesuré est en bonne part celui de la "
             "prédiction de bord, pas du cœur fovéal."),
+        "gate_iii_re_scope_a_64": (
+            "gate (iii) RE-SCOPÉ AVANT le run (§A31-build) : il était gravé "
+            "« M-b sans mort SUR V4 » alors que M-b tourne à 64² — "
+            "structurellement insatisfiable. Il devient « M-b sans mort À "
+            "64², sur fovéation 2-niveaux ». Le contrat à l'échelle V4 "
+            "devient une TRANSPOSITION NOMMÉE, NON MESURÉE : son "
+            "falsificateur exigerait un rederive à l'échelle V4, interdit "
+            "par « rederive intouché ». Conséquence : un PASS ici ne peut "
+            "PAS s'énoncer « le contrat tient à l'échelle V4 », seulement "
+            "« sans mort à 64² sur deux niveaux »."),
+        "reserve_temoin_etat_vs_mesure": (
+            "au BUILD, le témoin a montré (a) = 6e-5 d'écart relatif contre "
+            "le rederive f64 — trois ordres SOUS le pin 0,0733. La branche "
+            "« les deux traversent ⇒ Option B est le remède » en devient "
+            "très improbable, et une traversée de production sera presque "
+            "certainement (b)+(c). RÉSERVE : 6e-5 est une vérification "
+            "d'ÉTAT au build, PAS la mesure Δχ pré-enregistrée — "
+            "l'instrument n'est pas le même, le témoin doit tourner comme "
+            "prévu et sa branche reste lue sur SA mesure."),
     }
