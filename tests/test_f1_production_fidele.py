@@ -167,6 +167,57 @@ def test_connaissance_muette_si_le_seuil_est_infini():
     assert float(np.max(np.abs(out[2]))) == 0.0
 
 
+# ----- 5. le bras EPS = 0 : le canal doit être VRAIMENT transparent -----
+
+def test_le_cap_mord_a_eps_zero_avec_le_budget_de_la_cellule():
+    """AVANT de s'en servir comme plancher : à EPS=0, `|d| >= 0` est vrai
+    PARTOUT, donc 4096 candidats se présentent pour `budget_k_fen` = 409
+    places. Le CAP mord à la place du seuil — un « plancher » mesuré ainsi
+    mesurerait le cap 10 %, pas la structure."""
+    champ = np.full((64, 64), 0.5, dtype=np.float32)
+    ref = np.zeros((64, 64), dtype=np.float32)
+    n = remonter_seuillee(champ, ref, eps=0.0, budget=budget_k_fen(64 * 64))
+    assert n == 409 < 64 * 64
+
+
+def test_canal_transparent_exige_le_budget_plein():
+    """Le bras EPS=0 n'a de sens qu'avec un budget ≥ au nombre de cellules :
+    alors la connaissance EST le champ, et le canal ne retire plus rien."""
+    rng = np.random.default_rng(9)
+    champ = rng.random((64, 64)).astype(np.float32)
+    ref = np.zeros((64, 64), dtype=np.float32)
+    n = remonter_seuillee(champ, ref, eps=0.0, budget=64 * 64)
+    assert n == 64 * 64
+    np.testing.assert_array_equal(ref, champ)
+
+
+@gpu_requis
+def test_histoire_a_eps_zero_rend_le_champ_lui_meme():
+    """Bout à bout, sur plusieurs épisodes (donc plusieurs remontées
+    INCRÉMENTALES en f32) : la connaissance rendue doit être le champ `s`
+    lui-même. C'est ce qui fait du bras EPS=0 un vrai plancher.
+
+    RÉSERVE MESURÉE, pas supposée : la transparence est à l'ARRONDI f32
+    près, non bit-exacte — `ref += (champ − ref)` en f32 laisse un résidu
+    d'ordre eps_f32 (mesuré 1,5e-11 absolu sur un champ de max 1,2e-3, soit
+    ~1e-8 relatif). Sept ordres sous le pin 0,0733 : le canal ne peut pas
+    porter le plancher. On l'assert à ce niveau plutôt que de le
+    surdéclarer."""
+    import cupy as cp
+    b0 = _terrain()
+    params = SedimentParams(N_settle=20)
+    centres = centres_cellule(101, 3)
+    connu = evoluer_histoire_production(101, 3, b0, cp, centres, params,
+                                        checkpoints={3}, eps=0.0,
+                                        budget=b0.size)[3]
+    brut = evoluer_histoire_production(101, 3, b0, cp, centres, params,
+                                       checkpoints={3}, eps=0.0,
+                                       budget=b0.size, rendre_champ=True)[3]
+    assert np.count_nonzero(brut) > 0                  # dépôt non trivial
+    residu = float(np.max(np.abs(connu - brut)))
+    assert residu <= 1e-7 * float(np.max(np.abs(brut)))   # ~eps_f32 relatif
+
+
 def test_invariant_liant_production():
     """Rien de neuf dans `pas_f_fidele` : la production ORCHESTRE le kernel
     figé de C1 via `pas_deux_niveaux` (identité, pas diff)."""

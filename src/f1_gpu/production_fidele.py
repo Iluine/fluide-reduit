@@ -146,17 +146,31 @@ def evoluer_episode_production(s, b0, centre_frac, cp, oy: int, ox: int,
 def evoluer_histoire_production(seed: int, n_episodes: int, b0, cp, centres,
                                 params: SedimentParams = SedimentParams(),
                                 checkpoints: set[int] | None = None,
-                                eps: float = EPS_PRODUCTION) -> dict:
+                                eps: float = EPS_PRODUCTION,
+                                budget: int | None = None,
+                                rendre_champ: bool = False) -> dict:
     """L'histoire du bras PRODUCTION. Centres FOURNIS (ceux du rederive, cf.
     `cellule_mb.centres_cellule`) — la production ne les tire pas.
 
     Retourne {n: connaissance_cpu} aux checkpoints : ce que le CPU SAIT,
     c'est-à-dire la `reference` accumulée par la remontée seuillée — PAS le
-    champ live. C'est l'objet que Δχ compare au rederive."""
+    champ live. C'est l'objet que Δχ compare au rederive.
+
+    `budget` : places de la remontée. Par défaut celui de la cellule
+    (aire-proportionnel, cap 10 %). LE FORCER EST NÉCESSAIRE pour le bras
+    EPS = 0 : à seuil nul, `|d| >= 0` est vrai PARTOUT, donc H·W candidats se
+    présentent pour 10 % de places et c'est le CAP qui morde, pas le seuil —
+    le « plancher » mesurerait le cap. Un canal vraiment transparent exige
+    `budget >= H·W`.
+
+    `rendre_champ` : rend le champ `s` LIVE au lieu de la connaissance.
+    Sert à VÉRIFIER la transparence du canal (à EPS=0 et budget plein, les
+    deux doivent coïncider), jamais à mesurer — Δχ se lit toujours sur ce
+    que le CPU SAIT."""
     if checkpoints is None:
         checkpoints = {n_episodes}
     H, W = b0.shape
-    budget = budget_k_fen(H * W)
+    budget = budget_k_fen(H * W) if budget is None else int(budget)
     s = np.zeros_like(b0, dtype=np.float32)
     connaissance = np.zeros_like(b0, dtype=np.float32)   # option 1
     out: dict[int, np.ndarray] = {}
@@ -166,5 +180,5 @@ def evoluer_histoire_production(seed: int, n_episodes: int, b0, cp, centres,
                                        params)
         remonter_seuillee(s, connaissance, eps=eps, budget=budget)
         if ep in checkpoints:
-            out[ep] = connaissance.copy()
+            out[ep] = s.copy() if rendre_champ else connaissance.copy()
     return out

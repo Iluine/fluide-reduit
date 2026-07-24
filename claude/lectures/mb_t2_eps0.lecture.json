@@ -1,0 +1,208 @@
+{
+  "_note": "LECTURE versionnée (§A32-décomposition, bras EPS=0). Ce bras ATTRIBUE, il ne réhabilite pas : MORT-b n'est pas rouvert. Le driver REPORTE ; la décision appartient à Romain.",
+  "meta": {
+    "mesure": "M-b — bras EPS=0, discriminateur par canal (§A32-décomposition, pocCascade2phys d7fd6ee)"
+  },
+  "par_seed": {
+    "101": {
+      "par_emission": {
+        "4": 0.34943282317645785,
+        "8": 0.207270584041636,
+        "12": 0.6681759689693484,
+        "16": 0.06209758729843373,
+        "20": 0.20891375592090355,
+        "24": 0.10489245774047085
+      },
+      "eps0": 0.6681759689693484
+    },
+    "102": {
+      "par_emission": {
+        "4": 0.1652863109935674,
+        "8": 0.17586129409987172,
+        "12": 0.23591114971025962,
+        "16": 0.3404860107822636,
+        "20": 0.16056816362389925,
+        "24": 0.1752431719199541
+      },
+      "eps0": 0.3404860107822636
+    },
+    "103": {
+      "par_emission": {
+        "4": 0.14596780148738142,
+        "8": 0.3536552378368991,
+        "12": 0.11830125737610031,
+        "16": 0.278950388733488,
+        "20": 0.22434018595634042,
+        "24": 0.1544024075973247
+      },
+      "eps0": 0.3536552378368991
+    }
+  },
+  "lecture_mecanique": {
+    "pin_severe": 0.0733,
+    "eps_du_bras": 0.0,
+    "eps_de_production": 0.01,
+    "budget_force": "H·W (plein)",
+    "budget_de_la_cellule_refuse": 409,
+    "seeds_traversants": [
+      101,
+      102,
+      103
+    ],
+    "eps0_traverse_par_emission": [
+      17,
+      18
+    ],
+    "verdict_eps0": "LE BRAS EPS=0 ÉCHOUE (3/3 seeds traversent : [101, 102, 103]) ⇒ le plancher est STRUCTUREL (décimation + halo). Resserrer EPS ne peut pas le franchir : à seuil NUL et budget PLEIN, le canal ne retire déjà plus rien. L'architecture fovéale telle que construite ne peut pas satisfaire É2 — question de SPEC, pas de réglage.",
+    "attribution_par_emission": {
+      "101": {
+        "4": {
+          "temoin_a": 0.026284439270447546,
+          "eps0_a_plus_c": 0.34943282317645785,
+          "production_a_b_c": 0.39153553405368524,
+          "structure_c": 0.3231483839060103,
+          "canal_b": 0.04210271087722739
+        },
+        "8": {
+          "temoin_a": 0.0025288308266324666,
+          "eps0_a_plus_c": 0.207270584041636,
+          "production_a_b_c": 0.2805218243878458,
+          "structure_c": 0.20474175321500354,
+          "canal_b": 0.07325124034620978
+        },
+        "12": {
+          "temoin_a": 0.004174962836871909,
+          "eps0_a_plus_c": 0.6681759689693484,
+          "production_a_b_c": 0.4826236890025749,
+          "structure_c": 0.6640010061324765,
+          "canal_b": -0.18555227996677348
+        },
+        "16": {
+          "temoin_a": 0.005632232583740904,
+          "eps0_a_plus_c": 0.06209758729843373,
+          "production_a_b_c": 0.47745445431431155,
+          "structure_c": 0.05646535471469283,
+          "canal_b": 0.4153568670158778
+        },
+        "20": {
+          "temoin_a": 0.07730780184466135,
+          "eps0_a_plus_c": 0.20891375592090355,
+          "production_a_b_c": 0.409995693320649,
+          "structure_c": 0.1316059540762422,
+          "canal_b": 0.20108193739974545
+        },
+        "24": {
+          "temoin_a": 0.03374899602823278,
+          "eps0_a_plus_c": 0.10489245774047085,
+          "production_a_b_c": 0.7032877798557573,
+          "structure_c": 0.07114346171223807,
+          "canal_b": 0.5983953221152865
+        }
+      },
+      "102": {
+        "4": {
+          "temoin_a": 0.0069293045070896175,
+          "eps0_a_plus_c": 0.1652863109935674,
+          "production_a_b_c": 0.5658662956674541,
+          "structure_c": 0.15835700648647777,
+          "canal_b": 0.40057998467388667
+        },
+        "8": {
+          "temoin_a": 0.005693299771172278,
+          "eps0_a_plus_c": 0.17586129409987172,
+          "production_a_b_c": 0.3850898045964699,
+          "structure_c": 0.17016799432869945,
+          "canal_b": 0.20922851049659819
+        },
+        "12": {
+          "temoin_a": 0.012543666243854723,
+          "eps0_a_plus_c": 0.23591114971025962,
+          "production_a_b_c": 0.23282208487362777,
+          "structure_c": 0.2233674834664049,
+          "canal_b": -0.0030890648366318496
+        },
+        "16": {
+          "temoin_a": 0.006917010448001637,
+          "eps0_a_plus_c": 0.3404860107822636,
+          "production_a_b_c": 0.3402097554311818,
+          "structure_c": 0.33356900033426196,
+          "canal_b": -0.0002762553510817778
+        },
+        "20": {
+          "temoin_a": 0.005732372942889974,
+          "eps0_a_plus_c": 0.16056816362389925,
+          "production_a_b_c": 0.7026624297094988,
+          "structure_c": 0.15483579068100928,
+          "canal_b": 0.5420942660855995
+        },
+        "24": {
+          "temoin_a": 0.01480849461893241,
+          "eps0_a_plus_c": 0.1752431719199541,
+          "production_a_b_c": 0.5058643913642462,
+          "structure_c": 0.16043467730102168,
+          "canal_b": 0.3306212194442921
+        }
+      },
+      "103": {
+        "4": {
+          "temoin_a": 0.05240010472665835,
+          "eps0_a_plus_c": 0.14596780148738142,
+          "production_a_b_c": 0.8434329804253338,
+          "structure_c": 0.09356769676072307,
+          "canal_b": 0.6974651789379523
+        },
+        "8": {
+          "temoin_a": 0.009901486487567945,
+          "eps0_a_plus_c": 0.3536552378368991,
+          "production_a_b_c": 0.6154309123793686,
+          "structure_c": 0.34375375134933117,
+          "canal_b": 0.2617756745424695
+        },
+        "12": {
+          "temoin_a": 0.01812551830374942,
+          "eps0_a_plus_c": 0.11830125737610031,
+          "production_a_b_c": 0.5270757829128478,
+          "structure_c": 0.10017573907235089,
+          "canal_b": 0.40877452553674753
+        },
+        "16": {
+          "temoin_a": 0.008876434508363396,
+          "eps0_a_plus_c": 0.278950388733488,
+          "production_a_b_c": 0.6598364782405552,
+          "structure_c": 0.2700739542251246,
+          "canal_b": 0.38088608950706726
+        },
+        "20": {
+          "temoin_a": 0.0015083555966983742,
+          "eps0_a_plus_c": 0.22434018595634042,
+          "production_a_b_c": 0.8695845860340814,
+          "structure_c": 0.22283183035964205,
+          "canal_b": 0.645244400077741
+        },
+        "24": {
+          "temoin_a": 0.030107241771017756,
+          "eps0_a_plus_c": 0.1544024075973247,
+          "production_a_b_c": 0.7654269832932779,
+          "structure_c": 0.12429516582630695,
+          "canal_b": 0.6110245756959531
+        }
+      }
+    },
+    "structure_c_min_max": [
+      0.05646535471469283,
+      0.6640010061324765
+    ],
+    "canal_b_min_max": [
+      -0.18555227996677348,
+      0.6974651789379523
+    ],
+    "canal_b_negatif_sur_n": [
+      3,
+      18
+    ],
+    "non_monotonie_du_canal": "L'échelle (a) ⊂ (a)+(c) ⊂ (a)+(b)+(c) n'est PAS monotone : sur 3/18 émissions, retirer le seuil AGGRAVE Δχ (EPS0 > production). Le seuil ne fait donc pas que perdre de l'information — il filtre aussi des écarts de faible amplitude, et Δχ étant un rapport spectral, tout laisser passer peut injecter du désaccord. « Part du canal » est donc un écart signé, pas une contribution additive.",
+    "ce_bras_attribue_il_ne_rehabilite_pas": "Le verdict MORT-b n'est PAS rouvert. Ce bras ne remplace pas la production et ne la réhabilite pas : il dit OÙ est la cause. La production reste ce qu'elle est, et Option A reste morte.",
+    "portee_canal_modelise": "le plancher établi vaut pour LE CANAL TEL QUE MODÉLISÉ (`remonter_seuillee`, option 1 numpy). Le compacteur GPU L3 et sa capacité de buffer ne sont PAS exercés ici — une saturation de buffer du L3 réel resterait hors de cette mesure.",
+    "portee_transparence": "à EPS=0 et budget plein, la transparence du canal est à l'ARRONDI f32 près (~1e-8 relatif, mesuré), non bit-exacte — sept ordres sous le pin, donc le canal ne peut pas porter le plancher."
+  }
+}
