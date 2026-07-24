@@ -7,8 +7,10 @@ Ce que ces tests protègent :
      fovéa/grossier) ;
   2. le REFRESH inter-étage est load-bearing : refreshed ≠ halo figé (la
      signature du 0,186 de C1) ;
-  3. l'invariant liant tient : l'opérateur intérieur est le kernel de C1,
-     inchangé (empreinte 6dd207ca) — le refresh est ICI, pas dans C1."""
+  3. l'invariant liant tient : l'opérateur intérieur est le kernel de C1
+     (empreinte aef7237d, re-gravée le 2026-07-25 pour §A33-CORRECTION) —
+     le refresh est ICI, pas dans C1, et le PAS D'ESPACE est un argument
+     du kernel, pas un fork de code."""
 import hashlib
 
 import numpy as np
@@ -130,6 +132,6 @@ def test_operateur_interieur_est_le_kernel_de_c1():
         _obtenir_kernel_fidele,
     )
     assert hashlib.sha256(_SOURCE_FIDELE.encode()).hexdigest() == (
-        "6dd207cae0a9c23a6a042db825a3259051e8491c1f118d614e52a4b4ebc6265d")
+        "aef7237d758f7292bc1434940e94464e2a5ad7d41c4f334baae0310c3cadc4c1")
     # fovea_2niveaux ORCHESTRE le kernel de C1 (même objet)
     assert f2._obtenir_kernel_fidele is _obtenir_kernel_fidele

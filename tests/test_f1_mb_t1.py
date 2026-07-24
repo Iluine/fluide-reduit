@@ -164,8 +164,9 @@ def test_kernels_intouches():
     from src.f1_gpu.substrat_fusionne import _SOURCE
     from src.f1_gpu.substrat_l3 import _SOURCE_L3
     attendus = {
-        _SOURCE_FIDELE: "6dd207cae0a9c23a6a042db825a3259051e8491c1f118d614"
-                        "e52a4b4ebc6265d",
+        # re-gravée 2026-07-25 (§A33-CORRECTION) : kernel Δx-conscient.
+        _SOURCE_FIDELE: "aef7237d758f7292bc1434940e94464e2a5ad7d41c4f334baa"
+                        "e0310c3cadc4c1",
         _SOURCE_EXNER: "3533fd0bde3927856fa97b012a78fd04cfc6ab8c9ccf5fe17b1"
                        "3b95c7cd63aa6",
         _SOURCE: "e18015f57e14263414239b18c51d25cd335250f58dde2ccb892a6e2c1"

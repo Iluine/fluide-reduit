@@ -147,7 +147,7 @@ def test_c1_et_figes_intouches():
     from src.f1_gpu.substrat_fusionne import _SOURCE
     from src.f1_gpu.substrat_l3 import _SOURCE_L3
     assert hashlib.sha256(_SOURCE_FIDELE.encode()).hexdigest() == (
-        "6dd207cae0a9c23a6a042db825a3259051e8491c1f118d614e52a4b4ebc6265d")
+        "aef7237d758f7292bc1434940e94464e2a5ad7d41c4f334baae0310c3cadc4c1")
     assert hashlib.sha256(_SOURCE.encode()).hexdigest() == (
         "e18015f57e14263414239b18c51d25cd335250f58dde2ccb892a6e2c1d6f30b4")
     assert hashlib.sha256(_SOURCE_L3.encode()).hexdigest() == (

@@ -13,8 +13,9 @@ c'est pourquoi les deux tournent sur la MÊME cellule, avec le MÊME
 observable Δχ (§A31-build, apples-to-apples).
 
 INVARIANT LIANT : aucun kernel neuf, rien de neuf dans `pas_f_fidele`. Ce
-module ORCHESTRE `pas_deux_niveaux` (qui orchestre lui-même le kernel figé
-de C1, empreinte 6dd207ca). La cadence Exner est LUE de `save_every`.
+module ORCHESTRE `pas_deux_niveaux` (qui orchestre lui-même le kernel de C1,
+empreinte aef7237d, re-gravée le 2026-07-25 pour §A33-CORRECTION). La
+cadence Exner est LUE de `save_every`.
 
 ────────────────────────────────────────────────────────────────────────
 CHOIX D'IMPLÉMENTATION NON COUVERTS PAR LE GRAVÉ — remontés, pas préemptés
@@ -33,6 +34,18 @@ CHOIX D'IMPLÉMENTATION NON COUVERTS PAR LE GRAVÉ — remontés, pas préempté
    avancent d'un même dt ; le prendre au plus contraint des deux est
    conservateur pour les deux (le grossier, à dx = 2, a une limite ~2× plus
    large). Aucune sous-cyclage : le mipmap gravé (§A28) donne M = 1.
+
+   CE QUE LE CODE FAIT DÉSORMAIS (§A33-CORRECTION, 2026-07-25) — la prose
+   ci-dessus disait « le grossier, à dx = 2 », et le CODE ne le faisait pas :
+   le kernel ne recevait aucune longueur, donc les DEUX niveaux tournaient à
+   Δx = 1 et le grossier avançait à ~2× sa vitesse physique. C'est ce
+   mensonge prose/code qui a caché le défaut. Corrigé : `pas_deux_niveaux`
+   évolue le grossier à Δx = DECIMATION et la fovéa à Δx = 1.
+
+   La CFL, elle, reste calculée à Δx = 1 pour les DEUX niveaux
+   (`reduction_cfl_fidele` INTOUCHÉE, décision endossée) : pour le grossier
+   c'est CONSERVATEUR — un dt plus petit que sa limite réelle, jamais plus
+   grand. Le lockstep est donc préservé sans qu'aucun dt ne soit ajusté.
 4. **Échelle de lecture = le 64² PLEIN.** Le pré-enregistrement §4 disait
    « échelle décimée, comme la sonde » — écrit AVANT que la réconciliation
    2-niveaux soit endossée, et visant le grossier-contre-grossier de la

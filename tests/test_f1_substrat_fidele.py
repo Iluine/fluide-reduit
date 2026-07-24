@@ -37,9 +37,16 @@ gpu_requis = pytest.mark.skipif(
 
 # Empreinte GRAVÉE dès le premier commit (§A29-C). Re-calculable :
 # sha256(_SOURCE_FIDELE.encode()), longueur figée à côté.
+#
+# RE-GRAVÉE le 2026-07-25 (§A33-CORRECTION, D19-c endossé). Provenance de la
+# rupture : le kernel est devenu Δx-CONSCIENT (paramètre `inv_dx`, division
+# de la divergence par la maille — comme sa référence `_rhs_o2`). Le verrou
+# a fait exactement son travail : il a parlé. Empreinte précédente,
+# conservée pour la traçabilité —
+#   6dd207cae0a9c23a6a042db825a3259051e8491c1f118d614e52a4b4ebc6265d (9248)
 SHA256_ATTENDU: str = (
-    "6dd207cae0a9c23a6a042db825a3259051e8491c1f118d614e52a4b4ebc6265d")
-LONGUEUR_ATTENDUE: int = 9248
+    "aef7237d758f7292bc1434940e94464e2a5ad7d41c4f334baae0310c3cadc4c1")
+LONGUEUR_ATTENDUE: int = 9646
 
 N: int = 64
 
@@ -190,8 +197,9 @@ def test_bord_pluggable_meme_operateur_interieur():
 
     def lancer(out, mode, HQ, HB):
         kernel(grille, (_TAILLE_BLOC,),
-               (qd, qd, out, bd, HQ, HB, np.float32(0.02), np.float32(0.0),
-                np.int32(N), np.int64(total), np.int32(mode)))
+               (qd, qd, out, bd, HQ, HB, np.float32(0.02), np.float32(1.0),
+                np.float32(0.0), np.int32(N), np.int64(total),
+                np.int32(mode)))
 
     lancer(o0, MODE_REFLECHISSANT, qd, bd)
     lancer(o1, MODE_HALO, cp.asarray(hq), cp.asarray(hb))

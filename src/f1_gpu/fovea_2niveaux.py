@@ -18,7 +18,9 @@ liant l'interdit. L'opérateur intérieur reste le kernel figé de C1
 (`_obtenir_kernel_fidele`), appelé étage par étage.
 
 Aucun kernel neuf : ce module ORCHESTRE le kernel de C1 (empreinte
-6dd207ca inchangée)."""
+aef7237d, re-gravée le 2026-07-25 pour §A33-CORRECTION — le PAS D'ESPACE
+est devenu un ARGUMENT du kernel, ce qui est exactement l'invariant liant :
+un mode de données, pas un fork de code)."""
 from __future__ import annotations
 
 import numpy as np
@@ -71,16 +73,19 @@ def construire_halo(q_fine, b_fine, q_coarse, b_coarse, oy: int, ox: int,
 
 
 def _etage(kernel, q_in, q_base, sortie, b, halo_q, halo_b, dt, w_base,
-           mode, cp):
+           mode, cp, dx_maille: float = 1.0):
     """UN étage du kernel figé de C1 (une passe). L'opérateur intérieur est
-    inchangé ; seuls le mode et le halo varient."""
+    inchangé ; seuls le mode, le halo et le PAS D'ESPACE varient.
+
+    `dx_maille` : la maille physique du niveau évolué (§A33-CORRECTION) —
+    DECIMATION pour le grossier, 1.0 pour la fovéa."""
     n = int(q_in.shape[-1])
     total = int(q_in.shape[0] * q_in.shape[1] * n * n)
     grille = ((total + _TAILLE_BLOC - 1) // _TAILLE_BLOC,)
     kernel(grille, (_TAILLE_BLOC,),
            (q_in, q_base, sortie, b, halo_q, halo_b, np.float32(dt),
-            np.float32(w_base), np.int32(n), np.int64(total),
-            np.int32(mode)))
+            np.float32(1.0 / dx_maille), np.float32(w_base), np.int32(n),
+            np.int64(total), np.int32(mode)))
 
 
 def pas_deux_niveaux(q_coarse, b_coarse, q_fine, b_fine, oy: int, ox: int,
@@ -89,18 +94,24 @@ def pas_deux_niveaux(q_coarse, b_coarse, q_fine, b_fine, oy: int, ox: int,
     RAFRAÎCHI entre les étages depuis l'intermédiaire du grossier.
 
     Grossier : bord réfléchissant (vrai bord). Fovéa : halo-parent, refresh
-    inter-étage. Retourne (q_coarse_suivant, q_fine_suivant)."""
+    inter-étage. Retourne (q_coarse_suivant, q_fine_suivant).
+
+    PAS D'ESPACE PAR NIVEAU (§A33-CORRECTION) : le grossier est évolué à
+    Δx = DECIMATION, la fovéa à Δx = 1. C'est ce qui manquait — les deux
+    niveaux tournaient à Δx = 1, donc le grossier avançait à ~2× sa vitesse
+    physique alors même que le dt est partagé en lockstep."""
     kernel = _obtenir_kernel_fidele(cp)
+    dx_c = float(DECIMATION)
     c_tampon, c_out = cp.empty_like(q_coarse), cp.empty_like(q_coarse)
     f_tampon, f_out = cp.empty_like(q_fine), cp.empty_like(q_fine)
 
     # ── étage 1 (w_base = 0) ──
     _etage(kernel, q_coarse, q_coarse, c_tampon, b_coarse, q_coarse,
-           b_coarse, dt, 0.0, MODE_REFLECHISSANT, cp)
+           b_coarse, dt, 0.0, MODE_REFLECHISSANT, cp, dx_maille=dx_c)
     halo_q, halo_b = construire_halo(q_fine, b_fine, q_coarse, b_coarse,
                                      oy, ox, cp)
     _etage(kernel, q_fine, q_fine, f_tampon, b_fine, halo_q, halo_b, dt,
-           0.0, MODE_HALO, cp)
+           0.0, MODE_HALO, cp, dx_maille=1.0)
 
     # ── REFRESH : halo de la fovéa depuis l'intermédiaire du grossier ──
     halo_q2, halo_b2 = construire_halo(f_tampon, b_fine, c_tampon, b_coarse,
@@ -108,7 +119,7 @@ def pas_deux_niveaux(q_coarse, b_coarse, q_fine, b_fine, oy: int, ox: int,
 
     # ── étage 2 (w_base = 0.5) ──
     _etage(kernel, c_tampon, q_coarse, c_out, b_coarse, c_tampon, b_coarse,
-           dt, 0.5, MODE_REFLECHISSANT, cp)
+           dt, 0.5, MODE_REFLECHISSANT, cp, dx_maille=dx_c)
     _etage(kernel, f_tampon, q_fine, f_out, b_fine, halo_q2, halo_b2, dt,
-           0.5, MODE_HALO, cp)
+           0.5, MODE_HALO, cp, dx_maille=1.0)
     return c_out, f_out

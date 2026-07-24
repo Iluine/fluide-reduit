@@ -175,9 +175,14 @@ def lecture_t2(par_seed: dict[int, dict]) -> dict:
                "quand même, elle ne dépend pas du résultat.)")),
         "portees": portees_de_la_mesure(),
         "verrous": {
-            "kernels": ("F fidèle _SOURCE_FIDELE 6dd207ca (C1) INTOUCHÉ ; "
-                        "figés e18015f5/9533a130 ; Exner 3533fd0b — aucun "
-                        "kernel neuf en tranche-2"),
+            "kernels": ("F fidèle _SOURCE_FIDELE aef7237d (C1) — empreinte "
+                        "RE-GRAVÉE le 2026-07-25 (§A33-CORRECTION, D19-c) : "
+                        "le kernel est devenu Δx-conscient (`inv_dx`), il "
+                        "n'est donc PLUS l'objet 6dd207ca de T1. C'est le "
+                        "correctif d'INSTRUMENT, pas un réglage : aucun dt, "
+                        "aucun seuil, aucune bande n'a bougé ; figés "
+                        "e18015f5/9533a130 ; Exner 3533fd0b — aucun kernel "
+                        "neuf en tranche-2"),
             "rederive": ("`run_history` CPU f64 INTOUCHÉ — la vérité-sol ; "
                          "les centres des deux bras sont vérifiés contre lui"),
             "invariant_liant": (

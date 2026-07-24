@@ -300,8 +300,17 @@ def main() -> None:
                        "bord": "réfléchissant (mur, tranche-1)",
                        "cadence_exner": CADENCE_EXNER,
                        "dt_frame_ms": DT_FRAME * 1000},
-            "kernels": ("F fidèle _SOURCE_FIDELE 6dd207ca (C1) INTOUCHÉ ; "
-                        "figés e18015f5/9533a130 intouchés ; Exner 3533fd0b"),
+            "kernels": ("F fidèle _SOURCE_FIDELE aef7237d (C1) — re-gravé le "
+                        "2026-07-25 (§A33-CORRECTION) : Δx-conscient. À "
+                        "Δx = 1, le régime de T1 (mono-niveau), la sortie est "
+                        "BIT À BIT identique à celle de 6dd207ca (vérifié en "
+                        "compilant les deux sources côte à côte : écart max "
+                        "0.000e+00 sur champ non trivial). Ce qui a changé "
+                        "est le FLUX D'INSTRUCTIONS (3 multiplications de "
+                        "plus par cellule et par étage), donc le CHRONO : "
+                        "l'ancre publiée 0.924 reste mesurée sur 6dd207ca et "
+                        "n'est pas re-datée ici ; figés e18015f5/9533a130 "
+                        "intouchés ; Exner 3533fd0b"),
             "frames": {"warmup_exclu": WARMUP_FRAMES, "serie": SERIE_FRAMES},
             "verifs_exigees": list(VERIFS_EXIGEES),
         },

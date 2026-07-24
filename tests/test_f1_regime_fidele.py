@@ -115,4 +115,4 @@ def test_c1_intouche():
     import hashlib
     from src.f1_gpu.substrat_fidele import _SOURCE_FIDELE
     assert hashlib.sha256(_SOURCE_FIDELE.encode()).hexdigest() == (
-        "6dd207cae0a9c23a6a042db825a3259051e8491c1f118d614e52a4b4ebc6265d")
+        "aef7237d758f7292bc1434940e94464e2a5ad7d41c4f334baae0310c3cadc4c1")

@@ -273,7 +273,8 @@ def test_empreinte_config_bouge_avec_ce_qui_compte():
 def test_lecture_t2_declare_les_verrous():
     par_seed = {s: {"production": 0.01, "temoin": 0.01} for s in GRAINES}
     v = lecture_t2(par_seed)["verrous"]
-    assert "6dd207ca" in v["kernels"]
+    # empreinte re-gravée 2026-07-25 (§A33-CORRECTION) : kernel Δx-conscient
+    assert "aef7237d" in v["kernels"]
     assert "intouché" in v["rederive"].lower()
     assert "identité" in v["invariant_liant"]
 

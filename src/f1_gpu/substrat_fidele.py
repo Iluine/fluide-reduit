@@ -33,6 +33,14 @@ sous-CFL au niveau fin, pas de sous-cyclage. La CFL est CALCULÉE
 (`reduction_cfl_fidele`, pour la vérification de régime de C4) et NON
 consommée pour sous-pas.
 
+PAS D'ESPACE (§A33-CORRECTION, 2026-07-25) : le kernel prend `inv_dx` = 1/Δx
+et divise sa divergence par la maille, comme sa référence. Il ne l'a PAS
+toujours fait — il était `_rhs_o2` à Δx = 1 exactement, ce qui a fait tourner
+le niveau GROSSIER de T2 (Δx = 2) à ~2× sa vitesse physique. Le défaut est
+resté invisible parce que `grep _rhs_o2 tests/` ne retournait rien : le
+verrou d'empreinte protège la stabilité, pas la JUSTESSE. C'est
+`tests/test_portage_rhs_o2.py` qui l'a établi par exécution.
+
 VERROU D'EMPREINTE dès le premier commit (§A29-C) : on ne refait pas le
 coup de L3, resté sans verrou alors qu'il portait `reference += d`.
 `_SOURCE_FIDELE` a son sha256 et sa longueur figés ci-dessous ; un test
@@ -208,8 +216,8 @@ __device__ void divergence_axe_b(const float* q, const float* bb,
 extern "C" __global__ void """ + _NOM_KERNEL_FIDELE + r"""(
         const float* q_in, const float* q_base, float* q_out,
         const float* b, const float* halo_q, const float* halo_b,
-        const float dt, const float w_base, const int n, const long total,
-        const int mode) {
+        const float dt, const float inv_dx, const float w_base,
+        const int n, const long total, const int mode) {
     long t = (long)blockIdx.x * blockDim.x + threadIdx.x;
     if (t >= total) return;
     long nn = (long)n * n;
@@ -223,9 +231,14 @@ extern "C" __global__ void """ + _NOM_KERNEL_FIDELE + r"""(
                      &dhx, &dnx, &dtx);
     divergence_axe_b(q_in, b, halo_q, halo_b, bloc, n, y, x, 1, 0, 0, mode,
                      &dhy, &dny, &dty);
-    float Lh  = -(dhx + dhy);
-    float Lhu = -(dnx + dty);           /* qdm x : normale-x + tangentielle-y */
-    float Lhv = -(dtx + dny);           /* qdm y symétrique */
+    /* Division par la MAILLE, comme la référence `_rhs_o2` (divx/divy
+       divisent chaque axe par son pas). `inv_dx` = 1/Δx ; la grille du
+       projet est carrée (dx = dy), un seul paramètre suffit. Sans elle le
+       kernel EST `_rhs_o2` à Δx = 1 exactement — ce qui faisait avancer le
+       niveau GROSSIER (Δx = 2) à 2× sa vitesse physique (§A33-CORRECTION). */
+    float Lh  = -(dhx + dhy) * inv_dx;
+    float Lhu = -(dnx + dty) * inv_dx;  /* qdm x : normale-x + tangent.-y */
+    float Lhv = -(dtx + dny) * inv_dx;  /* qdm y symétrique */
 
     long idx = baseq + (long)y * n + x;
     float h  = q_in[idx];
@@ -296,10 +309,16 @@ def _valider(q, b, cp) -> None:
 
 
 def pas_f_fidele(q, b, cp, dt: float, sortie=None, tampon_etage=None,
-                 mode: int = MODE_REFLECHISSANT, halo_q=None, halo_b=None
-                 ) -> tuple:
+                 mode: int = MODE_REFLECHISSANT, halo_q=None, halo_b=None,
+                 dx_maille: float = 1.0) -> tuple:
     """Un pas SSP-RK2 du F FIDÈLE b-aware sur (B, S, 3, n, n) f32, lit
     `b_eff` (B, S, n, n) CONSTANT. Retourne (sortie, dt_cfl).
+
+    `dx_maille` : le PAS D'ESPACE physique de la grille passée
+    (§A33-CORRECTION). Défaut 1.0 — tous les usages mono-niveau (témoin,
+    T1, régime) sont donc inchangés par construction. Un niveau DÉCIMÉ ×2
+    doit passer 2.0 : sans quoi le kernel est `_rhs_o2` à Δx = 1 et fait
+    avancer ce niveau à ~2× sa vitesse physique.
 
     `mode` : MODE_REFLECHISSANT (mur, t1) ou MODE_HALO (halo-parent, t2).
     En MODE_HALO, `halo_q`/`halo_b` sont les tableaux padés de 2 cellules
@@ -337,11 +356,12 @@ def pas_f_fidele(q, b, cp, dt: float, sortie=None, tampon_etage=None,
     kernel = _obtenir_kernel_fidele(cp)
     grille = ((total + _TAILLE_BLOC - 1) // _TAILLE_BLOC,)
     dt_arg, n_arg, tot_arg = np.float32(dt), np.int32(n), np.int64(total)
+    inv_dx_arg = np.float32(1.0 / dx_maille)
     mode_arg = np.int32(mode)
     kernel(grille, (_TAILLE_BLOC,),
-           (q, q, tampon_etage, b, halo_q, halo_b, dt_arg, np.float32(0.0),
-            n_arg, tot_arg, mode_arg))
+           (q, q, tampon_etage, b, halo_q, halo_b, dt_arg, inv_dx_arg,
+            np.float32(0.0), n_arg, tot_arg, mode_arg))
     kernel(grille, (_TAILLE_BLOC,),
-           (tampon_etage, q, sortie, b, halo_q, halo_b, dt_arg,
+           (tampon_etage, q, sortie, b, halo_q, halo_b, dt_arg, inv_dx_arg,
             np.float32(0.5), n_arg, tot_arg, mode_arg))
     return sortie, dt_cfl
