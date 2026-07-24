@@ -1,0 +1,1327 @@
+{
+  "_note": "LECTURE versionnée (§A32, décomposition spatiale de T2). DIAGNOSTIC sur données déjà acquises, identité bit-exacte prouvée contre les Δχ publiés. Le driver REPORTE ; la décision appartient à Romain.",
+  "meta": {
+    "mesure": "M-b — décomposition spatiale de l'écart T2 (§A32, pocCascade2phys 0ef658e)",
+    "identite_champs": [
+      {
+        "seed": 101,
+        "emissions_verifiees": 6,
+        "identite": "BIT-EXACTE"
+      },
+      {
+        "seed": 102,
+        "emissions_verifiees": 6,
+        "identite": "BIT-EXACTE"
+      },
+      {
+        "seed": 103,
+        "emissions_verifiees": 6,
+        "identite": "BIT-EXACTE"
+      }
+    ],
+    "n_fovea": 32,
+    "aire_fovea_pct": 25.0
+  },
+  "par_seed": {
+    "101": {
+      "4": {
+        "fovea_oy_ox": [
+          16,
+          7
+        ],
+        "spectral": {
+          "dchi_plein": 0.39153553405368524,
+          "dchi_fovea": 0.1277779491536848,
+          "dchi_peripherie": 0.3129705672086027,
+          "bande_dominante": "2-3",
+          "par_bande_plein": {
+            "1": 0.32240923868661575,
+            "2-3": 0.39153553405368524,
+            "4-7": 0.12337675895285427,
+            "8-15": 0.07041177753761807,
+            "16-31": 0.08942789618241331
+          },
+          "par_bande_fovea": {
+            "1": 0.1277779491536848,
+            "2-3": 0.11421695842143409,
+            "4-7": 0.081894394837011,
+            "8-15": 0.06295891706493884,
+            "16-31": 0.04687066896072156
+          },
+          "par_bande_peripherie": {
+            "1": 0.24117842769372655,
+            "2-3": 0.3129705672086027,
+            "4-7": 0.07681661701899434,
+            "8-15": 0.03604774055453874,
+            "16-31": 0.06276328466036252
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.0003147042509694078,
+          "energie_peripherie": 0.1528837203383021,
+          "energie_totale": 0.15319842458927152,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 3.073283700873123e-07,
+          "energie_par_cellule_peripherie": 4.9766836047624385e-05,
+          "fraction_fovea": 0.002054226417883455
+        },
+        "fidelite": {
+          "correlation": 0.8873122388747395,
+          "erreur_rms_relative": 1.5510463738298865,
+          "moyenne_candidat": 0.0029899069286329905,
+          "moyenne_reference": 0.0013567894051493808
+        }
+      },
+      "8": {
+        "fovea_oy_ox": [
+          16,
+          11
+        ],
+        "spectral": {
+          "dchi_plein": 0.2805218243878458,
+          "dchi_fovea": 0.10909694472313625,
+          "dchi_peripherie": 0.20272687107278164,
+          "bande_dominante": "1",
+          "par_bande_plein": {
+            "1": 0.2805218243878458,
+            "2-3": 0.24000891519545653,
+            "4-7": 0.09624107495971201,
+            "8-15": 0.041668923462908514,
+            "16-31": 0.09212316116945529
+          },
+          "par_bande_fovea": {
+            "1": 0.10909694472313625,
+            "2-3": 0.07545131731164179,
+            "4-7": 0.06151026191482356,
+            "8-15": 0.03630020923814703,
+            "16-31": 0.03161083124917574
+          },
+          "par_bande_peripherie": {
+            "1": 0.20272687107278164,
+            "2-3": 0.18660812020311313,
+            "4-7": 0.05207149375603137,
+            "8-15": 0.018733880837054073,
+            "16-31": 0.07058840680421119
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.0003553327381102946,
+          "energie_peripherie": 0.18063240920853527,
+          "energie_totale": 0.18098774194664555,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 3.4700462706083457e-07,
+          "energie_par_cellule_peripherie": 5.8799612372570076e-05,
+          "fraction_fovea": 0.001963297261397102
+        },
+        "fidelite": {
+          "correlation": 0.9273495939884738,
+          "erreur_rms_relative": 1.0987140005316098,
+          "moyenne_candidat": 0.00392449533137551,
+          "moyenne_reference": 0.002052913658338475
+        }
+      },
+      "12": {
+        "fovea_oy_ox": [
+          16,
+          15
+        ],
+        "spectral": {
+          "dchi_plein": 0.4826236890025749,
+          "dchi_fovea": 0.33078360264273066,
+          "dchi_peripherie": 0.5407963707189282,
+          "bande_dominante": "8-15",
+          "par_bande_plein": {
+            "1": 0.2602730872265122,
+            "2-3": 0.176921740420795,
+            "4-7": 0.32446381082781395,
+            "8-15": 0.4826236890025749,
+            "16-31": 0.1977059894209411
+          },
+          "par_bande_fovea": {
+            "1": 0.3161552338500142,
+            "2-3": 0.28670196372794066,
+            "4-7": 0.33078360264273066,
+            "8-15": 0.28422002586456885,
+            "16-31": 0.1924530080346818
+          },
+          "par_bande_peripherie": {
+            "1": 0.11682196220889396,
+            "2-3": 0.0830224268737425,
+            "4-7": 0.41155414536163915,
+            "8-15": 0.5407963707189282,
+            "16-31": 0.24489224887419359
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.0005204586512092543,
+          "energie_peripherie": 0.196460727419096,
+          "energie_totale": 0.19698118607030526,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 5.082604015715374e-07,
+          "energie_par_cellule_peripherie": 6.395205970673698e-05,
+          "fraction_fovea": 0.0026421744207768935
+        },
+        "fidelite": {
+          "correlation": 0.7473277085841458,
+          "erreur_rms_relative": 1.4541373259817043,
+          "moyenne_candidat": 0.0027132049199281028,
+          "moyenne_reference": 0.0009208626799721838
+        }
+      },
+      "16": {
+        "fovea_oy_ox": [
+          16,
+          19
+        ],
+        "spectral": {
+          "dchi_plein": 0.47745445431431155,
+          "dchi_fovea": 0.27888274022521875,
+          "dchi_peripherie": 0.2944261068278986,
+          "bande_dominante": "2-3",
+          "par_bande_plein": {
+            "1": 0.4609449235615726,
+            "2-3": 0.47745445431431155,
+            "4-7": 0.33118604848204347,
+            "8-15": 0.2660827186913213,
+            "16-31": 0.24765534444084086
+          },
+          "par_bande_fovea": {
+            "1": 0.27888274022521875,
+            "2-3": 0.1704865161481839,
+            "4-7": 0.2072487366489335,
+            "8-15": 0.1385114765595774,
+            "16-31": 0.11250665612690808
+          },
+          "par_bande_peripherie": {
+            "1": 0.1655884603427089,
+            "2-3": 0.2944261068278986,
+            "4-7": 0.17297774597306614,
+            "8-15": 0.1489844938831194,
+            "16-31": 0.15065702614105575
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.0035941045081930674,
+          "energie_peripherie": 0.10571891292789964,
+          "energie_totale": 0.10931301743609272,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 3.5098676837822923e-06,
+          "energie_par_cellule_peripherie": 3.4413708635384e-05,
+          "fraction_fovea": 0.03287901653885161
+        },
+        "fidelite": {
+          "correlation": 0.8702490006097454,
+          "erreur_rms_relative": 0.9583833721086292,
+          "moyenne_candidat": 0.002373638342760387,
+          "moyenne_reference": 0.001723540474081383
+        }
+      },
+      "20": {
+        "fovea_oy_ox": [
+          16,
+          23
+        ],
+        "spectral": {
+          "dchi_plein": 0.409995693320649,
+          "dchi_fovea": 0.16805537433818496,
+          "dchi_peripherie": 0.28678140522868034,
+          "bande_dominante": "2-3",
+          "par_bande_plein": {
+            "1": 0.3268792209825748,
+            "2-3": 0.409995693320649,
+            "4-7": 0.24697274179858253,
+            "8-15": 0.1941220996341143,
+            "16-31": 0.23673378889249563
+          },
+          "par_bande_fovea": {
+            "1": 0.16805537433818496,
+            "2-3": 0.14688074153338304,
+            "4-7": 0.158461117486852,
+            "8-15": 0.13755004633083434,
+            "16-31": 0.09588653543867698
+          },
+          "par_bande_peripherie": {
+            "1": 0.18065759237451529,
+            "2-3": 0.28678140522868034,
+            "4-7": 0.11795694580066796,
+            "8-15": 0.11273892569378796,
+            "16-31": 0.1726834929523624
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.00244416160249094,
+          "energie_peripherie": 0.11074005060419043,
+          "energie_totale": 0.11318421220668137,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 2.386876564932559e-06,
+          "energie_par_cellule_peripherie": 3.604819355605157e-05,
+          "fraction_fovea": 0.021594545341957674
+        },
+        "fidelite": {
+          "correlation": 0.8651582783712747,
+          "erreur_rms_relative": 0.9295376768711753,
+          "moyenne_candidat": 0.0023086968119514495,
+          "moyenne_reference": 0.0015386987106526494
+        }
+      },
+      "24": {
+        "fovea_oy_ox": [
+          16,
+          27
+        ],
+        "spectral": {
+          "dchi_plein": 0.7032877798557573,
+          "dchi_fovea": 0.17788691060884598,
+          "dchi_peripherie": 0.6434117263609764,
+          "bande_dominante": "2-3",
+          "par_bande_plein": {
+            "1": 0.3301799304848807,
+            "2-3": 0.7032877798557573,
+            "4-7": 0.5581760439707031,
+            "8-15": 0.3759802751802057,
+            "16-31": 0.43394715296340747
+          },
+          "par_bande_fovea": {
+            "1": 0.07917692090124917,
+            "2-3": 0.06280615319873983,
+            "4-7": 0.06316373990503998,
+            "8-15": 0.17788691060884598,
+            "16-31": 0.14625293488675295
+          },
+          "par_bande_peripherie": {
+            "1": 0.239855839294554,
+            "2-3": 0.6434117263609764,
+            "4-7": 0.5961943910984788,
+            "8-15": 0.4544362179517547,
+            "16-31": 0.41841820407889385
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.006907078715030487,
+          "energie_peripherie": 0.12932449995067818,
+          "energie_totale": 0.13623157866570867,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 6.74519405764696e-06,
+          "energie_par_cellule_peripherie": 4.209781899436139e-05,
+          "fraction_fovea": 0.05070101060767559
+        },
+        "fidelite": {
+          "correlation": 0.7361622420039404,
+          "erreur_rms_relative": 1.2430515268979998,
+          "moyenne_candidat": 0.0016702046923455782,
+          "moyenne_reference": 0.0011873035423583657
+        }
+      }
+    },
+    "102": {
+      "4": {
+        "fovea_oy_ox": [
+          16,
+          7
+        ],
+        "spectral": {
+          "dchi_plein": 0.5658662956674541,
+          "dchi_fovea": 0.25158292519422265,
+          "dchi_peripherie": 0.35755832792504716,
+          "bande_dominante": "4-7",
+          "par_bande_plein": {
+            "1": 0.44916101970334366,
+            "2-3": 0.5228244435615732,
+            "4-7": 0.5658662956674541,
+            "8-15": 0.2896304132557549,
+            "16-31": 0.3170055280123376
+          },
+          "par_bande_fovea": {
+            "1": 0.25158292519422265,
+            "2-3": 0.19209903370436043,
+            "4-7": 0.17806695210835244,
+            "8-15": 0.11930185743780786,
+            "16-31": 0.09371852435553407
+          },
+          "par_bande_peripherie": {
+            "1": 0.20032994036674923,
+            "2-3": 0.31105103667267,
+            "4-7": 0.35755832792504716,
+            "8-15": 0.16511831448994452,
+            "16-31": 0.20789532293498802
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.001834931574414378,
+          "energie_peripherie": 0.0397610632245716,
+          "energie_totale": 0.04159599479898597,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 1.791925365639041e-06,
+          "energie_par_cellule_peripherie": 1.29430544350819e-05,
+          "fraction_fovea": 0.04411317924434181
+        },
+        "fidelite": {
+          "correlation": 0.8683157315823553,
+          "erreur_rms_relative": 0.7977314683399719,
+          "moyenne_candidat": 0.001769444588717306,
+          "moyenne_reference": 0.0015039702727656173
+        }
+      },
+      "8": {
+        "fovea_oy_ox": [
+          16,
+          11
+        ],
+        "spectral": {
+          "dchi_plein": 0.3850898045964699,
+          "dchi_fovea": 0.1788043559773269,
+          "dchi_peripherie": 0.29104629701191587,
+          "bande_dominante": "2-3",
+          "par_bande_plein": {
+            "1": 0.2924876040793003,
+            "2-3": 0.3850898045964699,
+            "4-7": 0.2801999694269235,
+            "8-15": 0.1767643223594796,
+            "16-31": 0.18509200874804488
+          },
+          "par_bande_fovea": {
+            "1": 0.1788043559773269,
+            "2-3": 0.1121106963651406,
+            "4-7": 0.11298905861156316,
+            "8-15": 0.05915182009995057,
+            "16-31": 0.050828209136108526
+          },
+          "par_bande_peripherie": {
+            "1": 0.1558016508309188,
+            "2-3": 0.29104629701191587,
+            "4-7": 0.18641694287427213,
+            "8-15": 0.12713401826510484,
+            "16-31": 0.14122408325964375
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.0007360840222545213,
+          "energie_peripherie": 0.13125170606417924,
+          "energie_totale": 0.13198779008643377,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 7.188320529829309e-07,
+          "energie_par_cellule_peripherie": 4.2725164734433344e-05,
+          "fraction_fovea": 0.005576909968509116
+        },
+        "fidelite": {
+          "correlation": 0.888081199976617,
+          "erreur_rms_relative": 1.0416191850050935,
+          "moyenne_candidat": 0.003086731257099018,
+          "moyenne_reference": 0.0018250920082284005
+        }
+      },
+      "12": {
+        "fovea_oy_ox": [
+          16,
+          15
+        ],
+        "spectral": {
+          "dchi_plein": 0.23282208487362777,
+          "dchi_fovea": 0.20363314173040004,
+          "dchi_peripherie": 0.14790247977698856,
+          "bande_dominante": "2-3",
+          "par_bande_plein": {
+            "1": 0.11311503002981516,
+            "2-3": 0.23282208487362777,
+            "4-7": 0.07606588868271169,
+            "8-15": 0.10546422964840407,
+            "16-31": 0.09195652271734511
+          },
+          "par_bande_fovea": {
+            "1": 0.20363314173040004,
+            "2-3": 0.1496645153959546,
+            "4-7": 0.11380042714564786,
+            "8-15": 0.07598532135388447,
+            "16-31": 0.06097354432102153
+          },
+          "par_bande_peripherie": {
+            "1": 0.023834169958980356,
+            "2-3": 0.14790247977698856,
+            "4-7": 0.00390416058517018,
+            "8-15": 0.056352801406177266,
+            "16-31": 0.05276290558147123
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.0005882294819420879,
+          "energie_peripherie": 0.1891982385164026,
+          "energie_totale": 0.1897864679983447,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 5.744428534590702e-07,
+          "energie_par_cellule_peripherie": 6.158796826705814e-05,
+          "fraction_fovea": 0.0030994279420765575
+        },
+        "fidelite": {
+          "correlation": 0.8311104218260978,
+          "erreur_rms_relative": 1.0183393988207428,
+          "moyenne_candidat": 0.003470451381872408,
+          "moyenne_reference": 0.0018746376373496138
+        }
+      },
+      "16": {
+        "fovea_oy_ox": [
+          16,
+          19
+        ],
+        "spectral": {
+          "dchi_plein": 0.3402097554311818,
+          "dchi_fovea": 0.25499949692697355,
+          "dchi_peripherie": 0.2073702776147286,
+          "bande_dominante": "1",
+          "par_bande_plein": {
+            "1": 0.3402097554311818,
+            "2-3": 0.32064918285404054,
+            "4-7": 0.14615748166912668,
+            "8-15": 0.09064369868976119,
+            "16-31": 0.17881260532091714
+          },
+          "par_bande_fovea": {
+            "1": 0.25499949692697355,
+            "2-3": 0.22531964794077597,
+            "4-7": 0.21020908876391653,
+            "8-15": 0.15018245407160502,
+            "16-31": 0.10898819393536363
+          },
+          "par_bande_peripherie": {
+            "1": 0.15701492920723403,
+            "2-3": 0.2073702776147286,
+            "4-7": 0.015762709442650236,
+            "8-15": 0.01286081383496962,
+            "16-31": 0.11279236045027285
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.0007844091768444871,
+          "energie_peripherie": 0.1388770573676358,
+          "energie_totale": 0.1396614665444803,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 7.660245867621944e-07,
+          "energie_par_cellule_peripherie": 4.5207375445193946e-05,
+          "fraction_fovea": 0.005616503938075598
+        },
+        "fidelite": {
+          "correlation": 0.8316215159620918,
+          "erreur_rms_relative": 1.1594600573055327,
+          "moyenne_candidat": 0.0021978905833748286,
+          "moyenne_reference": 0.0010880915644168802
+        }
+      },
+      "20": {
+        "fovea_oy_ox": [
+          16,
+          23
+        ],
+        "spectral": {
+          "dchi_plein": 0.7026624297094988,
+          "dchi_fovea": 0.15795152655584177,
+          "dchi_peripherie": 0.5777187111647042,
+          "bande_dominante": "2-3",
+          "par_bande_plein": {
+            "1": 0.5060335235040765,
+            "2-3": 0.7026624297094988,
+            "4-7": 0.6250853941852814,
+            "8-15": 0.34690364573624033,
+            "16-31": 0.29928097711224555
+          },
+          "par_bande_fovea": {
+            "1": 0.15795152655584177,
+            "2-3": 0.10881475573091759,
+            "4-7": 0.11880203621766539,
+            "8-15": 0.10394389912989688,
+            "16-31": 0.07756497648662042
+          },
+          "par_bande_peripherie": {
+            "1": 0.31152886954202197,
+            "2-3": 0.5777187111647042,
+            "4-7": 0.49246510758056905,
+            "8-15": 0.24600405789247304,
+            "16-31": 0.22535735783099742
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.0009727056889293271,
+          "energie_peripherie": 0.14761528253460476,
+          "energie_totale": 0.14858798822353408,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 9.49907899345046e-07,
+          "energie_par_cellule_peripherie": 4.805184978339999e-05,
+          "fraction_fovea": 0.006546327873192547
+        },
+        "fidelite": {
+          "correlation": 0.753602614517023,
+          "erreur_rms_relative": 1.2114364628555274,
+          "moyenne_candidat": 0.002049516077931912,
+          "moyenne_reference": 0.0013850677933228955
+        }
+      },
+      "24": {
+        "fovea_oy_ox": [
+          16,
+          27
+        ],
+        "spectral": {
+          "dchi_plein": 0.5058643913642462,
+          "dchi_fovea": 0.1951573673014798,
+          "dchi_peripherie": 0.6644888808025422,
+          "bande_dominante": "4-7",
+          "par_bande_plein": {
+            "1": 0.29462038653483935,
+            "2-3": 0.376005309958809,
+            "4-7": 0.5058643913642462,
+            "8-15": 0.3668030691743729,
+            "16-31": 0.2709599714373262
+          },
+          "par_bande_fovea": {
+            "1": 0.04064710349793743,
+            "2-3": 0.06379240972017941,
+            "4-7": 0.002868929889453975,
+            "8-15": 0.1951573673014798,
+            "16-31": 0.08062391946883996
+          },
+          "par_bande_peripherie": {
+            "1": 0.21473264035549655,
+            "2-3": 0.3782418630375899,
+            "4-7": 0.6644888808025422,
+            "8-15": 0.41295333347894614,
+            "16-31": 0.358245331119174
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.00808574476442985,
+          "energie_peripherie": 0.12874389774129524,
+          "energie_totale": 0.1368296425057251,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 7.896235121513525e-06,
+          "energie_par_cellule_peripherie": 4.1908820879327876e-05,
+          "fraction_fovea": 0.05909351669972779
+        },
+        "fidelite": {
+          "correlation": 0.7832737677423756,
+          "erreur_rms_relative": 1.1505795822130964,
+          "moyenne_candidat": 0.0018301288916973135,
+          "moyenne_reference": 0.0011541540984452874
+        }
+      }
+    },
+    "103": {
+      "4": {
+        "fovea_oy_ox": [
+          16,
+          7
+        ],
+        "spectral": {
+          "dchi_plein": 0.8434329804253338,
+          "dchi_fovea": 0.5720956055150912,
+          "dchi_peripherie": 0.4291201631222141,
+          "bande_dominante": "4-7",
+          "par_bande_plein": {
+            "1": 0.3039818448975198,
+            "2-3": 0.7159656277823789,
+            "4-7": 0.8434329804253338,
+            "8-15": 0.4512296799404758,
+            "16-31": 0.4119527287501738
+          },
+          "par_bande_fovea": {
+            "1": 0.17329002305995256,
+            "2-3": 0.24265570688468618,
+            "4-7": 0.5720956055150912,
+            "8-15": 0.5455846206108113,
+            "16-31": 0.4083298627812681
+          },
+          "par_bande_peripherie": {
+            "1": 0.035792006763784245,
+            "2-3": 0.34366217272939203,
+            "4-7": 0.4291201631222141,
+            "8-15": 0.14647234861139702,
+            "16-31": 0.1777039594147461
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.007261339085076509,
+          "energie_peripherie": 0.07138559021660813,
+          "energie_totale": 0.07864692930168464,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 7.091151450270028e-06,
+          "energie_par_cellule_peripherie": 2.3237496815302125e-05,
+          "fraction_fovea": 0.09232832291801847
+        },
+        "fidelite": {
+          "correlation": 0.5763771110239058,
+          "erreur_rms_relative": 1.6575117387364406,
+          "moyenne_candidat": 0.0014640926813171973,
+          "moyenne_reference": 0.0010232795120898829
+        }
+      },
+      "8": {
+        "fovea_oy_ox": [
+          16,
+          11
+        ],
+        "spectral": {
+          "dchi_plein": 0.6154309123793686,
+          "dchi_fovea": 0.3040006887726705,
+          "dchi_peripherie": 0.3866160758073176,
+          "bande_dominante": "4-7",
+          "par_bande_plein": {
+            "1": 0.2913227197515804,
+            "2-3": 0.41046768135008094,
+            "4-7": 0.6154309123793686,
+            "8-15": 0.5440895361903118,
+            "16-31": 0.43354881503984355
+          },
+          "par_bande_fovea": {
+            "1": 0.24522106678518507,
+            "2-3": 0.25322737755825053,
+            "4-7": 0.3040006887726705,
+            "8-15": 0.27082983482146306,
+            "16-31": 0.19379033899543885
+          },
+          "par_bande_peripherie": {
+            "1": 0.057528641255557345,
+            "2-3": 0.21804609332258806,
+            "4-7": 0.3866160758073176,
+            "8-15": 0.3584039019317433,
+            "16-31": 0.29644509119669227
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.0022631099652310575,
+          "energie_peripherie": 0.07012877054157952,
+          "energie_totale": 0.07239188050681059,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 2.2100683254209546e-06,
+          "energie_par_cellule_peripherie": 2.2828375827337085e-05,
+          "fraction_fovea": 0.031261930887651765
+        },
+        "fidelite": {
+          "correlation": 0.7840849501307842,
+          "erreur_rms_relative": 1.1642183493321543,
+          "moyenne_candidat": 0.0013748461440172832,
+          "moyenne_reference": 0.0009033407588481723
+        }
+      },
+      "12": {
+        "fovea_oy_ox": [
+          16,
+          15
+        ],
+        "spectral": {
+          "dchi_plein": 0.5270757829128478,
+          "dchi_fovea": 0.1746303658809596,
+          "dchi_peripherie": 0.4198807355887979,
+          "bande_dominante": "2-3",
+          "par_bande_plein": {
+            "1": 0.3822213332578346,
+            "2-3": 0.5270757829128478,
+            "4-7": 0.37209070832545943,
+            "8-15": 0.26025049073070466,
+            "16-31": 0.27583654068281876
+          },
+          "par_bande_fovea": {
+            "1": 0.1746303658809596,
+            "2-3": 0.09611915854359898,
+            "4-7": 0.09066952320179078,
+            "8-15": 0.06898319440478645,
+            "16-31": 0.0929375615531065
+          },
+          "par_bande_peripherie": {
+            "1": 0.22185752252625224,
+            "2-3": 0.4198807355887979,
+            "4-7": 0.27941538593936377,
+            "8-15": 0.2004139109173883,
+            "16-31": 0.20897667850870077
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.002188777794862095,
+          "energie_peripherie": 0.12172403171415752,
+          "energie_totale": 0.12391280950901962,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 2.1374783152950145e-06,
+          "energie_par_cellule_peripherie": 3.962370824028565e-05,
+          "fraction_fovea": 0.01766385415305085
+        },
+        "fidelite": {
+          "correlation": 0.8853725235231308,
+          "erreur_rms_relative": 0.9876852596442386,
+          "moyenne_candidat": 0.0028746780494657287,
+          "moyenne_reference": 0.0019534454924524875
+        }
+      },
+      "16": {
+        "fovea_oy_ox": [
+          16,
+          19
+        ],
+        "spectral": {
+          "dchi_plein": 0.6598364782405552,
+          "dchi_fovea": 0.27433869112993947,
+          "dchi_peripherie": 0.4941439294245975,
+          "bande_dominante": "2-3",
+          "par_bande_plein": {
+            "1": 0.13827798063559227,
+            "2-3": 0.6598364782405552,
+            "4-7": 0.41677449946227263,
+            "8-15": 0.36624293197334656,
+            "16-31": 0.3596221397766273
+          },
+          "par_bande_fovea": {
+            "1": 0.27433869112993947,
+            "2-3": 0.18379809357139476,
+            "4-7": 0.1803650987173684,
+            "8-15": 0.13029449311828367,
+            "16-31": 0.15051955443135318
+          },
+          "par_bande_peripherie": {
+            "1": 0.10583495888285,
+            "2-3": 0.4941439294245975,
+            "4-7": 0.2558820993953541,
+            "8-15": 0.2682562212154811,
+            "16-31": 0.2569968780636844
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": false,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.001800202006908289,
+          "energie_peripherie": 0.13954764458131547,
+          "energie_totale": 0.14134784658822375,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 1.758009772371376e-06,
+          "energie_par_cellule_peripherie": 4.5425665553813626e-05,
+          "fraction_fovea": 0.012735970517843538
+        },
+        "fidelite": {
+          "correlation": 0.7512032666374839,
+          "erreur_rms_relative": 1.1278195962128266,
+          "moyenne_candidat": 0.002139367671134096,
+          "moyenne_reference": 0.001422193170950666
+        }
+      },
+      "20": {
+        "fovea_oy_ox": [
+          16,
+          23
+        ],
+        "spectral": {
+          "dchi_plein": 0.8695845860340814,
+          "dchi_fovea": 0.16382680662267357,
+          "dchi_peripherie": 0.6775948189548866,
+          "bande_dominante": "2-3",
+          "par_bande_plein": {
+            "1": 0.3798334986359395,
+            "2-3": 0.8695845860340814,
+            "4-7": 0.7868887953582755,
+            "8-15": 0.4329718496661945,
+            "16-31": 0.5496102960759857
+          },
+          "par_bande_fovea": {
+            "1": 0.07795206477192052,
+            "2-3": 0.15544887530407436,
+            "4-7": 0.16382680662267357,
+            "8-15": 0.1098128060696909,
+            "16-31": 0.09069211732542531
+          },
+          "par_bande_peripherie": {
+            "1": 0.08606030599514947,
+            "2-3": 0.6775948189548866,
+            "4-7": 0.6043356554090251,
+            "8-15": 0.295667003790795,
+            "16-31": 0.41982630886538547
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.0019516564358414267,
+          "energie_peripherie": 0.1305007505046003,
+          "energie_totale": 0.13245240694044172,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 1.9059144881263933e-06,
+          "energie_par_cellule_peripherie": 4.2480713054882914e-05,
+          "fraction_fovea": 0.014734775161307598
+        },
+        "fidelite": {
+          "correlation": 0.6774715419502854,
+          "erreur_rms_relative": 1.293159586248921,
+          "moyenne_candidat": 0.0014839199113794166,
+          "moyenne_reference": 0.0013448230642669624
+        }
+      },
+      "24": {
+        "fovea_oy_ox": [
+          16,
+          27
+        ],
+        "spectral": {
+          "dchi_plein": 0.7654269832932779,
+          "dchi_fovea": 0.13513974075501212,
+          "dchi_peripherie": 0.6042166453673115,
+          "bande_dominante": "2-3",
+          "par_bande_plein": {
+            "1": 0.6665569117422605,
+            "2-3": 0.7654269832932779,
+            "4-7": 0.7143002578050046,
+            "8-15": 0.5132851864668658,
+            "16-31": 0.6181717972309371
+          },
+          "par_bande_fovea": {
+            "1": 0.13513974075501212,
+            "2-3": 0.10784634510795366,
+            "4-7": 0.05694019985448717,
+            "8-15": 0.11875887840844257,
+            "16-31": 0.12466270007301494
+          },
+          "par_bande_peripherie": {
+            "1": 0.4757563336426667,
+            "2-3": 0.6042166453673115,
+            "4-7": 0.5404505921162348,
+            "8-15": 0.4191927062794395,
+            "16-31": 0.581021621265831
+          },
+          "porteuses": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_fovea": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          },
+          "porteuses_peripherie": {
+            "1": true,
+            "2-3": true,
+            "4-7": true,
+            "8-15": true,
+            "16-31": false
+          }
+        },
+        "energie": {
+          "energie_fovea": 0.0037010548190972085,
+          "energie_peripherie": 0.0908946165459277,
+          "energie_totale": 0.0945956713650249,
+          "aire_fovea": 1024,
+          "aire_peripherie": 3072,
+          "energie_par_cellule_fovea": 3.6143113467746177e-06,
+          "energie_par_cellule_peripherie": 2.9588091323544174e-05,
+          "fraction_fovea": 0.03912499129918548
+        },
+        "fidelite": {
+          "correlation": 0.801308714547972,
+          "erreur_rms_relative": 1.0132809725116916,
+          "moyenne_candidat": 0.0014049695109861204,
+          "moyenne_reference": 0.001392865512357054
+        }
+      }
+    }
+  },
+  "lecture_mecanique": {
+    "ratio_energie_par_cellule_peripherie_sur_fovea_median": 22.28888720849356,
+    "bandes_dominantes": [
+      "1",
+      "2-3",
+      "4-7",
+      "8-15"
+    ],
+    "fovea_traverse_sur_n": [
+      18,
+      18
+    ],
+    "peripherie_traverse_sur_n": [
+      18,
+      18
+    ],
+    "dchi_fovea_min_max": [
+      0.10909694472313625,
+      0.5720956055150912
+    ],
+    "dchi_peripherie_min_max": [
+      0.14790247977698856,
+      0.6775948189548866
+    ],
+    "correlation_min_max": [
+      0.5763771110239058,
+      0.9273495939884738
+    ],
+    "verdict_decomposition": "LES DEUX RÉGIONS TRAVERSENT SÉPARÉMENT (18/18 fovéa, 18/18 périphérie) — aucune des deux lectures pré-écrites ne s'applique seule. Par le contrefactuel : réparer parfaitement la périphérie (r_fovea) laisserait Δχ à 0.109–0.572, et réparer parfaitement la fovéa (EPS) le laisserait à 0.148–0.678 — des deux côtés AU-DESSUS du pin 0.0733. AUCUN remède unilatéral ne rachète le gate (iii).",
+    "lecture_pre_ecrite": "fovéa propre + périphérie saturée ⇒ cause (c) LA DÉCIMATION — le remède n'est ni Option B ni EPS, c'est le CRITÈRE appliqué à la périphérie, donc r_fovea. Fovéa également dégradée ⇒ cause (b) EPS et/ou le canal, EPS se resserre.",
+    "reserve_masquage": "les Δχ partiels ne s'additionnent PAS au Δχ plein : masquer la différence introduit une discontinuité au bord de la fovéa, qui fuit en spectre, et Δχ n'est de toute façon pas additif (rapports de RMS). Ils se lisent l'un contre l'autre. La partition d'énergie, elle, est exactement additive — c'est elle qui départage.",
+    "reserve_fovea_mobile": "la fovéa est MOBILE : le champ à l'émission n a été accumulé sur n épisodes où elle occupait n positions distinctes. Le masque porte sa position à l'épisode n — le cœur fovéal de l'émission, pas l'union des positions visitées.",
+    "portee": "DIAGNOSTIC sur données déjà acquises, identité bit-exacte prouvée contre les Δχ publiés. Ni l'observable ni le critère ne bougent ; le verdict MORT-b n'est pas rouvert."
+  }
+}
