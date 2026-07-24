@@ -60,8 +60,10 @@ from src.f1_gpu.cellule_mb import (  # noqa: E402
 from src.f1_gpu.exner_gpu import CADENCE_EXNER  # noqa: E402
 from src.f1_gpu.memoire_instrument import (  # noqa: E402
     SondeMemoire,
+    armer_plafond_as,
     lire_jalons,
     pic_par_phase,
+    vm_size_go,
 )
 from src.f1_gpu.mort_b_lecture import (  # noqa: E402
     LABEL_OPTION_A_TIENT,
@@ -81,6 +83,11 @@ from src.sediment import SedimentParams, default_terrain  # noqa: E402
 OUT_DIR = ROOT / "outputs" / "f1"
 OUT_JSON_PATH = OUT_DIR / "mb_t2.json"
 MEMOIRE_PATH = OUT_DIR / "mb_t2_memoire.jsonl"
+
+# Marge au-dessus du socle d'espace d'adressage réservé par CUDA. Le pic
+# mesuré du rederive borné est ~2,2 Go ; 6 Go laissent large tout en
+# hard-stoppant très en-deçà des 23–25 Go qui ont tué les deux premiers runs.
+MARGE_AS_GO: float = 6.0
 
 # T2 mesure la FIDÉLITÉ contre le rederive CPU f64 : la vérification
 # load-bearing est le GEL BIT-EXACT du chemin rederive sur CETTE machine
@@ -293,6 +300,14 @@ def main() -> None:
     le seed manquant peut être celui qui traverse."""
     cp = exiger_cupy()
     exiger_pass(VERIFS_EXIGEES)
+    # Plafond armé APRÈS l'init CUDA (qui réserve ~6,4 Go d'espace
+    # d'adressage) : + MARGE_AS_GO au-dessus du socle réel. Le pic mesuré du
+    # rederive borné est de 2,2 Go — le plafond est une PREUVE, pas une
+    # béquille : sous lui, un débordement lève au lieu de tuer en silence.
+    plafond = armer_plafond_as(vm_size_go() + MARGE_AS_GO)
+    print(f"  [plafond AS] {plafond['plafond_go']:.1f} Go "
+          f"(socle CUDA réservé : {plafond['reserve_avant_go']:.1f} Go)",
+          flush=True)
     b0 = default_terrain(GridConfig()).astype("float32")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)

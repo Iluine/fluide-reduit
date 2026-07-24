@@ -139,16 +139,72 @@ def test_le_barreau_redescend_entre_episodes():
     assert retenus[2] > retenus[3], f"barreaux={retenus}"
 
 
-def test_la_marge_d_un_pas_est_exigee():
-    """La marge protège du dernier `dt` ÉCRÊTÉ : le barreau retenu doit
-    offrir N_settle + 1 pas, pas N_settle tout juste."""
+# ----- 3bis. LA GARDE STRUCTURELLE (§A31-diagnostic, amendement 1) -----
+
+def test_la_garde_structurelle_est_verifiee_a_chaque_episode():
+    """La garde lit le temps du DERNIER PAS RETENU et l'exige strictement
+    sous `t_end − marge`. Elle ne compare à AUCUNE exécution non bornée —
+    c'est tout son intérêt : là où le risque est maximal (l'épisode qui
+    OOM), l'exécution non bornée est justement impossible."""
     b0 = _terrain()
-    params = replace(SedimentParams(), N_settle=30)
+    params = replace(SedimentParams(), N_settle=10)
     c = ConsommateurRederive(params)
-    assert c._params_marge.N_settle == params.N_settle + 1
-    t_end = c._barreau(np.zeros_like(b0), b0, (0.5, 0.5))
-    # au barreau retenu, N_settle + 1 pas passent : donc N_settle aussi
-    c._appeler(np.zeros_like(b0), b0, (0.5, 0.5), t_end, c._params_marge)
+    c.episode(np.zeros_like(b0), b0, (0.5, 0.5))
+    g = c.gardes[-1]
+    assert g["t_dernier_retenu"] + g["marge"] <= g["t_end"]
+    assert g["ok"] is True
+
+
+def test_la_garde_rejette_un_barreau_ou_la_fenetre_touche_t_end():
+    """Cas construit sur des nombres MESURÉS : à N_settle=10 et t_end=2,0 le
+    dernier pas retenu tombe à t=1,9331 pour une marge de ~0,19 — la fenêtre
+    frôle `t_end`, donc le barreau est REJETÉ et l'escalade continue.
+
+    Ce cas montre aussi que la garde est STRICTEMENT PLUS FORTE que la sonde
+    échantillonnée qu'elle remplace : celle-ci acceptait ce barreau (11 pas
+    disponibles ≥ N_settle+1)."""
+    b0 = _terrain()
+    params = replace(SedimentParams(), N_settle=10)
+    c = ConsommateurRederive(params, echelle=(2.0, 2.5, 4.0))
+    c.episode(np.zeros_like(b0), b0, (0.5, 0.5))
+    assert c.t_end_courant > 2.0, "le barreau 2,0 aurait dû être rejeté"
+    rejets = [g for g in c.gardes if not g["ok"]]
+    assert rejets and rejets[0]["t_end"] == 2.0
+
+
+def test_la_fenetre_retenue_ne_depend_pas_de_t_end():
+    """Le fondement du protocole, vérifié directement : le temps du dernier
+    pas retenu est le MÊME à trois `t_end` distincts."""
+    b0 = _terrain()
+    params = replace(SedimentParams(), N_settle=10)
+    temps = []
+    for t_end in (2.5, 4.0, 8.0):
+        c = ConsommateurRederive(params, echelle=(t_end,))
+        c.episode(np.zeros_like(b0), b0, (0.5, 0.5))
+        temps.append(c.gardes[-1]["t_dernier_retenu"])
+    assert temps[0] == temps[1] == temps[2]
+
+
+def test_au_plafond_grave_aucune_garde_n_est_requise():
+    """Au barreau plafond, l'appel EST l'original (même `t_end` gravé) : le
+    borner n'a plus de sens, et refuser là où l'original accepte créerait une
+    divergence de domaine. La garde ne s'applique qu'aux barreaux BORNÉS."""
+    b0 = _terrain()
+    params = replace(SedimentParams(), N_settle=10)
+    c = ConsommateurRederive(params, echelle=(_T_END_RELAX,))
+    c.episode(np.zeros_like(b0), b0, (0.5, 0.5))
+    g = c.gardes[-1]
+    assert g["ok"] is True and g["plafond"] is True
+
+
+def test_la_garde_ne_double_pas_le_calcul():
+    """La garde lit les temps de l'appel RÉEL (un seul par barreau) — elle
+    ne relance pas l'épisode comme le faisait la sonde échantillonnée."""
+    b0 = _terrain()
+    params = replace(SedimentParams(), N_settle=10)
+    c = ConsommateurRederive(params, echelle=(4.0,))
+    c.episode(np.zeros_like(b0), b0, (0.5, 0.5))
+    assert c.appels == 1
 
 
 # ----- 4. l'épisode qui tuait le run -----

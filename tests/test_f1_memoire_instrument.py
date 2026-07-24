@@ -13,11 +13,16 @@ Ce que ces tests protègent :
   3. le pic est attribué PAR BRAS ET PAR PHASE ;
   4. la sonde fonctionne sans cupy (le poste suspect est la RAM hôte)."""
 import json
+import resource
+
+import pytest
 
 from src.f1_gpu.memoire_instrument import (
     SondeMemoire,
+    armer_plafond_as,
     lire_jalons,
     pic_par_phase,
+    vm_size_go,
 )
 
 
@@ -136,7 +141,37 @@ def test_lire_jalons_tolere_une_derniere_ligne_tronquee(tmp_path):
     assert jalons and all("etat" in j for j in jalons)
 
 
-# ----- 4. sans cupy -----
+# ----- 4. le plafond RLIMIT_AS : une preuve, pas un correctif -----
+
+def test_armer_le_plafond_puis_le_rendre():
+    """Le plafond transforme un débordement en `MemoryError` CONTENUE (donc
+    persistable) au lieu d'un SIGKILL muet."""
+    avant = resource.getrlimit(resource.RLIMIT_AS)
+    try:
+        info = armer_plafond_as(vm_size_go() + 6.0)
+        assert info["plafond_go"] > vm_size_go()
+        assert resource.getrlimit(resource.RLIMIT_AS)[0] == info["plafond_octets"]
+    finally:
+        resource.setrlimit(resource.RLIMIT_AS, avant)
+
+
+def test_armer_refuse_un_plafond_sous_l_espace_deja_reserve():
+    """CUDA réserve ~6,4 Go d'ESPACE D'ADRESSAGE pour ~0,3 Go résident :
+    un plafond posé sous ce socle tuerait le run à la première allocation.
+    On refuse fail-loud plutôt que d'armer un piège."""
+    avant = resource.getrlimit(resource.RLIMIT_AS)
+    with pytest.raises(RuntimeError, match="déjà réservé"):
+        armer_plafond_as(vm_size_go() * 0.5)
+    assert resource.getrlimit(resource.RLIMIT_AS) == avant
+
+
+def test_vm_size_distingue_reserve_et_resident():
+    """VmSize (réservé) ≫ VmRSS (résident) sous CUDA — c'est pourquoi le
+    plafond se règle sur le premier, jamais sur le second."""
+    assert vm_size_go() > 0
+
+
+# ----- 5. sans cupy -----
 
 def test_sonde_sans_cupy(tmp_path):
     """Le poste suspect est la RAM HÔTE : la sonde doit marcher sans GPU."""

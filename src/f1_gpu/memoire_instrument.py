@@ -42,6 +42,42 @@ def rss_mo() -> float:
     return 0.0
 
 
+def vm_size_go() -> float:
+    """Espace d'adressage RÉSERVÉ (VmSize), en Go — distinct du résident.
+    Sous CUDA les deux divergent d'un ordre : ~6,4 Go réservés pour ~0,3 Go
+    résidents (mesuré). Le plafond se règle donc sur CELUI-CI."""
+    with open(f"/proc/{os.getpid()}/status", encoding="utf-8") as f:
+        for ligne in f:
+            if ligne.startswith("VmSize:"):
+                return int(ligne.split()[1]) / (1024 * 1024)
+    return 0.0
+
+
+def armer_plafond_as(plafond_go: float) -> dict:
+    """Pose un plafond `RLIMIT_AS`. Ce n'est PAS un correctif — c'est une
+    PREUVE : sous plafond, un débordement ne peut plus tuer le processus en
+    silence, il lève une `MemoryError` CONTENUE, donc persistable et
+    reportable (§A31-run, la leçon du FAIL non persisté).
+
+    Refuse fail-loud un plafond situé sous l'espace DÉJÀ réservé : armé là,
+    il tuerait le run à la première allocation — un piège, pas une garde."""
+    import resource
+    reserve = vm_size_go()
+    if plafond_go <= reserve + 1.0:
+        raise RuntimeError(
+            f"armer_plafond_as : plafond {plafond_go:.1f} Go ≤ espace déjà "
+            f"réservé ({reserve:.1f} Go) + 1 Go de marge — armer ici tuerait "
+            "le run à la première allocation. Relever le plafond.")
+    octets = int(plafond_go * 1024 ** 3)
+    souple, dur = resource.getrlimit(resource.RLIMIT_AS)
+    resource.setrlimit(resource.RLIMIT_AS,
+                       (octets, dur if dur != resource.RLIM_INFINITY
+                        else resource.RLIM_INFINITY))
+    return {"plafond_go": plafond_go, "plafond_octets": octets,
+            "reserve_avant_go": round(reserve, 2),
+            "ancien_souple": souple}
+
+
 def _vram_mo(cp) -> tuple[float | None, float | None]:
     """(utilisé, réservé) du mempool CuPy en Mo, ou (None, None) sans GPU."""
     if cp is None:
