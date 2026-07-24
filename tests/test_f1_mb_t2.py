@@ -162,6 +162,49 @@ def test_le_report_porte_les_anomalies_si_il_y_en_a():
     imprimer_lecture(lec)
 
 
+# ----- 6. l'instrument : rederive borné + mémoire persistée (§A31-run) -----
+
+def test_le_driver_consomme_le_rederive_BORNE_pas_run_history():
+    """Le poste d'OOM était le rederive consommé à `t_end` plein. Le driver
+    doit passer par le consommateur borné — et le rederive rester intouché."""
+    import scripts.run_f1_mb_t2 as drv
+    from src.f1_gpu.rederive_borne import ConsommateurRederive
+    assert drv.ConsommateurRederive is ConsommateurRederive
+
+
+def test_le_driver_persiste_sa_memoire_par_bras_et_par_phase(tmp_path):
+    """La sonde du driver écrit par (bras, phase) : un SIGKILL doit laisser
+    dire QUI tenait le processus et COMBIEN il tenait."""
+    from src.f1_gpu.memoire_instrument import (
+        SondeMemoire,
+        lire_jalons,
+        pic_par_phase,
+    )
+    chemin = tmp_path / "memoire.jsonl"
+    sonde = SondeMemoire(chemin, periode_s=0.01)
+    for bras in ("rederive", "production", "temoin"):
+        with sonde.phase(bras, "seed=101"):
+            sonde.attendre_un_echantillon()
+    pics = pic_par_phase(lire_jalons(chemin))
+    assert {b for b, _ in pics} == {"rederive", "production", "temoin"}
+
+
+def test_le_report_porte_la_memoire_mesuree():
+    """Le pic mesuré voyage DANS le report : un échec d'instrument doit
+    laisser un chiffre, pas seulement un processus mort."""
+    from scripts.run_f1_mb_t2 import document_t2
+    par_seed = {s: {"production": 0.01, "temoin": 0.001} for s in GRAINES}
+    doc = document_t2(par_seed, lecture_t2(par_seed),
+                      memoire={("rederive", "seed=101"): {"rss_pic_mo": 2109}})
+    assert doc["memoire_pic_mo"]["rederive|seed=101"]["rss_pic_mo"] == 2109
+
+
+def test_le_document_reste_serialisable_sans_memoire():
+    from scripts.run_f1_mb_t2 import document_t2
+    par_seed = {s: {"production": 0.01, "temoin": 0.001} for s in GRAINES}
+    json.loads(json.dumps(document_t2(par_seed, lecture_t2(par_seed))))
+
+
 # ----- 5. survivre à une coupure : reprise par seed -----
 
 def test_un_run_partiel_ne_prononce_AUCUNE_lecture():

@@ -40,6 +40,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
+from contextlib import nullcontext
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -57,6 +58,11 @@ from src.f1_gpu.cellule_mb import (  # noqa: E402
     dchi,
 )
 from src.f1_gpu.exner_gpu import CADENCE_EXNER  # noqa: E402
+from src.f1_gpu.memoire_instrument import (  # noqa: E402
+    SondeMemoire,
+    lire_jalons,
+    pic_par_phase,
+)
 from src.f1_gpu.mort_b_lecture import (  # noqa: E402
     LABEL_OPTION_A_TIENT,
     lecture_mort_b,
@@ -67,12 +73,14 @@ from src.f1_gpu.production_fidele import (  # noqa: E402
     N_FOVEA,
     evoluer_histoire_production,
 )
+from src.f1_gpu.rederive_borne import ConsommateurRederive  # noqa: E402
 from src.f1_gpu.temoin_fidele import evoluer_histoire_temoin  # noqa: E402
 from src.f1_gpu.verifs import exiger_pass  # noqa: E402
-from src.sediment import SedimentParams, default_terrain, run_history  # noqa: E402
+from src.sediment import SedimentParams, default_terrain  # noqa: E402
 
 OUT_DIR = ROOT / "outputs" / "f1"
 OUT_JSON_PATH = OUT_DIR / "mb_t2.json"
+MEMOIRE_PATH = OUT_DIR / "mb_t2_memoire.jsonl"
 
 # T2 mesure la FIDÉLITÉ contre le rederive CPU f64 : la vérification
 # load-bearing est le GEL BIT-EXACT du chemin rederive sur CETTE machine
@@ -102,20 +110,36 @@ def maxima_de_serie(production: dict, temoin: dict, rederive: dict) -> dict:
 
 
 def mesurer_seed(seed: int, b0, cp,
-                 params: SedimentParams = SedimentParams()) -> dict:
-    """Les deux bras d'UN seed, sur la MÊME histoire. Les centres sont tirés
-    UNE fois et donnés aux deux bras — le rederive, lui, les retire
-    identiquement (verrou testé dans `cellule_mb`)."""
+                 params: SedimentParams = SedimentParams(),
+                 sonde: SondeMemoire | None = None) -> dict:
+    """Les trois bras d'UN seed, sur la MÊME histoire. Les centres sont tirés
+    UNE fois et donnés aux trois — le rederive, lui, les retire identiquement
+    (verrou testé dans `cellule_mb`).
+
+    Le rederive est consommé BORNÉ (§A31-run) : il reste INTOUCHÉ, mais son
+    `t_end` est réduit au plus petit barreau suffisant, ce qui rend le MÊME
+    résultat (bit-exact, testé) pour 2,2 Go au lieu de 25.
+
+    `sonde` : chaque bras est une phase persistée — si le processus meurt, le
+    disque dit lequel le tenait et à quel pic."""
     emissions = set(EMISSIONS)
     centres = centres_cellule(seed, N_EPISODES)
-    rederive = run_history(seed, N_EPISODES, b0.astype(float), params,
-                           checkpoints=emissions)
-    production = evoluer_histoire_production(seed, N_EPISODES, b0, cp,
-                                             centres, params,
-                                             checkpoints=emissions,
-                                             eps=EPS_PRODUCTION)
-    temoin = evoluer_histoire_temoin(seed, N_EPISODES, b0, cp, centres,
-                                     params, checkpoints=emissions)
+
+    def _phase(bras):
+        return (sonde.phase(bras, f"seed={seed}") if sonde is not None
+                else nullcontext())
+
+    with _phase("rederive"):
+        rederive = ConsommateurRederive(params).histoire(
+            b0.astype(float), centres, checkpoints=emissions)
+    with _phase("production"):
+        production = evoluer_histoire_production(seed, N_EPISODES, b0, cp,
+                                                 centres, params,
+                                                 checkpoints=emissions,
+                                                 eps=EPS_PRODUCTION)
+    with _phase("temoin"):
+        temoin = evoluer_histoire_temoin(seed, N_EPISODES, b0, cp, centres,
+                                         params, checkpoints=emissions)
     return maxima_de_serie(production, temoin, rederive)
 
 
@@ -207,7 +231,8 @@ def document_partiel(par_seed: dict[int, dict], empreinte: str) -> dict:
     }
 
 
-def document_t2(par_seed: dict[int, dict], lecture: dict) -> dict:
+def document_t2(par_seed: dict[int, dict], lecture: dict,
+                memoire: dict | None = None) -> dict:
     """Le report. EXTRAIT de `main` à dessein : il s'exécute APRÈS la mesure,
     donc une faute ici détruirait un run déjà payé — il doit être exerçable à
     vide (cf. tests)."""
@@ -226,6 +251,10 @@ def document_t2(par_seed: dict[int, dict], lecture: dict) -> dict:
         "statut": f"COMPLET — {len(par_seed)}/{len(GRAINES)} seeds mesurés",
         "empreinte": empreinte_config(),
         "par_seed": {str(s): m for s, m in par_seed.items()},
+        # pic mémoire PAR BRAS ET PAR PHASE : l'instrument voyage avec la
+        # mesure (§A31-run — un échec doit laisser un chiffre).
+        "memoire_pic_mo": {f"{bras}|{phase}": v
+                           for (bras, phase), v in (memoire or {}).items()},
         "lecture_mecanique": lecture,
     }
 
@@ -275,22 +304,28 @@ def main() -> None:
         print(f"  [reprise] seeds déjà mesurés sous la même empreinte "
               f"{empreinte} : {sorted(par_seed)}", flush=True)
 
+    sonde = SondeMemoire(MEMOIRE_PATH, cp=cp)
     for seed in a_faire:
-        print(f"  seed {seed} : rederive + production + témoin "
+        print(f"  seed {seed} : rederive borné + production + témoin "
               f"({N_EPISODES} épisodes) ...", flush=True)
-        par_seed[seed] = mesurer_seed(seed, b0, cp)
+        par_seed[seed] = mesurer_seed(seed, b0, cp, sonde=sonde)
         # report AVANT le seed suivant : une coupure ne perd plus le mesuré
         OUT_JSON_PATH.write_text(
             json.dumps(document_partiel(par_seed, empreinte), indent=2,
                        ensure_ascii=False), encoding="utf-8")
         cp.get_default_memory_pool().free_all_blocks()
 
+    memoire = pic_par_phase(lire_jalons(MEMOIRE_PATH))
     lecture = lecture_t2(par_seed)
     OUT_JSON_PATH.write_text(
-        json.dumps(document_t2(par_seed, lecture), indent=2,
+        json.dumps(document_t2(par_seed, lecture, memoire), indent=2,
                    ensure_ascii=False), encoding="utf-8")
     imprimer_lecture(lecture)
+    for (bras, phase), v in sorted(memoire.items()):
+        print(f"  [mémoire] {bras:11s} {phase:12s} pic RSS = "
+              f"{v['rss_pic_mo']:7.0f} Mo")
     print(f"[REPORT] -> {OUT_JSON_PATH}")
+    print(f"[MÉMOIRE] -> {MEMOIRE_PATH}")
     print("POINT D'ARRÊT OBLIGATOIRE : lecture remontée à Romain.")
 
 
