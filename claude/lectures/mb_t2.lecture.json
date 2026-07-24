@@ -1,0 +1,225 @@
+{
+  "_note": "LECTURE versionnée (§A31-diagnostic, run de T2). Le driver REPORTE ; le verdict appartient à Romain. Jalons mémoire par bras/phase sur disque (outputs/f1/mb_t2_memoire.jsonl).",
+  "meta": {
+    "mesure": "M-b tranche-2 / gate (iii) — fidélité à 64², fovéation 2-niveaux (§A31, pocCascade2phys a8a7639 ; gate re-scopé §A31-build)",
+    "config": {
+      "n": 64,
+      "n_fovea": 32,
+      "eps_production": 0.01,
+      "cadence_exner": 2,
+      "bord_fovea": "halo-parent, rafraîchi entre étages RK2",
+      "bord_grossier": "réfléchissant (vrai bord, = rederive)"
+    },
+    "verifs_exigees": [
+      "gel_bit_exact"
+    ]
+  },
+  "statut": "COMPLET — 3/3 seeds mesurés",
+  "empreinte": "7953c3b62829af05",
+  "par_seed": {
+    "101": {
+      "par_emission": {
+        "4": {
+          "production": 0.39153553405368524,
+          "temoin": 0.026284439270447546
+        },
+        "8": {
+          "production": 0.2805218243878458,
+          "temoin": 0.0025288308266324666
+        },
+        "12": {
+          "production": 0.4826236890025749,
+          "temoin": 0.004174962836871909
+        },
+        "16": {
+          "production": 0.47745445431431155,
+          "temoin": 0.005632232583740904
+        },
+        "20": {
+          "production": 0.409995693320649,
+          "temoin": 0.07730780184466135
+        },
+        "24": {
+          "production": 0.7032877798557573,
+          "temoin": 0.03374899602823278
+        }
+      },
+      "production": 0.7032877798557573,
+      "temoin": 0.07730780184466135
+    },
+    "102": {
+      "par_emission": {
+        "4": {
+          "production": 0.5658662956674541,
+          "temoin": 0.0069293045070896175
+        },
+        "8": {
+          "production": 0.3850898045964699,
+          "temoin": 0.005693299771172278
+        },
+        "12": {
+          "production": 0.23282208487362777,
+          "temoin": 0.012543666243854723
+        },
+        "16": {
+          "production": 0.3402097554311818,
+          "temoin": 0.006917010448001637
+        },
+        "20": {
+          "production": 0.7026624297094988,
+          "temoin": 0.005732372942889974
+        },
+        "24": {
+          "production": 0.5058643913642462,
+          "temoin": 0.01480849461893241
+        }
+      },
+      "production": 0.7026624297094988,
+      "temoin": 0.01480849461893241
+    },
+    "103": {
+      "par_emission": {
+        "4": {
+          "production": 0.8434329804253338,
+          "temoin": 0.05240010472665835
+        },
+        "8": {
+          "production": 0.6154309123793686,
+          "temoin": 0.009901486487567945
+        },
+        "12": {
+          "production": 0.5270757829128478,
+          "temoin": 0.01812551830374942
+        },
+        "16": {
+          "production": 0.6598364782405552,
+          "temoin": 0.008876434508363396
+        },
+        "20": {
+          "production": 0.8695845860340814,
+          "temoin": 0.0015083555966983742
+        },
+        "24": {
+          "production": 0.7654269832932779,
+          "temoin": 0.030107241771017756
+        }
+      },
+      "production": 0.8695845860340814,
+      "temoin": 0.05240010472665835
+    }
+  },
+  "memoire_pic_mo": {
+    "rederive|seed=101": {
+      "rss_pic_mo": 1251.5,
+      "vram_pic_mo": 0.0
+    },
+    "production|seed=101": {
+      "rss_pic_mo": 1073.1,
+      "vram_pic_mo": 32.3
+    },
+    "temoin|seed=101": {
+      "rss_pic_mo": 1005.3,
+      "vram_pic_mo": 32.3
+    },
+    "rederive|seed=102": {
+      "rss_pic_mo": 1611.7,
+      "vram_pic_mo": 0.0
+    },
+    "production|seed=102": {
+      "rss_pic_mo": 1495.7,
+      "vram_pic_mo": 32.3
+    },
+    "temoin|seed=102": {
+      "rss_pic_mo": 1416.3,
+      "vram_pic_mo": 32.3
+    },
+    "rederive|seed=103": {
+      "rss_pic_mo": 1500.0,
+      "vram_pic_mo": 0.0
+    },
+    "production|seed=103": {
+      "rss_pic_mo": 1416.8,
+      "vram_pic_mo": 32.3
+    },
+    "temoin|seed=103": {
+      "rss_pic_mo": 1286.1,
+      "vram_pic_mo": 32.3
+    }
+  },
+  "lecture_mecanique": {
+    "mort_b": {
+      "pin_severe": 0.0733,
+      "par_seed": {
+        "101": {
+          "production_dchi_max": 0.7032877798557573,
+          "temoin_dchi_max": 0.07730780184466135,
+          "production_traverse": true,
+          "temoin_traverse": true,
+          "label": "MORT-b — Option B EST le remède (cause a, f32)",
+          "option_a_morte": true,
+          "option_b_est_le_remede": true
+        },
+        "102": {
+          "production_dchi_max": 0.7026624297094988,
+          "temoin_dchi_max": 0.01480849461893241,
+          "production_traverse": true,
+          "temoin_traverse": false,
+          "label": "MORT-b — Option B N'EST PAS le remède (cause b+c : EPS et/ou structure)",
+          "option_a_morte": true,
+          "option_b_est_le_remede": false
+        },
+        "103": {
+          "production_dchi_max": 0.8695845860340814,
+          "temoin_dchi_max": 0.05240010472665835,
+          "production_traverse": true,
+          "temoin_traverse": false,
+          "label": "MORT-b — Option B N'EST PAS le remède (cause b+c : EPS et/ou structure)",
+          "option_a_morte": true,
+          "option_b_est_le_remede": false
+        }
+      },
+      "seeds_traversants": [
+        101,
+        102,
+        103
+      ],
+      "option_a_morte": true,
+      "verdict": "MORT-b — Option B N'EST PAS le remède (cause b+c : EPS et/ou structure)",
+      "option_b_est_le_remede": false,
+      "anomalies": [],
+      "note_remede": "Option B (tout-déterministe) ne corrige que (a) l'arithmétique f32. Elle n'est le remède QUE si tout seed traversant a son témoin traversant. Un traversant à témoin PASSANT accuse (b) EPS et/ou (c) structure — remède ailleurs."
+    },
+    "cellule": {
+      "graines": [
+        101,
+        102,
+        103
+      ],
+      "delta_t": 4,
+      "emissions": [
+        4,
+        8,
+        12,
+        16,
+        20,
+        24
+      ],
+      "n_episodes": 24,
+      "cap_commit": 0.1
+    },
+    "ce_que_ce_pass_dit": "gate (iii) re-scopé (§A31-build) : un PASS s'énonce « M-b sans mort À 64², sur fovéation 2-niveaux » et RIEN de plus. Il ne peut PAS s'énoncer « le contrat tient à l'échelle V4 » : la transposition à V4 est NOMMÉE, non mesurée, et son falsificateur exigerait un rederive à l'échelle V4 qu'« intouché » interdit. (Ici aucun PASS n'est prononcé — la limite est reportée quand même, elle ne dépend pas du résultat.)",
+    "portees": {
+      "l1_l3_non_validees_a_v4": "à 64² sur DEUX niveaux, L1 étalée et L3 ne sont exercées que MARGINALEMENT : la mesure de fidélité NE LES VALIDE PAS à l'échelle V4 (131 072²). Un PASS ici ne dit rien de leur comportement à grande échelle.",
+      "colonnes_entrantes_dominantes": "la fovéa mobile E4c parcourt ~24 cellules sur les 6 émissions, soit ~un TIERS du domaine 64². La contribution des colonnes ENTRANTES (prédites depuis le grossier à chaque déplacement) y est FORTE — l'écart mesuré est en bonne part celui de la prédiction de bord, pas du cœur fovéal.",
+      "gate_iii_re_scope_a_64": "gate (iii) RE-SCOPÉ AVANT le run (§A31-build) : il était gravé « M-b sans mort SUR V4 » alors que M-b tourne à 64² — structurellement insatisfiable. Il devient « M-b sans mort À 64², sur fovéation 2-niveaux ». Le contrat à l'échelle V4 devient une TRANSPOSITION NOMMÉE, NON MESURÉE : son falsificateur exigerait un rederive à l'échelle V4, interdit par « rederive intouché ». Conséquence : un PASS ici ne peut PAS s'énoncer « le contrat tient à l'échelle V4 », seulement « sans mort à 64² sur deux niveaux ».",
+      "reserve_temoin_etat_vs_mesure": "au BUILD, le témoin a montré (a) = 6e-5 d'écart relatif contre le rederive f64 — trois ordres SOUS le pin 0,0733. La branche « les deux traversent ⇒ Option B est le remède » en devient très improbable, et une traversée de production sera presque certainement (b)+(c). RÉSERVE : 6e-5 est une vérification d'ÉTAT au build, PAS la mesure Δχ pré-enregistrée — l'instrument n'est pas le même, le témoin doit tourner comme prévu et sa branche reste lue sur SA mesure."
+    },
+    "verrous": {
+      "kernels": "F fidèle _SOURCE_FIDELE 6dd207ca (C1) INTOUCHÉ ; figés e18015f5/9533a130 ; Exner 3533fd0b — aucun kernel neuf en tranche-2",
+      "rederive": "`run_history` CPU f64 INTOUCHÉ — la vérité-sol ; les centres des deux bras sont vérifiés contre lui",
+      "invariant_liant": "`t1.pas_f_fidele is t2.pas_f_fidele` — identité, pas diff. Le halo-parent est rafraîchi entre étages RK2 AU DRIVER (couche t2), jamais dans `pas_f_fidele`",
+      "canal": "remontée L3 seuillée EPS 0.01, connaissance CPU option 1 (la `reference`), cap 10% ; pas de miroir CPU",
+      "cadence_exner": "LUE de save_every = 2"
+    }
+  }
+}
