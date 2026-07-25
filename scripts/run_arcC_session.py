@@ -182,6 +182,58 @@ def fabrique_affiche(rendu: str, taille_px: int) -> "callable":
         f"run_arcC_session : chemin de rendu inconnu {rendu!r} (attendu {CHEMINS_RENDU!r}).")
 
 
+# Géométrie de la campagne qui a mesuré le pin gravé jnd_sev 7.33 % IC
+# [6.03, 8.67] : `outputs/arcC/manifeste_campagne.json`, 2026-07-05, harnais
+# 3d2a6ed8, ppd 42.099, taille_domaine_px 77. RECOPIÉE, jamais dérivée.
+GEOMETRIE_DU_PIN: str = "pic-csf"
+
+
+def assert_geometrie_comparable(geometrie: str, *, est_session_humaine: bool) -> None:
+    """GARDE PUR de COMPARABILITÉ, BLOQUANTE (§A38-CORRECTION, pré-requis P3).
+
+    Une session humaine dont la géométrie d'affichage n'est pas celle de la
+    campagne du pin ne peut PAS être lue contre l'IC gravé [6.03, 8.67] : elle
+    aurait changé DEUX choses à la fois (le chemin de rendu ET la taille
+    d'affichage), et un écart deviendrait inattribuable — chemin ? géométrie ?
+    C'est exactement ce que le bras témoin de P3 existe pour exclure.
+
+    Replay et sujet synthétique : NO-OP (rien ne s'affiche, aucune donnée
+    humaine n'est produite).
+
+    HISTORIQUE, consigné parce qu'il porte une leçon : cette garde a d'abord
+    été pré-enregistrée comme une garde d'ACUITÉ (« cellule ≥ seuil ⇒ refus »).
+    Falsifiée AVANT build : à pic-CSF la taille angulaire d'une cellule vaut
+    `(porteuse/c_deg_cible)·60/64` = 1.71875 arcmin — `ppd` s'annule —, donc
+    ≥ 1.0 arcmin PARTOUT ; la garde aurait refusé toute session pic-CSF, y
+    compris la campagne fondatrice du pin (ratio 1.71). Le report §C7 reste
+    donc ce que §C7 pièce 3 voulait qu'il soit : un CHIFFRE SURFACÉ au sidecar,
+    jamais un booléen. La tension d'acuité est une propriété du RÉFÉRENT,
+    symétrique entre les deux bras — pas un confondeur."""
+    if not est_session_humaine:
+        return
+    if geometrie != GEOMETRIE_DU_PIN:
+        raise RuntimeError(
+            f"Géométrie de session {geometrie!r} INCOMPARABLE au pin -- la campagne qui a "
+            f"mesuré jnd_sev 7.33 % IC [6.03, 8.67] a tourné en {GEOMETRIE_DU_PIN!r} "
+            "(outputs/arcC/manifeste_campagne.json, 2026-07-05, ppd 42.099, 77 px). "
+            "CAUSE : lire un seuil contre cet IC exige les conditions du pin ; changer la "
+            "taille d'affichage EN PLUS du chemin de rendu ferait deux changements à la "
+            "fois, et l'écart mesuré ne serait attribuable ni au chemin ni à la "
+            "géométrie.\n"
+            f"    CORRECTION : relance avec --geometrie {GEOMETRIE_DU_PIN}\n"
+            "AUCUN essai n'a été présenté, AUCUNE donnée n'est produite -- rien à "
+            "reprendre, seulement à relancer.")
+
+
+def sha256_fichier(chemin: Path) -> str:
+    """sha256 d'un fichier lu en OCTETS. Sert la LIAISON sidecar↔log
+    (pré-requis P3) : le sidecar de conditions porte le sha du log JSONL écrit
+    à la clôture, et la lecture versionnée du verdict CITE ce sha — plus
+    d'appariement par nom de fichier seul. `arcC_abx.py` reste INTOUCHÉ : c'est
+    un post-traitement de coquille, pas un changement de format de log."""
+    return hashlib.sha256(chemin.read_bytes()).hexdigest()
+
+
 def _sha256_module_rendu() -> str:
     """Empreinte sha256 de la SOURCE de `src/arcC_rendu.py` (fichier lu en
     octets), recalculée à CHAQUE session.
@@ -403,6 +455,11 @@ def main() -> None:
             "par écrit, pas par habitude, AVANT toute donnée humaine) -- absentes seulement "
             "en --replay (aucune capture humaine, rien à consigner).")
 
+    # Garde de COMPARABILITÉ (§A38-CORRECTION), avant toute plomberie : cette
+    # coquille n'a pas de mode synthétique -- toute session sans `--replay` est
+    # une session humaine (cf. docstring module).
+    assert_geometrie_comparable(args.geometrie, est_session_humaine=args.replay is None)
+
     regime = REGIME_SEVERE if args.regime == "severe" else REGIME_LAXISTE
     ppd = pixels_par_degre(args.long_ref_px, args.long_ref_mm, args.distance_mm)
     taille_px = calcule_taille_affichage_px(
@@ -482,13 +539,17 @@ def main() -> None:
     # casse. Motif de l'écart au « en-tête JSONL » demandé : cf. docstring
     # module (le log d'essais n'a pas d'en-tête, et `arcC_abx.py` est
     # intouchable).
+    # `sha256_log` (pré-requis P3) : calculé sur le JSONL DÉJÀ écrit ci-dessus,
+    # à la CLÔTURE. La lecture versionnée du verdict citera ce sha — un log
+    # altéré d'un seul octet devient détectable, et l'appariement
+    # sidecar↔log cesse de reposer sur le nom de fichier.
     conditions_path = out_path.parent / f"{out_path.stem}.conditions.json"
     ecrit_manifeste_json(conditions_path, dict(
         luminosite=args.luminosite, conditions=args.conditions,
         long_ref_px=args.long_ref_px, long_ref_mm=args.long_ref_mm,
         distance_mm=args.distance_mm, c_deg_cible=args.c_deg_cible,
         porteuse_cyc_par_domaine=args.porteuse_cyc_par_domaine,
-        provenance_rendu=provenance))
+        provenance_rendu=provenance, sha256_log=sha256_fichier(out_path)))
 
     print("=" * 78)
     print(f"ARC C / TASK 3 -- SESSION staircase={args.numero_staircase} régime={regime.nom}")

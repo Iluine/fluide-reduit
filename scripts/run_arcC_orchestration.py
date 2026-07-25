@@ -540,7 +540,11 @@ def main() -> None:
         print("[AVERTISSEMENT] --sujet humain : chemin délégué à la coquille interactive, "
               "NON testé par ce build. Aucune session humaine n'est lancée par les tests.")
         taille_px = calcule_taille_affichage_px(args.geometrie, ppd)
-        from scripts.run_arcC_session import provenance_rendu
+        from scripts.run_arcC_session import assert_geometrie_comparable, provenance_rendu
+        # Garde de COMPARABILITÉ (§A38-CORRECTION) : MÊME garde que la coquille
+        # isolée, importée d'elle -- une campagne et une session ne peuvent pas
+        # diverger sur ce qui rend un verdict lisible contre l'IC gravé.
+        assert_geometrie_comparable(args.geometrie, est_session_humaine=True)
         provenance = provenance_rendu(
             args.rendu, ppd=ppd, taille_px=taille_px,
             obs=observation_cellule_pic_csf(ppd))
