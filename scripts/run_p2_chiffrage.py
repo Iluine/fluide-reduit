@@ -17,9 +17,35 @@ surclame ; P2 dit « le NOYAU coûte X ».
     Bande [0.05, 5] ms. Consommateur (D17) : l'intégrité des timings de
     présentation du régime sévère (§C0).
   Cellule 2 — étages sRGB + quantification (Y = A) en f32 sur 1920×1080, GPU.
-    L'ÉQUIVALENCE au numpy passe D'ABORD, tolérance ZÉRO. Bande [0.02, 0.5] ms.
-    Consommateur (D17) : la ligne de budget « ~16.7 ms pour un rendu jamais
-    chiffré ».
+    L'ÉQUIVALENCE passe D'ABORD, au CRITÈRE DE NATURE (§A38-CORRECTION-2).
+    Bande [0.02, 0.5] ms. Consommateur (D17) : la ligne de budget « ~16.7 ms
+    pour un rendu jamais chiffré ».
+
+CRITÈRE D'ÉQUIVALENCE — REMPLACÉ (§A38-CORRECTION-2, correction explicite du
+prereg ; rien n'est réécrit). La « tolérance ZÉRO » d'origine a été FALSIFIÉE
+STRUCTURELLEMENT par la mesure de ce runner : 13 px sur 2.07·10⁶ diffèrent de
+1 niveau, tous à < 1.73·10⁻⁵ de la bascule de `rint`, cause isolée =
+l'arithmétique f32 de la puissance 1/2.4. Le confondeur du champ test est
+démasqué au passage : un champ 64×64 a **au plus 4096 valeurs distinctes par
+construction** — le champ réel passait « tolérance zéro » par PAUVRETÉ
+d'échantillons, jamais par équivalence. Le critère devait changer, pas la
+mesure. Ce qui est gravé désormais, prononcé mécaniquement DANS CET ORDRE :
+
+  1. équivalence STRUCTURELLE — les formules sont RECOPIÉES de `arcC_rendu.py`
+     et son sha est cité ; le runner vérifie que ce sha est encore celui du
+     fichier. C'est elle qui juge la FORMULE.
+  2. ISOLATION DES CAUSES, booléenne — la chaîne f64 à entrée castée f32 doit
+     rendre ZÉRO désaccord, sinon AUTRE. Elle sépare « l'entrée a perdu des
+     bits » de « l'arithmétique a arrondi ailleurs ».
+  3. BASCULE PURE — tout désaccord résiduel de la chaîne f32 vaut
+     |Δniveau| == 1 EXACTEMENT ; un écart ≥ 2 niveaux est une formule fausse,
+     verdict AUTRE.
+  4. taux de désaccord et distance à la bascule : SURFACÉS au JSON, JAMAIS
+     jugés.
+
+Portée dite : le critère de nature juge l'ARITHMÉTIQUE ; un écart de formule
+sub-niveau SYSTÉMATIQUE passerait le point 3 — il est couvert par le point 1,
+la recopie.
 
 QUI LANCE QUOI. Les 300 appels officiels sont VERDICT-GRADE : iluin-tworings3,
 terminal natif, **lancés par Romain**. `--n-appels`/`--n-chauffe` existent pour
@@ -74,6 +100,13 @@ FORME_V4: tuple[int, int] = (1080, 1920)
 # Champ réel de la cellule 1 : celui des images d'exemple de P1.
 SEED_SOURCE: int = 101
 CLE_CHAMP: str = "s_L10"
+# Champs test de l'ÉQUIVALENCE, GRAVÉS (§A38-CORRECTION-2) : la rampe (choix
+# adverse) + trois uniformes seedés. Le champ RÉEL est consigné INSUFFISANT
+# pour ce test — au plus 4096 valeurs distinctes par construction — et reste le
+# champ de la cellule 1, où il est le bon objet.
+SEEDS_UNIFORMES_EQUIVALENCE: tuple[int, ...] = (0, 1, 2)
+# Empreinte de R1 attendue par la RECOPIE ci-dessous (point 1 du critère).
+SHA256_R1_RECOPIE: str = "c5ac875798d7cdb770702e9d612683ab3448ec8556fa2e81b3d902d426e4fe10"
 
 VERDICT_DANS_BANDE: str = "DANS_BANDE"
 VERDICT_AUTRE: str = "AUTRE"
@@ -136,16 +169,16 @@ def lecture_cellule1(mediane_ms: float) -> dict:
 def lecture_cellule2(mediane_ms: float) -> dict:
     """Lectures pré-écrites de la cellule 2 (prereg), les DEUX branches.
 
-    RENDRE « ≪ » MÉCANIQUE — le seul point du prereg qui n'était pas un
-    opérateur, et il est REMONTÉ comme tel. La branche 1 dit « médiane ≪ marge
-    V4 (2.199 ms) », la branche 2 « comparable ou supérieure » : entre les deux
-    il n'existe aucun nombre gravé. Règle appliquée, dérivée des seuls chiffres
-    DÉJÀ gravés, sans en inventer un :
+    RÈGLE DES ZONES, désormais GRAVÉE (§A38-CORRECTION-2). Le prereg d'origine
+    écrivait « médiane ≪ marge V4 » pour la branche 1 et « comparable ou
+    supérieure » pour la branche 2, sans aucun nombre entre les deux — flou de
+    plume, consigné comme tel, résolu sans inventer de seuil (uniquement des
+    nombres déjà gravés) :
 
       - médiane <= 0.5 ms (le HAUT de la bande gravée de cette cellule, soit
         0.227 x la marge) ⇒ branche 1 : à cette échelle « ≪ » est garanti par
         la bande elle-même ;
-      - médiane >= 2.199 ms (la marge) ⇒ branche 2 ;
+      - médiane >= 2.199 ms (la marge V4) ⇒ branche 2 ;
       - entre les deux ⇒ AUCUNE branche prononcée, le ratio est surfacé et la
         lecture remonte à Romain. Prononcer là serait choisir un seuil.
     """
@@ -214,51 +247,100 @@ def etages_srgb_quantif_cupy(cp, champ_f32):
     return cp.rint(v * np.float32(arcC_rendu.NIVEAU_MAX_UINT8)).astype(cp.uint8), v
 
 
-def champ_equivalence() -> np.ndarray:
-    """Champ test de l'équivalence : une RAMPE `linspace(0, 1)` sur 1920x1080.
-    Choix nommé — elle couvre la bande entière, les deux extrémités exactes
-    (0.0 et 1.0) ET la branche linéaire de sRGB (~6500 points sous 0.0031308),
-    ce qu'un tirage aléatoire ne garantit pas. Déterministe par construction."""
+def champ_rampe() -> np.ndarray:
+    """RAMPE `linspace(0, 1)` sur 1920x1080 — le CHOIX ADVERSE, gravé.
+    Elle couvre la bande entière, les deux extrémités exactes (0.0 et 1.0), la
+    branche linéaire de sRGB (~6500 points sous 0.0031308) et 2.07·10⁶ valeurs
+    DISTINCTES. C'est la densité qui compte : le taux de bascule est d'environ
+    10⁻⁵ PAR VALEUR DISTINCTE, donc un champ pauvre en valeurs passe n'importe
+    quel critère d'équivalence par chance."""
     total = FORME_V4[0] * FORME_V4[1]
     return np.linspace(0.0, 1.0, total, dtype=np.float64).reshape(FORME_V4)
 
 
-def verifie_equivalence(cp) -> dict:
-    """ÉQUIVALENCE D'ABORD, TOLÉRANCE ZÉRO (prereg cellule 2) : la sonde f32
-    doit rendre les MÊMES uint8 que la chaîne numpy f64 de R1 sur le champ
-    test. L'arrondi f32/f64 de la puissance 1/2.4 peut casser le bit-exact —
-    si c'est le cas on le REMONTE CHIFFRÉ (combien de pixels, de combien),
-    jamais on ne le tolère en silence.
+def champs_equivalence() -> tuple[tuple[str, np.ndarray], ...]:
+    """Les champs test GRAVÉS de l'équivalence (§A38-CORRECTION-2) : la rampe
+    plus trois uniformes seedés. Le champ RÉEL n'en fait pas partie — consigné
+    INSUFFISANT (au plus 4096 valeurs distinctes par construction) ; il reste le
+    champ de la cellule 1, où il est le bon objet."""
+    champs = [("rampe_linspace", champ_rampe())]
+    for seed in SEEDS_UNIFORMES_EQUIVALENCE:
+        champs.append((f"uniforme_seed{seed}",
+                       np.random.default_rng(seed).uniform(0.0, 1.0, size=FORME_V4)))
+    return tuple(champs)
 
-    Contrôle adjoint : les valeurs encodées f32 restent dans [0, 1]. Hors
-    bande, `astype(uint8)` enroulerait silencieusement (255.4 -> 255 mais
-    256.0 -> 0) — c'est exactement la classe de défaut que la garde fail-loud
-    de R1 refuse, et la sonde ne doit pas la ré-ouvrir."""
-    champ = champ_equivalence()
+
+def _analyse_equivalence_champ(cp, champ: np.ndarray) -> dict:
+    """Les points 2, 3 et 4 du critère de NATURE sur UN champ test.
+
+    Point 2 — ISOLATION DES CAUSES : la chaîne f64 alimentée par l'entrée
+    CASTÉE en f32 doit rendre les mêmes uint8 que la chaîne f64 pleine. Zéro
+    désaccord exigé. Ce point sépare « l'entrée a perdu des bits » de
+    « l'arithmétique a arrondi ailleurs » : sans lui, un désaccord de bascule
+    serait inattribuable.
+
+    Point 3 — BASCULE PURE : tout désaccord résiduel de la chaîne f32 vaut
+    |Δniveau| == 1 exactement. `np.rint` étant monotone, un désaccord d'un seul
+    niveau ne peut encadrer qu'UNE frontière d'arrondi ; deux niveaux ou plus
+    signifient que les deux chaînes ne calculent pas la même chose, et c'est
+    AUTRE. C'est aussi ce point qui attraperait un enroulement `astype(uint8)`
+    (256.0 -> 0 ferait un écart de 255 niveaux).
+
+    Point 4 — le taux et la distance à la bascule sont SURFACÉS, jamais jugés :
+    ils rendent le chiffre lisible (« arrondi » vs « formule différente »), ils
+    ne décident de rien."""
     encode64 = srgb_encode(champ)
     attendu = quantifie_uint8(encode64)
+
+    entree_f32 = np.asarray(champ, dtype=np.float32).astype(np.float64)
+    n_isolation = int((attendu != quantifie_uint8(srgb_encode(entree_f32))).sum())
+
     obtenu_gpu, encode_gpu = etages_srgb_quantif_cupy(cp, cp.asarray(champ, dtype=cp.float32))
     obtenu = cp.asnumpy(obtenu_gpu)
-    v_min = float(cp.asnumpy(encode_gpu.min()))
-    v_max = float(cp.asnumpy(encode_gpu.max()))
-
-    differents = attendu != obtenu
+    ecarts = np.abs(attendu.astype(np.int16) - obtenu.astype(np.int16))
+    differents = ecarts != 0
     n_differents = int(differents.sum())
-    ecart_max = int(np.abs(attendu.astype(np.int16) - obtenu.astype(np.int16)).max())
+    ecart_max = int(ecarts.max())
 
-    # Rend l'écart LISIBLE plutôt que seulement compté : distance des pixels en
-    # désaccord au point de bascule de `np.rint` (k + 0.5). Un désaccord collé à
-    # la bascule est le désaccord MINIMAL possible entre deux arithmétiques —
-    # ce n'est pas une excuse, c'est le chiffre qui permet à Romain de lire
-    # « arrondi f32/f64 » plutôt que « formule différente ».
     echelle = encode64 * float(arcC_rendu.NIVEAU_MAX_UINT8)
     distances = np.abs(echelle - (np.floor(echelle) + 0.5))[differents]
     return dict(
-        equivalent=bool(n_differents == 0 and 0.0 <= v_min and v_max <= 1.0),
-        n_pixels_total=int(attendu.size), n_pixels_differents=n_differents,
-        fraction_differents=n_differents / attendu.size, ecart_max_niveaux=ecart_max,
+        n_pixels_total=int(attendu.size),
+        isolation_entree_f32_desaccords=n_isolation,       # point 2 (doit valoir 0)
+        isolation_ok=bool(n_isolation == 0),
+        n_pixels_differents=n_differents,                  # point 4 (surfacé)
+        fraction_differents=n_differents / attendu.size,   # point 4 (surfacé)
+        ecart_max_niveaux=ecart_max,                       # point 3 (jugé)
+        bascule_pure=bool(n_differents == 0 or ecart_max == 1),
         distance_max_a_la_bascule=(float(distances.max()) if n_differents else None),
-        encode_f32_min=v_min, encode_f32_max=v_max, tolerance="ZERO (prereg cellule 2)")
+        encode_f32_min=float(cp.asnumpy(encode_gpu.min())),
+        encode_f32_max=float(cp.asnumpy(encode_gpu.max())))
+
+
+def verifie_equivalence(cp) -> dict:
+    """CRITÈRE DE NATURE (§A38-CORRECTION-2), prononcé mécaniquement sur les
+    champs test gravés. `equivalent` est vrai ssi les trois points jugeants le
+    sont : recopie à jour (point 1), isolation à zéro sur CHAQUE champ
+    (point 2), bascule pure sur CHAQUE champ (point 3).
+
+    Un seul champ suffit à faire AUTRE : la densité de valeurs distinctes est
+    précisément ce qui rend le test capable d'échouer, et une moyenne sur les
+    champs le re-neutraliserait."""
+    sha_actuel = empreinte_r1()["sha256"]
+    recopie_a_jour = bool(sha_actuel == SHA256_R1_RECOPIE)      # point 1
+
+    par_champ = {nom: _analyse_equivalence_champ(cp, champ)
+                 for nom, champ in champs_equivalence()}
+    isolation_ok = all(a["isolation_ok"] for a in par_champ.values())
+    bascule_pure = all(a["bascule_pure"] for a in par_champ.values())
+    return dict(
+        critere="NATURE (§A38-CORRECTION-2) -- la tolerance ZERO est falsifiee "
+                "structurellement, elle n'est plus le critere",
+        equivalent=bool(recopie_a_jour and isolation_ok and bascule_pure),
+        point1_recopie_a_jour=recopie_a_jour, sha256_r1_recopie=SHA256_R1_RECOPIE,
+        sha256_r1_actuel=sha_actuel,
+        point2_isolation_ok=isolation_ok, point3_bascule_pure=bascule_pure,
+        par_champ=par_champ)
 
 
 def cellule2(cp, *, n_appels: int, n_chauffe: int) -> dict:
@@ -270,10 +352,17 @@ def cellule2(cp, *, n_appels: int, n_chauffe: int) -> dict:
                 forme=list(FORME_V4), n_pixels=FORME_V4[0] * FORME_V4[1],
                 bande_ms=list(BANDE_CELLULE2_MS), equivalence=equivalence)
     if not equivalence["equivalent"]:
+        causes = []
+        if not equivalence["point1_recopie_a_jour"]:
+            causes.append("point 1 (recopie perimee : R1 a bouge depuis la recopie)")
+        if not equivalence["point2_isolation_ok"]:
+            causes.append("point 2 (isolation : la chaine f64 a entree castee f32 desaccorde)")
+        if not equivalence["point3_bascule_pure"]:
+            causes.append("point 3 (ecart >= 2 niveaux : ce n'est plus une bascule)")
         return dict(base, verdict_bande=VERDICT_AUTRE, lecture=dict(
             branche=None, texte=(
-                "EQUIVALENCE ECHOUEE : la sonde f32 ne reproduit pas les uint8 de R1. "
-                "Le chrono n'a PAS ete lance -- un chiffre sur une sonde qui ne calcule "
+                "EQUIVALENCE ECHOUEE au critere de NATURE -- " + " ; ".join(causes) + ". "
+                "Le chrono n'a PAS ete lance : un chiffre sur une sonde qui ne calcule "
                 "pas la meme chose que R1 ne mesure rien d'attribuable.")))
 
     champ = cp.asarray(np.random.default_rng(SEED_SOURCE).uniform(0.0, 1.0, size=FORME_V4),
@@ -374,11 +463,17 @@ def main() -> None:
             c2 = cellule2(cp, n_appels=args.n_appels, n_chauffe=args.n_chauffe)
             rapport["cellule_2"] = c2
             eq = c2["equivalence"]
-            print(f"\n[cellule 2] equivalence f32 vs numpy f64 : equivalent={eq['equivalent']} "
-                  f"({eq['n_pixels_differents']}/{eq['n_pixels_total']} pixels differents, "
-                  f"ecart max {eq['ecart_max_niveaux']} niveau(x), distance max a la "
-                  f"bascule de np.rint = {eq['distance_max_a_la_bascule']} ; encode f32 "
-                  f"dans [{eq['encode_f32_min']:.9f}, {eq['encode_f32_max']:.9f}])")
+            print(f"\n[cellule 2] equivalence, critere de NATURE : "
+                  f"equivalent={eq['equivalent']}  (1) recopie a jour="
+                  f"{eq['point1_recopie_a_jour']}  (2) isolation="
+                  f"{eq['point2_isolation_ok']}  (3) bascule pure="
+                  f"{eq['point3_bascule_pure']}")
+            for nom, a in eq["par_champ"].items():
+                print(f"            {nom:18s} : {a['n_pixels_differents']:6d}/"
+                      f"{a['n_pixels_total']} differents ({a['fraction_differents']:.3e}), "
+                      f"ecart max {a['ecart_max_niveaux']} niveau(x), isolation "
+                      f"{a['isolation_entree_f32_desaccords']} desaccord(s), distance max "
+                      f"a la bascule {a['distance_max_a_la_bascule']}")
             if eq["equivalent"]:
                 print(f"            mediane={c2['mediane_ms']:.4f} ms  "
                       f"p95={c2['p95_ms']:.4f} ms  bande={list(BANDE_CELLULE2_MS)} -> "

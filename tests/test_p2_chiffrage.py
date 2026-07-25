@@ -15,15 +15,16 @@ import hashlib
 import numpy as np
 import pytest
 
+from scripts import run_p2_chiffrage
 from scripts.run_p2_chiffrage import (BANDE_CELLULE1_MS, BANDE_CELLULE2_MS, MARGE_V4_MS,
-                                      N_APPELS_GRAVE, N_CHAUFFE_GRAVE, SEUIL_TIMINGS_P3_MS,
-                                      VERDICT_AUTRE, VERDICT_DANS_BANDE, champ_equivalence,
-                                      chronometre, classe_bande, empreinte_r1,
-                                      etages_srgb_quantif_cupy, lecture_cellule1,
-                                      lecture_cellule2)
+                                      N_APPELS_GRAVE, N_CHAUFFE_GRAVE,
+                                      SEEDS_UNIFORMES_EQUIVALENCE, SHA256_R1_RECOPIE,
+                                      SEUIL_TIMINGS_P3_MS, VERDICT_AUTRE, VERDICT_DANS_BANDE,
+                                      _analyse_equivalence_champ, champ_rampe,
+                                      champs_equivalence, chronometre, classe_bande,
+                                      empreinte_r1, lecture_cellule1, lecture_cellule2)
 from scripts.run_arcC_session import (GEOMETRIE_DU_PIN, assert_geometrie_comparable,
                                       sha256_fichier)
-from src.arcC_rendu import quantifie_uint8, srgb_encode
 from src.f1_gpu.backend import cupy_disponible
 
 gpu_requis = pytest.mark.skipif(
@@ -146,44 +147,87 @@ def test_chronometre_synchronise_avant_chaque_lecture_dhorloge():
 # --- Champ d'équivalence -----------------------------------------------------
 
 
-def test_champ_equivalence_couvre_les_deux_branches_srgb():
-    """La rampe couvre la bande ENTIÈRE, les deux extrémités EXACTES et la
-    branche linéaire de sRGB — ce qu'un tirage aléatoire ne garantit pas.
-    C'est ce qui donne un sens à « tolérance zéro »."""
-    champ = champ_equivalence()
+def test_champ_rampe_couvre_les_deux_branches_srgb():
+    """La rampe est le CHOIX ADVERSE gravé : bande entière, extrémités exactes,
+    branche linéaire de sRGB, et 2.07·10⁶ valeurs DISTINCTES. C'est la densité
+    qui rend le test capable d'échouer — le taux de bascule est ~10⁻⁵ PAR
+    VALEUR DISTINCTE."""
+    champ = champ_rampe()
     assert champ.shape == (1080, 1920) and champ.dtype == np.float64
     assert champ.min() == 0.0 and champ.max() == 1.0
     assert int((champ <= 0.0031308).sum()) > 1000    # branche linéaire échantillonnée
 
 
-@gpu_requis
-def test_equivalence_sonde_cupy_contre_r1_numpy():
-    """L'ÉQUIVALENCE, tolérance ZÉRO (prereg cellule 2) — sur un ÉCHANTILLON
-    du champ test (le plein 1920x1080 est pour le runner, pas pour la suite).
+def test_champs_equivalence_sont_ceux_graves():
+    """Les champs test sont GRAVÉS (§A38-CORRECTION-2) : rampe + trois
+    uniformes seedés, et le champ RÉEL n'en fait PAS partie.
 
-    Ce test ne présuppose AUCUNE branche : l'arrondi f32/f64 de la puissance
-    1/2.4 PEUT casser le bit-exact, et si c'est le cas le chiffre doit être
-    remonté, pas toléré. Il vérifie donc que la sonde est DÉCIDABLE (elle rend
-    des uint8 comparables et des valeurs encodées dans [0,1]) et IMPRIME
-    l'écart mesuré."""
+    Le motif est mesuré, pas supposé : un champ 64x64 a au plus 4096 valeurs
+    distinctes par construction, donc il passe n'importe quel critère
+    d'équivalence par PAUVRETÉ d'échantillons. Ce test verrouille la densité,
+    la seule propriété qui rend le critère falsifiable."""
+    champs = champs_equivalence()
+    assert [nom for nom, _ in champs] == ["rampe_linspace", "uniforme_seed0",
+                                          "uniforme_seed1", "uniforme_seed2"]
+    assert SEEDS_UNIFORMES_EQUIVALENCE == (0, 1, 2)
+    for nom, champ in champs:
+        assert champ.shape == (1080, 1920) and champ.dtype == np.float64
+        assert len(np.unique(champ)) > 2_000_000, f"{nom} : trop peu de valeurs distinctes"
+
+
+def test_sha256_de_la_recopie_est_celui_du_verrou():
+    """Point 1 du critère de NATURE : la recopie des formules cite un sha, et
+    c'est celui que `tests/test_arcC_rendu.py` verrouille. Si R1 bouge, la
+    recopie est PÉRIMÉE et la cellule 2 doit rendre AUTRE — pas continuer sur
+    des formules qui ne sont plus celles de l'instrument."""
+    from tests.test_arcC_rendu import SHA256_ATTENDU
+
+    assert SHA256_R1_RECOPIE == SHA256_ATTENDU
+
+
+@gpu_requis
+def test_analyse_equivalence_est_decidable():
+    """CRITÈRE DE NATURE, sur un ÉCHANTILLON (le plein 1920x1080 est pour le
+    runner, pas pour la suite).
+
+    Ce test ne présuppose AUCUNE branche — ni que l'isolation soit à zéro, ni
+    que la bascule soit pure : ce sont des FAITS que le runner mesure et
+    prononce. Il vérifie que l'analyse est DÉCIDABLE (tous les champs jugeants
+    et surfacés sont présents et cohérents entre eux) et IMPRIME ce qu'elle a
+    mesuré."""
     import cupy as cp
 
-    champ = champ_equivalence()[::37, ::41].copy()
-    attendu = quantifie_uint8(srgb_encode(champ))
-    obtenu_gpu, encode_gpu = etages_srgb_quantif_cupy(cp, cp.asarray(champ, dtype=cp.float32))
-    obtenu = cp.asnumpy(obtenu_gpu)
+    analyse = _analyse_equivalence_champ(cp, champ_rampe()[::37, ::41].copy())
+    print(f"\n[critere de nature, echantillon] {analyse}")
 
-    n_diff = int((attendu != obtenu).sum())
-    ecart = int(np.abs(attendu.astype(np.int16) - obtenu.astype(np.int16)).max())
-    v_min = float(cp.asnumpy(encode_gpu.min()))
-    v_max = float(cp.asnumpy(encode_gpu.max()))
-    print(f"\n[equivalence f32 vs f64] {n_diff}/{attendu.size} pixels differents, "
-          f"ecart max {ecart} niveau(x), encode f32 dans [{v_min:.9f}, {v_max:.9f}]")
+    assert set(analyse) >= {"isolation_ok", "bascule_pure", "n_pixels_differents",
+                            "ecart_max_niveaux", "distance_max_a_la_bascule"}
+    assert analyse["isolation_ok"] == (analyse["isolation_entree_f32_desaccords"] == 0)
+    assert analyse["bascule_pure"] == (analyse["ecart_max_niveaux"] <= 1)
+    assert 0.0 <= analyse["encode_f32_min"] and analyse["encode_f32_max"] <= 1.0
 
-    assert obtenu.dtype == np.uint8 and obtenu.shape == attendu.shape
-    assert 0.0 <= v_min and v_max <= 1.0, (
-        "l'encodage f32 sort de [0,1] : `astype(uint8)` enroulerait silencieusement, "
-        "exactement la classe de defaut que la garde fail-loud de R1 refuse.")
+
+@gpu_requis
+def test_point3_refuse_un_ecart_de_deux_niveaux(monkeypatch):
+    """FALSIFIEUR du point 3 : une sonde décalée de 2 niveaux n'est PAS une
+    bascule — `np.rint` étant monotone, un désaccord d'un seul niveau ne peut
+    encadrer qu'UNE frontière d'arrondi ; au-delà, les deux chaînes ne
+    calculent pas la même chose et le verdict doit être AUTRE.
+
+    Sans ce test, `bascule_pure` serait une case toujours verte : on saurait
+    qu'elle passe, jamais qu'elle sait échouer."""
+    import cupy as cp
+
+    vraie = run_p2_chiffrage.etages_srgb_quantif_cupy
+
+    def sonde_decalee(cp_mod, champ_f32):
+        quantifie, encode = vraie(cp_mod, champ_f32)
+        return cp_mod.clip(quantifie.astype(cp_mod.int16) + 2, 0, 255).astype(cp_mod.uint8), encode
+
+    monkeypatch.setattr(run_p2_chiffrage, "etages_srgb_quantif_cupy", sonde_decalee)
+    analyse = _analyse_equivalence_champ(cp, champ_rampe()[::37, ::41].copy())
+    assert analyse["ecart_max_niveaux"] >= 2
+    assert analyse["bascule_pure"] is False
 
 
 def test_empreinte_r1_est_celle_du_verrou():
