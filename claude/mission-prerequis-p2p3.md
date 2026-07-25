@@ -46,11 +46,16 @@
 4. **[AJOUTÉ — §A38-CORRECTION-2] Critère de NATURE pour l'équivalence de la
    cellule 2** (`scripts/run_p2_chiffrage.py`) : remplace la tolérance zéro,
    falsifiée structurellement par ta propre remontée. Le runner prononce
-   mécaniquement, dans cet ordre : (1) équivalence structurelle — inchangée
-   (recopie + sha) ; (2) chaîne f64 à entrée castée f32 ⇒ ZÉRO désaccord exigé,
-   sinon AUTRE (ton harnais d'isolation existant) ; (3) chaque désaccord
-   résiduel de la chaîne f32 : |Δniveau| == 1 exactement, sinon AUTRE ;
-   (4) taux et `distance_max_a_la_bascule` surfacés au JSON, JAMAIS jugés.
+   mécaniquement, dans cet ordre : (1) équivalence structurelle — rendue
+   MÉCANIQUE par toi (sha vérifié à l'exécution), confirmée telle quelle ;
+   (2)+(3) **FUSIONNÉES (§A38-CORRECTION-3 — ton ZÉRO d'isolation falsifié à
+   son tour, décision Romain)** : critère de nature UNIFIÉ appliqué à CHAQUE
+   bras — isolation (f64, entrée castée f32) ET f32 complet : tout désaccord =
+   bascule pure, |Δniveau| == 1, sinon AUTRE ; l'attribution par cause redevient
+   un DIAGNOSTIC — comptages surfacés au JSON par champ et par bras, jamais
+   jugés ; (4) taux et `distance_max_a_la_bascule` surfacés, JAMAIS jugés —
+   inchangé. Ton falsifieur (sonde à 2 niveaux) et l'agrégation sans moyenne :
+   confirmés, à étendre au bras d'isolation.
    **Champs test GRAVÉS** : rampe `linspace(0,1)` + 3 uniformes seedés (tes
    seeds existants) ; le champ réel NE COMPTE PAS pour l'équivalence
    (≤ 4096 valeurs distinctes — consigné insuffisant) et reste le champ de la

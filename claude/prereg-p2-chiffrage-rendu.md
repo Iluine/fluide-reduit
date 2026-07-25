@@ -98,6 +98,19 @@ passait « tolérance zéro » par pauvreté d'échantillons, pas par équivalen
 
 Portée dite : le critère de nature juge l'ARITHMÉTIQUE ; un écart de formule
 sub-niveau systématique passerait (3) — il est couvert par (1), la recopie.
+
+**CORRECTION 2 (2026-07-25, §A38-CORRECTION-3 — rien n'est réécrit)** : la
+clause (2) ci-dessus (« isolation ⇒ ZÉRO désaccord ») est **FALSIFIÉE à son
+tour** (6/2/4 désaccords sur les uniformes, tous bascule pure — le cast perturbe
+v·255 de ~10⁻⁶, les franchissements sont l'attente sur 2·10⁶ valeurs ; le 0 de
+la rampe était un tirage, dit partiel après coup). **Critère retenu (décision
+Romain, option A) : NATURE UNIFIÉE** — les clauses (2) et (3) fusionnent : tout
+désaccord, dans le bras d'isolation COMME dans le bras f32 complet, doit être
+une bascule pure (|Δniveau| == 1), sinon AUTRE ; **l'attribution par cause
+redevient un diagnostic** — comptages surfacés par champ et par bras, jamais
+jugés. La clause (1) est désormais MÉCANIQUE (sha de la recopie vérifié à
+l'exécution). Leçon gravée : un zéro mesuré est un tirage tant que sa structure
+n'est pas dérivée.
 **Champs test GRAVÉS** : rampe `linspace(0,1)` (le choix adverse — couvre les
 deux branches sRGB, 2.07·10⁶ valeurs distinctes) + 3 uniformes seedés ; le champ
 réel est consigné INSUFFISANT pour ce test. Écho consigné, à ne pas instruire :
