@@ -117,6 +117,24 @@ réel est consigné INSUFFISANT pour ce test. Écho consigné, à ne pas instrui
 même bête que le fait d'instrument CPU/BLAS — une pièce au dossier de la
 proposition non endossée « quantification du commis par format » (note v2 §5).
 
+**CORRECTION 3 (2026-07-25 soir, §A39-CORRECTION — rien n'est réécrit)** : le
+prereg était intérieurement INCOHÉRENT — la bande venait d'un modèle à UNE passe
+(« ~10 Mo à 224 Go/s »), le texte gravait une implémentation à DIX (« sonde CuPy
+élémentaire ») : deux objets sous la même phrase ; l'AUTRE du run signalait cette
+incohérence (diagnostic : une passe 0.1115 ms = 148.8 Go/s ; la puissance 1/2.4
+quasi gratuite ; sonde = 8.8× une passe). **Décision Romain : CELLULE 2b
+pré-enregistrée** — l'objet est le **noyau FUSIONNÉ, un kernel, une passe**
+(l'objet que la bande a toujours modélisé), MÊME bande [0.02, 0.5], MÊME critère
+de nature unifié (déjà satisfait en diagnostic : 9/21 désaccords, bascule pure),
+MÊMES zones, prononcé mécanique par le runner, **run verdict-grade par Romain**.
+La cellule 2a (sonde élémentaire) et son verdict AUTRE restent gravés tels
+quels : le coût de l'implémentation naïve, leçon consignée. Le chiffre
+diagnostic 0.1200 ms (session de build) n'est PAS l'ancre — l'ancre sortira du
+runner. Consigné avec : même fusionné, le papier était optimiste ×2.4
+(86.4 Go/s effectifs, écritures uint8 étroites — absorbé par la marge ×10 de la
+bande) ; le script diagnostic de scratchpad meurt sans perte (ses chiffres
+vivent ici, le kernel vit dans le runner testé).
+
 **2. La règle des zones de la cellule 2 est GRAVÉE** (le « ≪ » sans nombre de la
 branche 1 était un flou de plume, résolu sans inventer de seuil — uniquement des
 nombres déjà gravés) : branche 1 (« la dette se déplace ») prononcée si

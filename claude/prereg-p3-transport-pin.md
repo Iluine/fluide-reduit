@@ -53,6 +53,15 @@ décisions nommées (§A35/D15, seance-fidelite §4) ; aucune n'est souhaitée.
   l'écran a dérivé depuis Arc C) — aucune lecture de transport n'est prononcée.
   Sans ce bras, un écart R1-vs-pin serait inattribuable (chemin ? dérive ?).
 
+**PRÉCISIONS GRAVÉES (2026-07-25 soir, décisions Romain)** : (1) **position du
+témoin** : la 3e des 4 staircases de la session — deux staircases R1, PUIS le
+témoin viridis, PUIS la dernière R1 — pour répartir fatigue et apprentissage
+sur les deux bras ; gravée AVANT la session, l'outillage la matérialise
+(chantier 6). (2) **Conditions de session = celles du pin** : lumière du jour
+stable, OSD 80 %, sujet frais — une session de nuit a été explicitement
+refusée le 25/07 au soir (le pin est pré-enregistré pour sa config exacte ;
+brûler une session pour un INDÉTERMINÉ prévisible n'est pas une mesure).
+
 ## Lectures pré-écrites (prononcées mécaniquement, aucune à l'œil)
 
 Sous témoin valide, avec IC(R1) = IC de jnd_sev^R1 (même méthode) :

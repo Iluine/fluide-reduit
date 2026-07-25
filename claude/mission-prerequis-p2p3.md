@@ -64,6 +64,27 @@
    implémentation du point n°1 est confirmée telle quelle. Tests à mettre à
    jour en conséquence ; toujours AUCUN chrono verdict-grade par toi.
 
+5. **[AJOUTÉ — §A39-CORRECTION] Cellule 2b : le noyau FUSIONNÉ promu au
+   runner** (`scripts/run_p2_chiffrage.py`) : ton kernel fusionné (un seul
+   kernel, constantes en paramètres) devient l'objet d'une cellule 2b —
+   MÊME bande [0.02, 0.5], MÊME critère de nature unifié via `compare_bras`,
+   MÊMES zones, prononcé mécanique, dans le même JSON (clé `cellule_2b`,
+   la 2a reste intacte avec son AUTRE). Tests : équivalence des quatre champs,
+   falsifieur (sonde décalée ⇒ AUTRE), bandes verrouillées étendues à 2b.
+   Le script de scratchpad meurt ; sa substance vit ici.
+6. **[AJOUTÉ — prereg P3, précisions gravées] Support de session P3 dans
+   l'orchestration** (`scripts/run_arcC_orchestration.py`) :
+   - `--regime {severe,laxiste,tous}`, défaut `tous` (comportement historique
+     intact) — P3 utilisera `severe` ;
+   - `--temoin-viridis` : valide UNIQUEMENT avec `--sujet humain --rendu r1` ;
+     insère UNE staircase témoin en chemin viridis **en 3e position sur 4**
+     (R1, R1, témoin, R1 — position gravée au prereg P3), avec son propre
+     sidecar (provenance viridis : sha=None, chaîne historique — la fonction
+     existante fait déjà foi), seeds dérivées du même schéma déterministe ;
+   - le manifeste consigne l'ordre effectif des staircases et leurs chemins.
+   Tests : ordre des staircases vérifié ; `--temoin-viridis` sans humain/r1 ⇒
+   erreur d'argparse ; sidecars distincts et liés à leurs logs (chantier 3).
+
 ## Garde-fous (ils sont le contrat)
 
 - **`src/arcC_rendu.py` INTOUCHÉ** — l'empreinte c5ac8757… doit rester verte ;
