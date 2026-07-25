@@ -36,13 +36,44 @@ toute donnée humaine : (1) durées d'exposition RÉALISÉES loggées par essai
 + résumé réalisé-vs-nominal imprimé, AVERTISSEMENT si écart >25 %, jamais un
 gate dur) ; (2) `--luminosite`/`--conditions` REQUISES en session live
 (sidecar `<log>.conditions.json`) -- absentes seulement en `--replay` (aucune
-capture humaine)."""
+capture humaine).
+
+P1 / §A37 (2026-07-25) — DEUX CHEMINS D'AFFICHAGE, choisis EXPLICITEMENT.
+`--rendu` est OBLIGATOIRE et SANS DÉFAUT : chaque session future choisit son
+chemin consciemment, jamais par héritage.
+
+  - `viridis` : le chemin HISTORIQUE, conservé tel quel (contrôle A/A,
+    comparaisons avec les sessions d'Arc C déjà mesurées). C'est LUI qui a
+    mesuré le pin gravé jnd_sev 7.33 % -- en PSEUDO-COULEUR, avec
+    l'interpolation par DÉFAUT d'imshow, sans gestion d'EOTF (fait de code
+    gravé §A37).
+  - `r1` : le noyau de rendu-instrument (`src/arcC_rendu.py`) -- albédo ->
+    luminance, niveaux de gris, rééchantillonnage bilinéaire GRAVÉ dans R1,
+    inverse-EOTF sRGB, quantification unique. Ici matplotlib n'a plus le droit
+    d'interpoler quoi que ce soit (`interpolation="nearest"`) : le
+    rééchantillonnage est DÉJÀ fait, à la taille calibrée §C7. La fenêtre
+    présente donc l'image À SA TAILLE, sans zoom de figure.
+
+PROVENANCE (§A37 : « P3 date son verdict sur R1 »). Le sidecar
+`<log>.conditions.json` porte désormais, en plus des conditions §C9, le bloc
+`provenance_rendu` : chemin choisi, sha256 de `src/arcC_rendu.py`, ordre des
+étages, ppd, taille d'affichage RÉALISÉE et le report §C7
+`observation_cellule_pic_csf`. ÉCART ASSUMÉ ET REMONTÉ par rapport à l'ordre de
+mission, qui demandait « l'en-tête JSONL de session » : le log d'essais N'A PAS
+d'en-tête (`ecrit_log_jsonl`/`lit_log_jsonl`, `src/arcC_abx.py`, écrivent et
+relisent UNE LIGNE PAR ESSAI), et lui en ajouter un casserait `rejoue_escalier`
+-- or `src/arcC_abx.py` est INTOUCHABLE par garde-fou. Le sidecar de conditions
+est le manifeste de session existant ; il portait déjà les entrées de
+calibration. Aucune information de la liste gravée n'est perdue, seul son
+FICHIER change."""
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import sys
 import time
+from functools import partial
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -62,6 +93,8 @@ from src.arcC_abx import (REGIME_LAXISTE, REGIME_SEVERE, BanqueBancs, EssaiPropo
                           rejoue_escalier, run_escalier)
 from src.arcC_calibration import (C_DEG_CIBLE_DEFAUT, PORTEUSE_CYC_PAR_DOMAINE_DEFAUT,
                                   observation_cellule_pic_csf, pixels_par_degre)
+from src import arcC_rendu
+from src.arcC_rendu import CHEMINS_RENDU, rendu_r1
 from src.arcC_stimuli import melange, regenere_budget
 from src.arcC_timing import (JournalTiming, ecrit_timing_jsonl, enregistre_phase,
                              formate_resume_timing, formate_timing_essai, resume_timing)
@@ -110,6 +143,80 @@ def _affiche(ax: plt.Axes, image: np.ndarray, titre: str) -> None:
     ax.set_yticks([])
 
 
+def _affiche_r1(ax: plt.Axes, image: np.ndarray, titre: str, *, taille_px: int) -> None:
+    """Affiche `image` (albedo) à travers le NOYAU R1 (§A37) : niveaux de gris,
+    `origin="lower"` conservé (même convention que le chemin viridis).
+
+    `interpolation="nearest"` est LOAD-BEARING, pas une préférence : R1 a DÉJÀ
+    rééchantillonné le champ 64x64 vers `taille_px` (bilinéaire gravé, D-P1-2).
+    Laisser matplotlib re-interpoler par-dessus remettrait dans la chaîne
+    exactement l'étage non gravé que P1 est venu retirer. La fenêtre présente
+    donc l'image À SA TAILLE : tout zoom de figure (redimensionnement manuel de
+    la fenêtre, DPI inattendu) ré-introduit un rééchantillonnage hors contrat --
+    la géométrie de session §C7 suppose que ça n'arrive pas.
+
+    Niveaux de gris via `cmap="gray"` + `vmin=0`/`vmax=255` : UNE valeur par
+    pixel, la réplication RGB est laissée au backend (matplotlib la fait), rien
+    n'est fabriqué ici."""
+    ax.clear()
+    ax.imshow(rendu_r1(image, taille_px), cmap="gray", vmin=0, vmax=255,
+              origin="lower", interpolation="nearest")
+    ax.set_title(titre)
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+
+def fabrique_affiche(rendu: str, taille_px: int) -> "callable":
+    """Retourne la fonction d'affichage `(ax, image, titre) -> None` du chemin
+    demandé -- AUCUN défaut : `rendu` inconnu lève, il n'existe pas de valeur
+    implicite (§A37 : chaque session choisit son chemin consciemment).
+
+    Un SEUL point de dispatch, partagé par la coquille et par la campagne
+    (`scripts/run_arcC_orchestration.py`) : le chemin d'affichage ne peut donc
+    pas diverger entre une session isolée et une session de campagne."""
+    if rendu == "viridis":
+        return _affiche
+    if rendu == "r1":
+        return partial(_affiche_r1, taille_px=taille_px)
+    raise ValueError(
+        f"run_arcC_session : chemin de rendu inconnu {rendu!r} (attendu {CHEMINS_RENDU!r}).")
+
+
+def _sha256_module_rendu() -> str:
+    """Empreinte sha256 de la SOURCE de `src/arcC_rendu.py` (fichier lu en
+    octets), recalculée à CHAQUE session.
+
+    Elle ne juge rien ici : le VERROU de non-dérive vit dans
+    `tests/test_arcC_rendu.py` (tradition des kernels F1). Ce que cette
+    empreinte fait, c'est DATER la session -- §A37 grave que « P3 date son
+    verdict sur R1 », donc le pin transporté devra pouvoir nommer l'objet R1
+    exact qu'il a traversé."""
+    return hashlib.sha256(Path(arcC_rendu.__file__).read_bytes()).hexdigest()
+
+
+def provenance_rendu(rendu: str, *, ppd: float, taille_px: int, obs: dict) -> dict:
+    """Bloc de PROVENANCE du chemin d'affichage (§A37), consigné au sidecar de
+    conditions et imprimé en tête de session.
+
+    Pour `viridis`, `sha256_arcC_rendu` et `ordre_etages` disent la VÉRITÉ du
+    chemin historique -- R1 n'y participe pas, et la chaîne est celle du fait de
+    code gravé : pseudo-couleur, interpolation par défaut d'imshow, aucun EOTF.
+    Y écrire l'empreinte de R1 serait une provenance fausse."""
+    if rendu == "r1":
+        sha = _sha256_module_rendu()
+        etages = arcC_rendu.ORDRE_ETAGES
+    elif rendu == "viridis":
+        sha = None
+        etages = ("imshow(cmap=viridis, vmin=0, vmax=1) -- pseudo-couleur, "
+                  "reechantillonnage PAR DEFAUT d'imshow (non grave), aucun EOTF")
+    else:
+        raise ValueError(
+            f"provenance_rendu : chemin de rendu inconnu {rendu!r} (attendu {CHEMINS_RENDU!r}).")
+    return dict(chemin_rendu=rendu, sha256_arcC_rendu=sha, ordre_etages=etages,
+                ppd=ppd, taille_domaine_px_realisee=taille_px,
+                observation_cellule_pic_csf=obs)
+
+
 def _masque_bruite(shape: tuple[int, int], rng: np.random.Generator) -> np.ndarray:
     """Masque bruité intercalé (régime laxiste, §C0) : bruit uniforme [0,1],
     indépendant à chaque présentation (RNG passée par l'appelant -- seedée si
@@ -129,7 +236,7 @@ class SessionInterrompue(RuntimeError):
 
 
 def _construit_repondre_humain(fig: plt.Figure, axes: list[plt.Axes], regime: Regime,
-                               rng_masque: np.random.Generator
+                               rng_masque: np.random.Generator, affiche: "callable"
                                ) -> tuple["callable", JournalTiming]:
     """Fabrique `repondre(essai) -> "A"|"B"` branché sur un humain : affiche
     A/B (+X) selon le régime (simultané côte à côte / séquentiel avec masque
@@ -146,7 +253,14 @@ def _construit_repondre_humain(fig: plt.Figure, axes: list[plt.Axes], regime: Re
     `src/arcC_timing.py`) dans un `JournalTiming` renvoyé à l'appelant (qui
     écrit le sidecar + imprime le résumé, cf. `main()` ici et
     `_fabrique_repondre_humain`, `scripts/run_arcC_orchestration.py` --
-    PARTAGÉ, un seul endroit instrumenté)."""
+    PARTAGÉ, un seul endroit instrumenté).
+
+    P1 / §A37 : `affiche` est un paramètre REQUIS (`fabrique_affiche`), jamais
+    une valeur par défaut -- un chemin d'affichage hérité en silence est
+    exactement ce que le sélecteur obligatoire interdit. Le MASQUE bruité du
+    régime laxiste passe par la MÊME fonction que les stimuli : sous `--rendu
+    r1` il traverse donc R1 comme eux, et la session ne mélange pas deux
+    chaînes d'affichage."""
     etat: dict = {"reponse": None, "ferme": False}
     journal_timing = JournalTiming()
 
@@ -167,9 +281,9 @@ def _construit_repondre_humain(fig: plt.Figure, axes: list[plt.Axes], regime: Re
         n_avant = len(journal_timing.enregistrements)
         if regime.simultane:
             t_debut = time.perf_counter()
-            _affiche(axes[0], a_a, "A")
-            _affiche(axes[1], a_b, "B")
-            _affiche(axes[2], a_x, "X")
+            affiche(axes[0], a_a, "A")
+            affiche(axes[1], a_b, "B")
+            affiche(axes[2], a_x, "X")
             fig.canvas.draw()
             fig.canvas.flush_events()  # rendu immédiat (sévère : pas de plt.pause pour pomper)
             # Inspection libre, SANS limite de temps (régime sévère, §C0) --
@@ -182,7 +296,7 @@ def _construit_repondre_humain(fig: plt.Figure, axes: list[plt.Axes], regime: Re
         else:
             for image, titre in ((a_x, "X"), (a_a, "A"), (a_b, "B")):
                 t_debut = time.perf_counter()
-                _affiche(axes[0], image, titre)
+                affiche(axes[0], image, titre)
                 fig.canvas.draw()
                 plt.pause(regime.exposition_s or 0.0)
                 enregistre_phase(journal_timing, indice_essai=essai.indice_essai,
@@ -191,7 +305,7 @@ def _construit_repondre_humain(fig: plt.Figure, axes: list[plt.Axes], regime: Re
                                  nominal=regime.exposition_s)
                 if regime.masque_bruite:
                     t_debut = time.perf_counter()
-                    _affiche(axes[0], _masque_bruite(image.shape, rng_masque), "")
+                    affiche(axes[0], _masque_bruite(image.shape, rng_masque), "")
                     fig.canvas.draw()
                     plt.pause(regime.retention_s or 0.0)
                     enregistre_phase(journal_timing, indice_essai=essai.indice_essai,
@@ -239,6 +353,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--regime", choices=["severe", "laxiste"], required=True)
+    # P1 / §A37 : SANS DÉFAUT, volontairement. Exigé même en `--replay` (qui
+    # n'affiche rien) : le sélecteur est le lieu où une session DÉCLARE son
+    # chemin, et une exception « sauf en replay » rouvrirait la porte à
+    # l'héritage silencieux que ce flag existe pour fermer.
+    parser.add_argument("--rendu", choices=list(CHEMINS_RENDU), required=True,
+                        help="Chemin d'affichage (§A37) : 'viridis' = chemin historique "
+                             "(pseudo-couleur, celui du pin gravé) ; 'r1' = noyau "
+                             "rendu-instrument (luminance, sRGB, bilinéaire gravé).")
     parser.add_argument("--numero-staircase", type=int, required=True)
     parser.add_argument("--seed-roving", type=int, required=True)
     parser.add_argument("--seed-catch", type=int, required=True)
@@ -293,6 +415,11 @@ def main() -> None:
           f"arcmin (plafond={obs['seuil_acuite_arcmin']:.3f} arcmin, ratio="
           f"{obs['ratio_cellule_sur_seuil']:.3f}) -- observation, aucune décision.")
 
+    provenance = provenance_rendu(args.rendu, ppd=ppd, taille_px=taille_px, obs=obs)
+    print(f"[provenance §A37] rendu={provenance['chemin_rendu']}  "
+          f"sha256(arcC_rendu.py)={provenance['sha256_arcC_rendu']}  "
+          f"etages={provenance['ordre_etages']}")
+
     banques = BanqueBancs()
     params = ParametresEscalier()
 
@@ -320,7 +447,8 @@ def main() -> None:
     plt.ion()          # mode interactif : la fenêtre s'affiche et pompe les événements
     fig.show()
     rng_masque = np.random.default_rng(args.seed_masque)
-    repondre, journal_timing = _construit_repondre_humain(fig, axes, regime, rng_masque)
+    repondre, journal_timing = _construit_repondre_humain(
+        fig, axes, regime, rng_masque, fabrique_affiche(args.rendu, taille_px))
 
     t0 = time.time()
     try:
@@ -347,14 +475,20 @@ def main() -> None:
 
     # Correctif §C9 pièces 2 & 3 : luminosité + conditions d'environnement,
     # consignées par écrit (sidecar, même convention que le timing) --
-    # réutilise `ecrit_manifeste_json` (helper JSON DRY de l'orchestrateur),
-    # schéma inchangé (dict plat, cf. finding Minor structure hors scope).
+    # réutilise `ecrit_manifeste_json` (helper JSON DRY de l'orchestrateur).
+    # P1 / §A37 : le bloc `provenance_rendu` s'y adjoint (chemin, empreinte de
+    # R1, ordre des étages, calibration réalisée) -- le dict n'est donc plus
+    # plat ; aucun lecteur n'existe pour ce sidecar (vérifié au grep), rien ne
+    # casse. Motif de l'écart au « en-tête JSONL » demandé : cf. docstring
+    # module (le log d'essais n'a pas d'en-tête, et `arcC_abx.py` est
+    # intouchable).
     conditions_path = out_path.parent / f"{out_path.stem}.conditions.json"
     ecrit_manifeste_json(conditions_path, dict(
         luminosite=args.luminosite, conditions=args.conditions,
         long_ref_px=args.long_ref_px, long_ref_mm=args.long_ref_mm,
         distance_mm=args.distance_mm, c_deg_cible=args.c_deg_cible,
-        porteuse_cyc_par_domaine=args.porteuse_cyc_par_domaine))
+        porteuse_cyc_par_domaine=args.porteuse_cyc_par_domaine,
+        provenance_rendu=provenance))
 
     print("=" * 78)
     print(f"ARC C / TASK 3 -- SESSION staircase={args.numero_staircase} régime={regime.nom}")

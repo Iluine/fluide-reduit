@@ -488,13 +488,19 @@ def test_run_arcC_session_leve_systemexit_si_session_humaine_sans_luminosite_ni_
     synthétique, cf. docstring module) -- --luminosite/--conditions sont
     donc REQUISES. Ce garde-fou n'a AUCUNE régression jusqu'ici : `main()`
     importe `matplotlib.pyplot` au niveau module (headless-safe, aucun
-    écran requis) mais ne crée de figure que plus bas, après ce garde."""
+    écran requis) mais ne crée de figure que plus bas, après ce garde.
+
+    `--rendu` est fourni ICI (P1/§A37 : sélecteur OBLIGATOIRE, sans défaut) --
+    sans lui, argparse lèverait SystemExit pour un argument manquant et ce test
+    passerait pour la MAUVAISE raison, sans jamais atteindre le garde §C9 qu'il
+    prétend vérifier."""
     import sys
 
     from scripts.run_arcC_session import main
 
     argv = ["run_arcC_session.py",
            "--regime", "severe",
+           "--rendu", "viridis",
            "--numero-staircase", "1",
            "--seed-roving", "1",
            "--seed-catch", "2",
@@ -512,13 +518,18 @@ def test_run_arcC_session_replay_sans_luminosite_ni_conditions_ne_leve_pas_syste
     focalisé SUR CE GARDE : le chemin --replay échoue ensuite pour une
     AUTRE raison (log inexistant -- `FileNotFoundError` dans
     `lit_log_jsonl`), jamais atteinte si le garde luminosité/conditions
-    avait (à tort) déclenché un SystemExit en premier."""
+    avait (à tort) déclenché un SystemExit en premier.
+
+    `--rendu` est fourni bien que `--replay` n'affiche RIEN : le sélecteur
+    §A37 est obligatoire sans exception, précisément pour qu'aucun chemin
+    d'affichage ne puisse être hérité en silence."""
     import sys
 
     from scripts.run_arcC_session import main
 
     argv = ["run_arcC_session.py",
            "--regime", "severe",
+           "--rendu", "viridis",
            "--numero-staircase", "1",
            "--seed-roving", "1",
            "--seed-catch", "2",

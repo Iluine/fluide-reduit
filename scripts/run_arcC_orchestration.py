@@ -74,8 +74,9 @@ from src.arcC_abx import (BUDGET_CATCH, PAIRES_SOURCES, REGIME_LAXISTE, REGIME_S
                           ecrit_log_jsonl, evalue_validite_session, run_escalier,
                           verifie_arret_2_invalides)
 from src.arcC_calibration import (C_DEG_CIBLE_DEFAUT, PORTEUSE_CYC_PAR_DOMAINE_DEFAUT,
-                                  SEUIL_ACUITE_ARCMIN_DEFAUT, plafond_texture,
-                                  taille_domaine_px)
+                                  SEUIL_ACUITE_ARCMIN_DEFAUT, observation_cellule_pic_csf,
+                                  plafond_texture, taille_domaine_px)
+from src.arcC_rendu import CHEMINS_RENDU
 from src.arcC_stimuli import delta_chi_stim, regenere_budget
 from src.arcC_synthetic import fabrique_sujet_synthetique
 
@@ -242,7 +243,7 @@ def _fabrique_repondre_synthetique(theta_sim: float, sigma_sim: float) -> Fabriq
     return fabrique
 
 
-def _fabrique_repondre_humain(taille_px: int, out_dir: Path) -> FabriqueRepondre:
+def _fabrique_repondre_humain(taille_px: int, out_dir: Path, rendu: str) -> FabriqueRepondre:
     """Délègue à la coquille interactive (`scripts/run_arcC_session.py`) --
     **NON testé ici** (matplotlib + clavier), **non exécuté par ce build**
     (brief : « AUCUN humain lancé dans ce build »). Une figure/axes est créée
@@ -256,13 +257,19 @@ def _fabrique_repondre_humain(taille_px: int, out_dir: Path) -> FabriqueRepondre
     timing.jsonl`, MÊME convention de nom que le log d'essais écrit ensuite
     par `orchestre_regime`, `out_dir` fourni ici pour cette raison) et
     imprime le résumé réalisé-vs-nominal (+ AVERTISSEMENT >25%, jamais un
-    gate dur)."""
+    gate dur).
+
+    P1 / §A37 : `rendu` est un paramètre REQUIS, transmis à `fabrique_affiche`
+    (source UNIQUE du dispatch d'affichage, côté coquille) -- une campagne ne
+    peut donc pas hériter d'un chemin d'affichage en silence, et la coquille et
+    la campagne ne peuvent pas diverger."""
     import os
 
     import matplotlib
     import matplotlib.pyplot as plt
 
-    from scripts.run_arcC_session import _cree_figure, _construit_repondre_humain
+    from scripts.run_arcC_session import (_cree_figure, _construit_repondre_humain,
+                                          fabrique_affiche)
     from src.arcC_backend import assert_backend_interactif, selectionne_backend_qt
     from src.arcC_timing import ecrit_timing_jsonl, formate_resume_timing, resume_timing
 
@@ -273,6 +280,7 @@ def _fabrique_repondre_humain(taille_px: int, out_dir: Path) -> FabriqueRepondre
     assert_backend_interactif(matplotlib.get_backend(), est_replay=False,
                               display=os.environ.get("DISPLAY"))
     plt.ion()
+    affiche = fabrique_affiche(rendu, taille_px)
 
     def fabrique(numero_staircase: int, regime_nom: str, seed_sujet: int
                 ) -> tuple[Callable[[EssaiPropose], Reponse], Callable[[], None]]:
@@ -282,7 +290,8 @@ def _fabrique_repondre_humain(taille_px: int, out_dir: Path) -> FabriqueRepondre
                      fontsize=9)
         fig.show()  # affiche la fenêtre de CETTE staircase (mode interactif)
         rng_masque = np.random.default_rng(seed_sujet)
-        repondre, journal_timing = _construit_repondre_humain(fig, axes, regime, rng_masque)
+        repondre, journal_timing = _construit_repondre_humain(fig, axes, regime, rng_masque,
+                                                              affiche)
 
         def cleanup() -> None:
             plt.close(fig)
@@ -351,7 +360,7 @@ def orchestre_campagne(
         fraction_sources_fortes: float = FRACTION_SOURCES_FORTES,
         luminosite: str | None = None, conditions: str | None = None,
         long_ref_px: float | None = None, long_ref_mm: float | None = None,
-        distance_mm: float | None = None) -> dict:
+        distance_mm: float | None = None, provenance_rendu: dict | None = None) -> dict:
     """Orchestrateur de campagne complet (§C8) : applique D-2 (exclusion
     nommée -- STOP si >= `n_exclusions_stop`), D-3 (catch réserve forte,
     optionnellement restreint aux sources fortes), D-1 (ancre = `budget`,
@@ -376,7 +385,15 @@ def orchestre_campagne(
     ascendante), `commit_harnais` (`obtient_commit_harnais`, SHA pocPhysicator
     au moment de CETTE session) et `date_session` (ISO 8601, `datetime.now()`)
     sont stampés au manifeste -- c'est le HARNAIS qui les connaît, jamais le
-    post-traitement Task 3 (pins)."""
+    post-traitement Task 3 (pins).
+
+    P1 / §A37 : `provenance_rendu` (bloc construit par
+    `run_arcC_session.provenance_rendu` -- chemin d'affichage, empreinte de
+    `src/arcC_rendu.py`, ordre des étages, calibration réalisée) est stampé
+    sous `config_affichage`. Défaut `None` = campagne SYNTHÉTIQUE (aucun écran,
+    aucun chemin d'affichage à dater) ; `main()` l'exige dès `--sujet humain`.
+    Motif : « P3 date son verdict sur R1 » -- une campagne humaine dont on ne
+    sait pas quel chemin elle a traversé est inattribuable."""
     if geometrie not in GEOMETRIES:
         raise ValueError(
             f"orchestre_campagne : geometrie inconnue {geometrie!r} (attendu {GEOMETRIES!r}).")
@@ -399,7 +416,8 @@ def orchestre_campagne(
             budget_catch=BUDGET_CATCH, geometrie=geometrie,
             catch_sources_fortes=catch_sources_fortes,
             fraction_sources_fortes=(fraction_sources_fortes if catch_sources_fortes else None)),
-        config_affichage=dict(geometrie=geometrie, ppd=ppd, taille_domaine_px=taille_px),
+        config_affichage=dict(geometrie=geometrie, ppd=ppd, taille_domaine_px=taille_px,
+                              provenance_rendu=provenance_rendu),
         conditions_validite=dict(
             luminosite=luminosite, conditions=conditions,
             calibration=dict(ppd=ppd, long_ref_px=long_ref_px, long_ref_mm=long_ref_mm,
@@ -476,6 +494,13 @@ def main() -> None:
                              "seulement sur décision remontée (catch structurellement trop "
                              "dur, cf. brief).")
     parser.add_argument("--sujet", choices=["synthetique", "humain"], default="synthetique")
+    # P1 / §A37 : SANS DÉFAUT, exigé dès `--sujet humain` (même idiome que
+    # --luminosite/--conditions, §C9). Laissé optionnel en synthétique : cette
+    # campagne-là n'affiche rien du tout, il n'y a aucun chemin à déclarer.
+    parser.add_argument("--rendu", choices=list(CHEMINS_RENDU), default=None,
+                        help="Chemin d'affichage (§A37) : 'viridis' (historique, pseudo-"
+                             "couleur) ou 'r1' (noyau rendu-instrument). REQUIS si "
+                             "--sujet humain.")
     parser.add_argument("--theta-sim", type=float, default=None,
                         help="Requis si --sujet synthetique.")
     parser.add_argument("--sigma-sim", type=float, default=None,
@@ -503,11 +528,26 @@ def main() -> None:
     from src.arcC_calibration import pixels_par_degre
     ppd = pixels_par_degre(args.long_ref_px, args.long_ref_mm, args.distance_mm)
 
+    provenance = None
     if args.sujet == "humain":
+        # P1 / §A37 : le chemin d'affichage se DÉCLARE avant toute présentation
+        # humaine (même idiome que --luminosite/--conditions, §C9).
+        if args.rendu is None:
+            parser.error(
+                "--rendu est REQUIS avec --sujet humain (§A37 : chaque session choisit son "
+                f"chemin d'affichage consciemment, attendu {CHEMINS_RENDU!r}) -- sans objet "
+                "en sujet synthétique, qui n'affiche rien.")
         print("[AVERTISSEMENT] --sujet humain : chemin délégué à la coquille interactive, "
               "NON testé par ce build. Aucune session humaine n'est lancée par les tests.")
         taille_px = calcule_taille_affichage_px(args.geometrie, ppd)
-        fabrique_repondre = _fabrique_repondre_humain(taille_px, args.out_dir)
+        from scripts.run_arcC_session import provenance_rendu
+        provenance = provenance_rendu(
+            args.rendu, ppd=ppd, taille_px=taille_px,
+            obs=observation_cellule_pic_csf(ppd))
+        print(f"[provenance §A37] rendu={provenance['chemin_rendu']}  "
+              f"sha256(arcC_rendu.py)={provenance['sha256_arcC_rendu']}  "
+              f"etages={provenance['ordre_etages']}")
+        fabrique_repondre = _fabrique_repondre_humain(taille_px, args.out_dir, args.rendu)
     else:
         if args.theta_sim is None or args.sigma_sim is None:
             parser.error("--sujet synthetique requiert --theta-sim et --sigma-sim.")
@@ -520,7 +560,8 @@ def main() -> None:
             catch_sources_fortes=args.catch_sources_fortes, ppd=ppd, sujet=args.sujet,
             fabrique_repondre=fabrique_repondre, out_dir=args.out_dir,
             luminosite=args.luminosite, conditions=args.conditions,
-            long_ref_px=args.long_ref_px, long_ref_mm=args.long_ref_mm, distance_mm=args.distance_mm)
+            long_ref_px=args.long_ref_px, long_ref_mm=args.long_ref_mm,
+            distance_mm=args.distance_mm, provenance_rendu=provenance)
     except SessionInterrompue as exc:
         print(f"[CAMPAGNE INTERROMPUE] {exc} -- AUCUN manifeste écrit (campagne inachevée = "
               "fait de session, pas de référent, §C10). Reprends au pré-vol si c'était "
