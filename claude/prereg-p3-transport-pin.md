@@ -39,7 +39,8 @@ décisions nommées (§A35/D15, seance-fidelite §4) ; aucune n'est souhaitée.
 
 - **Identique à la campagne du pin** : mêmes 20 sources (seed, L) de manche 1,
   même axe `stim(t)` en espace sédiment, même escalier 2-down-1-up, mêmes catch
-  trials et gardes de validité §C5, même méthode d'IC (mean±2SEM combiné),
+  trials et gardes de validité §C5, même méthode d'IC (mean±2SEM combiné
+  — **FAUX, corrigé ci-dessous : §A38-CORRECTION-4**),
   **régime SÉVÈRE seul** (c'est jnd_sev que T2 consomme ; le laxiste n'est pas
   re-mesuré). Calibration §C7 re-mesurée en début de session (règle §A37-3),
   valeurs au sidecar.
@@ -61,6 +62,19 @@ sur les deux bras ; gravée AVANT la session, l'outillage la matérialise
 stable, OSD 80 %, sujet frais — une session de nuit a été explicitement
 refusée le 25/07 au soir (le pin est pré-enregistré pour sa config exacte ;
 brûler une session pour un INDÉTERMINÉ prévisible n'est pas une mesure).
+
+**CORRECTION — MÉTHODE D'IC (2026-07-26, §A38-CORRECTION-4, rien n'est
+réécrit)** : « mean±2SEM combiné » attribuait au pin une méthode qui n'est pas
+la sienne — c'est celle de la branche à-cheval, **jamais active**
+(`branche_combinee_active=False`). L'artefact fait foi (`pins_spatial.json`) :
+`methode_ic_primaire = min_max_seuils`, et [6.03, 8.67] est EXACTEMENT le
+min/max des trois seuils du pin (2SEM donnerait [5.81, 8.86]). L'asymétrie
+2SEM-contre-min/max aurait ÉLARGI le bras R1 et favorisé la branche 1, la
+confortable. **Décision Romain (A) : même méthode = celle du pin telle que son
+artefact la déclare — l'IC du bras R1 est le MIN/MAX de ses trois seuils,
+la comparaison est min/max contre min/max ; le mean±2SEM reste SURFACÉ en
+diagnostic, jamais décideur.** Choix adverse : min/max est ici le plus étroit,
+le recouvrement est plus dur, pas plus facile.
 
 ## Lectures pré-écrites (prononcées mécaniquement, aucune à l'œil)
 

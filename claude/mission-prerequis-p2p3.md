@@ -97,8 +97,11 @@
    2. **le TÉMOIN d'abord** (staircase 3, viridis) : seuil ∈ [6.03, 8.67]
       (IC gravé du pin) — sinon **session INDÉTERMINÉE**, AUCUNE lecture de
       transport, les seuils R1 ne sont même pas imprimés ;
-   3. témoin valide ⇒ IC des TROIS staircases R1 (méthode gravée mean±2SEM,
-      importée, jamais réimplémentée) ; branches du prereg P3 prononcées
+   3. témoin valide ⇒ IC des TROIS staircases R1 par **MIN/MAX des seuils —
+      la méthode du pin telle que son artefact la déclare (§A38-CORRECTION-4 ;
+      ton implémentation 2SEM-décideur est à BASCULER : min/max décide, le
+      mean±2SEM reste surfacé en diagnostic avec le texte d'asymétrie)** ;
+      branches du prereg P3 prononcées
       telles quelles (recouvrement d'IC ⇒ compatible-avec-1 avec son
       anti-surclame ; disjoints ⇒ transport ≠ 1, T et IC par les bornes ;
       gardes échouées ⇒ INDÉTERMINÉE) ;
