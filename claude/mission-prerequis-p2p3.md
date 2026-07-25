@@ -24,13 +24,19 @@
      mécanique, JSON complet écrit sous `outputs/arcC/p2_chiffrage.json`
      (empreinte R1 recalculée dedans, machine, versions, date) — la lecture
      versionnée se recopie APRÈS le run de Romain, pas par toi.
-2. **Garde d'acuité BLOQUANTE** (`scripts/run_arcC_session.py`) : sous
-   `--sujet humain`, si `observation_cellule_pic_csf` rend cellule ≥ seuil
-   d'acuité à la géométrie de session ⇒ `RuntimeError` d'AIGUILLAGE (tradition
-   `arcC_backend` : nommer le défaut, la cause, la correction exacte, acter
-   qu'aucune donnée n'a été produite). Replay et synthétique : INCHANGÉS (rien
-   ne s'affiche). Test : géométrie au-dessus du plafond ⇒ lève ; géométrie de
-   session nominale ⇒ passe.
+2. **Garde de COMPARABILITÉ, bloquante** (`scripts/run_arcC_session.py`) —
+   **ré-écrite après ta propre remontée (§A38-CORRECTION) : l'ancienne garde
+   d'acuité était falsifiée, ppd s'annule à pic-CSF** : sous `--sujet humain`,
+   si la géométrie de session ≠ `pic-csf` (celle de la campagne du pin,
+   manifeste du 2026-07-05) ⇒ `RuntimeError` d'AIGUILLAGE (tradition
+   `arcC_backend` : nommer le défaut, la CAUSE — la comparabilité à l'IC gravé
+   exige les conditions du pin —, la correction exacte, acter qu'aucune donnée
+   n'a été produite). Le report §C7 (`observation_cellule_pic_csf`) reste un
+   CHIFFRE SURFACÉ au sidecar — jamais un booléen (pièce 3, refus délibéré,
+   PRÉSERVÉ). Replay et synthétique : INCHANGÉS (rien ne s'affiche). Tests :
+   `--geometrie plafond --sujet humain` ⇒ lève ; `--geometrie pic-csf
+   --sujet humain` ⇒ passe (la campagne du pin serait passée, par identité) ;
+   synthétique/replay à toute géométrie ⇒ inchangés.
 3. **Liaison sidecar↔log** (`scripts/run_arcC_session.py`, à la CLÔTURE de
    session) : sha256 du fichier JSONL final écrit dans le sidecar de conditions
    (clé `sha256_log`), `arcC_abx.py` INTOUCHÉ (post-traitement de coquille).

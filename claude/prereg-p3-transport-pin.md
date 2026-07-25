@@ -18,11 +18,16 @@ décisions nommées (§A35/D15, seance-fidelite §4) ; aucune n'est souhaitée.
 
 ## Pré-requis de build, gatés (AVANT la session, cap 0.5 séance, mission dédiée)
 
-1. **Garde d'acuité BLOQUANTE** (recommandation session critique, endossée
-   Romain 25/07) : sous `--sujet humain`, si `observation_cellule_pic_csf` rend
-   cellule ≥ seuil d'acuité à la géométrie de session, la session **REFUSE de
-   démarrer** (RuntimeError d'aiguillage, tradition `arcC_backend`) — un run
-   au-dessus du plafond serait un instrument invalide, pas une donnée.
+1. ~~**Garde d'acuité BLOQUANTE**~~ **FALSIFIÉ AVANT BUILD, puis REMPLACÉ —
+   §A38-CORRECTION (2026-07-25, correction explicite, rien de réécrit)** : à
+   pic-CSF, ppd s'annule — cellule = (5.5/3)·60/64 = 1.71875 arcmin partout,
+   seuil 1.0 ⇒ la garde aurait refusé TOUTE session pic-CSF, y compris la
+   campagne fondatrice du pin (ratio 1.71). **Remplacement, décision Romain :
+   garde de COMPARABILITÉ, bloquante** — sous `--sujet humain`, géométrie de
+   session == `pic-csf` (celle du pin) exigée, `RuntimeError` d'aiguillage
+   sinon ; le report §C7 reste un CHIFFRE SURFACÉ au sidecar, jamais un booléen
+   (pièce 3, refus délibéré préservé). La tension d'acuité est portée par le PIN
+   et symétrique entre les bras — propriété du référent, pas un confondeur.
 2. **Liaison sidecar↔log** (recommandation endossée) : le sidecar de conditions
    porte le **sha256 du log JSONL en fin de session** (écrit à la clôture ;
    `arcC_abx.py` INTOUCHÉ — c'est un post-traitement de la coquille). La lecture
