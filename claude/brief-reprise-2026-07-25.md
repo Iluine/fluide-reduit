@@ -29,8 +29,24 @@ les valeurs 16.589/0.111 sont PÉRIMÉES) ; **gate (ii) F0-cloud déféré et d�
 **gate (iii) : attributions de §A32/§A32-décomp/§A33 SUSPENDUES (§A33-CORRECTION) — le
 défaut d'instrument est CONFIRMÉ PAR EXÉCUTION le 25/07** (err(Δx=1)=3.3e-05 vs
 err(Δx=2)=0.500) : le grossier de T2 tournait à mauvaise échelle. **D19 est TRANCHÉ**
-(a: test fait ; b: suspension gravée ; c ENDOSSÉ : kernel Δx-conscient, T2 à re-courir
-inchangé). Le re-run T2 dira si le plancher survit à l'instrument réparé.
+(a: test fait ; b: suspension gravée ; c ENDOSSÉ : kernel Δx-conscient, T2 re-couru).
+**Le re-run T2 (25/07, instrument validé) a RE-PRONONCÉ MORT-b, PLUS LARGE (§A34)** :
+production 1.47–2.42 (20–33× le pin, AU-DESSUS de la plage de corruption délibérée),
+**témoin seed 101 TRAVERSE (0.07731 > 0.0733)**, Option B n'est pas le remède. Le FAIT
+est solide ; les attributions fines (b vs c, « structurel », « par le halo ») restent
+suspendues, non re-mesurées. **La séance D14–D18 est CLOSE (§A35)** : scission de É2
+endossée (état/projection, caveat du transport-par-construction gravé) ; **gate (iii)
+ÉCHOUÉ sur É2-état, prononcé** ; **gate (iii′) NÉ sur É2-projection** — la moitié
+projection (image d'abord) est LE CHEMIN CRITIQUE de sa mesure ; la spec fovéa-z ne
+fait pas foi en l'état ; non-transposabilité gravée sur 1.47–2.42 (Π ≫ 1) ; règle
+gravée : aucun diagnostic sans décision qui en dépend. **P0 TRANCHÉE (§A36)** : C-uni mort comme
+contrat de fovéa (vivant comme étalon du harnais) ; **le contrat de la fovéa est
+C-STRAT version F-unique** (commis à l'identité-sous-JND, vivant au témoignage, juge =
+projection pondérée-observateur ; un seul F scale-aware, tirage de naissance, falsifieur
+unifié « aucune transition détectable ») ; principes v2 endossés gravés par référence
+(`note-orientation-v2-2026-07-25.md`). **Prochain livrable : la spec P1** (rendu
+minimal d'instrumentation, sa décision de périmètre en tête), puis P2 chiffrage, puis
+P3 transport du pin. (γ) et b-vs-c dormants sous la règle D17.
 
 ## LE FAIT DOMINANT — défaut d'instrument confirmé par lecture de code (25/07)
 
@@ -72,11 +88,12 @@ iluin-tworings3 — **CONFIRMÉ**, lecture pré-écrite prononcée telle quelle
 **(b)** suspension gravée (§A33-CORRECTION + §A33-CORRECTION-résultat, append-only) ;
 **(c)** ENDOSSÉ ; **(d)** sans objet.
 
-1. **Séance Claude Code** : appliquer l'ordre de mission
-   `claude/mission-correctif-dx-2026-07-25.md` — kernel Δx-conscient, empreinte
-   re-gravée avec provenance, `reduction_cfl_fidele` INTOUCHÉE (conservatrice),
-   3e test de portage (inv_dx = 0.5 ≡ dx=2), suite complète verte. **La mission
-   s'arrête aux tests verts.**
+1. **FAIT (commit 26d53e2, 2026-07-25)** : kernel Δx-conscient (`inv_dx` dans la
+   signature, grossier à Δx=DECIMATION aux quatre étages), `reduction_cfl_fidele`
+   INTOUCHÉE, empreinte re-gravée (aef7237d…, 9646), **1124 tests verts**, 3e test de
+   portage : inv_dx=1.0 → err(Δx=1)=3.297e-05 (le chiffre exact d'avant correctif — le
+   régime Δx=1 n'a rien vu passer, ET c'est mesuré bit-exact contre l'ancien kernel) ;
+   inv_dx=0.5 → err(Δx=2)=6.331e-05. Kernels _SOURCE/L3/EXNER : diff vide vérifié.
 2. **Romain lance lui-même le re-run T2**, inchangé par ailleurs (mêmes seuils, mêmes
    seeds, mêmes bandes, cellule §A15 intacte), verdict-grade sur sa machine.
 3. **Le verdict du re-run remonte avant toute suite** : D14–D18 (scission É2, destin du
@@ -144,8 +161,12 @@ iluin-tworings3 — **CONFIRMÉ**, lecture pré-écrite prononcée telle quelle
   numpy 2.4.6, CuPy 14.1.1). VM Cowork = dev/lecture (bit-identique au gel mais **kill
   45 s** ; voit le GPU, jamais une mesure). Le cloud n'est **pas** l'instrument (AVX512).
 - **Quatre empreintes kernels** recalculables : fusionné e18015f5…, L3 9533a130…,
-  FIDELE 6dd207ca…, EXNER 3533fd0b….
-- `ruff` absent (contrôle F401 par AST). OOM T2 = **RAM hôte** (escalade de `t_end`
+  **FIDELE aef7237d… (9646)** — re-gravée le 25/07 (correctif Δx, commit 26d53e2, onze
+  citations à jour) —, EXNER 3533fd0b…. L'ancienne FIDELE 6dd207ca… (9248) reste
+  **l'empreinte de datation** de l'ancre T1 0.924 et du coût 11.696 ms (chrono non
+  re-daté : bit-exact à inv_dx=1 mais +1 multiplication/cellule/étage).
+- `ruff` **INSTALLÉ** (`.venv/bin/ruff`, vérifié le 25/07 — le « ruff absent » du brief
+  du 19/07 est PÉRIMÉ). OOM T2 = **RAM hôte** (escalade de `t_end`
   depuis le bas, RLIMIT_AS sur VmSize). À EPS = 0 **le cap 10 % mord** (budget H·W).
   **Δχ non monotone en erreur d'état** (les bras ne s'additionnent pas). **Masquer la
   DIFFÉRENCE, jamais le domaine.** Hypersensibilité : 6e-5 d'état ⇒ 0.077 de Δχ.
@@ -154,8 +175,9 @@ iluin-tworings3 — **CONFIRMÉ**, lecture pré-écrite prononcée telle quelle
 
 ## Dettes et risques nommés, NON armés
 
-σ_ω (réveil = décision de cadencement) ; `r_fovea` gaté ; effondrement du dt en
-assèchement ; p99 non résolu ; **la moitié PROJECTION n'existe pas — ni image rendue ni
+σ_ω (réveil = décision de cadencement) ; **chrono T1 daté sur 6dd207ca — réveil :
+toute décision consommant le coût du fidèle à la marge (gravé §A33-CORRECTION-exécution)** ;
+`r_fovea` gaté ; effondrement du dt en assèchement ; p99 non résolu ; **la moitié PROJECTION n'existe pas — ni image rendue ni
 son** (tous deux conséquences déterministes de `z`, coût mesuré pour AUCUN ; « V4 tient »
 signifie « ~16.7 ms pour un rendu jamais chiffré ») ; substrat-jeu non figé ; niveau 0
 CPU 500k (×7.6 non mesuré) ; calcul 3D sans ancre ; cadencement « 1 pas/fenêtre/frame »
