@@ -1,6 +1,6 @@
 {
   "prereg": "claude/prereg-p2-chiffrage-rendu.md (ENDOSSE, §A38)",
-  "date": "2026-07-25T22:30:37.169174",
+  "date": "2026-07-26T00:27:15.137408",
   "machine": "iluin-TwoRings3",
   "versions": {
     "python": "3.12.3",
@@ -48,13 +48,13 @@
     },
     "n_appels": 300,
     "n_chauffe": 30,
-    "mediane_ms": 0.11936900045839138,
-    "p95_ms": 0.13001039515074808,
-    "min_ms": 0.11813200399046764,
-    "max_ms": 0.16922599752433598
+    "mediane_ms": 0.11917350275325589,
+    "p95_ms": 0.14831140069873086,
+    "min_ms": 0.11782799992943183,
+    "max_ms": 0.40510499820811674
   },
   "cellule_2": {
-    "objet": "etages sRGB + quantification uint8 (Y = A), f32, GPU",
+    "objet": "cellule 2a -- etages sRGB + quantification uint8 (Y = A), f32, GPU, sonde CuPy ELEMENTAIRE (une dizaine de passes)",
     "forme": [
       1080,
       1920
@@ -165,14 +165,136 @@
     "verdict_bande": "AUTRE",
     "lecture": {
       "branche": null,
-      "ratio_sur_marge_v4": 0.4461616629984725,
+      "ratio_sur_marge_v4": 0.4560475238144022,
       "texte": "mediane entre le haut de la bande gravee (0.5 ms) et la marge V4 (2.199 ms) : AUCUNE branche prononcee. Le prereg n'a grave aucun nombre dans cet intervalle ; le ratio est surface, la lecture appartient a Romain."
     },
     "n_appels": 300,
     "n_chauffe": 30,
-    "mediane_ms": 0.9811094969336409,
-    "p95_ms": 1.005068700760603,
-    "min_ms": 0.9776430015335791,
-    "max_ms": 1.0513360030017793
+    "mediane_ms": 1.0028485048678704,
+    "p95_ms": 1.0102572010509903,
+    "min_ms": 0.9782690030988306,
+    "max_ms": 1.0333680038456805
+  },
+  "cellule_2b": {
+    "objet": "cellule 2b -- etages sRGB + quantification uint8 (Y = A), f32, GPU, noyau FUSIONNE (un kernel, une passe)",
+    "forme": [
+      1080,
+      1920
+    ],
+    "n_pixels": 2073600,
+    "bande_ms": [
+      0.02,
+      0.5
+    ],
+    "equivalence": {
+      "critere": "NATURE UNIFIE (§A38-CORRECTION-3) -- un seul critere, applique a CHAQUE bras ; l'attribution par cause est un DIAGNOSTIC, jamais un gate",
+      "equivalent": true,
+      "point1_recopie_a_jour": true,
+      "sha256_r1_recopie": "c5ac875798d7cdb770702e9d612683ab3448ec8556fa2e81b3d902d426e4fe10",
+      "sha256_r1_actuel": "c5ac875798d7cdb770702e9d612683ab3448ec8556fa2e81b3d902d426e4fe10",
+      "point2_bascule_pure_tous_bras": true,
+      "par_champ": {
+        "rampe_linspace": {
+          "n_pixels_total": 2073600,
+          "bras": {
+            "isolation_entree_f32": {
+              "n_desaccords": 0,
+              "fraction_desaccords": 0.0,
+              "ecart_max_niveaux": 0,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": null
+            },
+            "f32_complet": {
+              "n_desaccords": 13,
+              "fraction_desaccords": 6.26929012345679e-06,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 1.9821690699473038e-05
+            }
+          },
+          "bascule_pure": true,
+          "encode_f32_min": null,
+          "encode_f32_max": null
+        },
+        "uniforme_seed0": {
+          "n_pixels_total": 2073600,
+          "bras": {
+            "isolation_entree_f32": {
+              "n_desaccords": 6,
+              "fraction_desaccords": 2.8935185185185184e-06,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 2.6786650835219916e-06
+            },
+            "f32_complet": {
+              "n_desaccords": 18,
+              "fraction_desaccords": 8.680555555555556e-06,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 2.0245063126367313e-05
+            }
+          },
+          "bascule_pure": true,
+          "encode_f32_min": null,
+          "encode_f32_max": null
+        },
+        "uniforme_seed1": {
+          "n_pixels_total": 2073600,
+          "bras": {
+            "isolation_entree_f32": {
+              "n_desaccords": 2,
+              "fraction_desaccords": 9.645061728395062e-07,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 1.6434472911441844e-06
+            },
+            "f32_complet": {
+              "n_desaccords": 19,
+              "fraction_desaccords": 9.162808641975309e-06,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 1.8415493855172826e-05
+            }
+          },
+          "bascule_pure": true,
+          "encode_f32_min": null,
+          "encode_f32_max": null
+        },
+        "uniforme_seed2": {
+          "n_pixels_total": 2073600,
+          "bras": {
+            "isolation_entree_f32": {
+              "n_desaccords": 4,
+              "fraction_desaccords": 1.9290123456790124e-06,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 1.8197174256329163e-06
+            },
+            "f32_complet": {
+              "n_desaccords": 21,
+              "fraction_desaccords": 1.0127314814814815e-05,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 2.1078224193615824e-05
+            }
+          },
+          "bascule_pure": true,
+          "encode_f32_min": null,
+          "encode_f32_max": null
+        }
+      }
+    },
+    "verdict_bande": "DANS_BANDE",
+    "lecture": {
+      "branche": "1",
+      "ratio_sur_marge_v4": 0.04254524727750497,
+      "texte": "mediane << marge V4 (2.199 ms) : LECTURE GRAVEE D'AVANCE -- le cout inconnu du rendu ne vit PAS dans l'encodage ; il vit dans la COMPOSITION et dans l'optique au-dela de Y = A (R2+). La dette se DEPLACE, elle ne retrecit pas. INTERDICTION PRE-ECRITE d'en conclure « le rendu tient »."
+    },
+    "n_appels": 300,
+    "n_chauffe": 30,
+    "mediane_ms": 0.09355699876323342,
+    "p95_ms": 0.12518945150077343,
+    "min_ms": 0.09214999590767547,
+    "max_ms": 0.13743699673796073
   }
 }

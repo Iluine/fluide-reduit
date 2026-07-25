@@ -1,0 +1,117 @@
+{
+  "prereg": "claude/prereg-p3-transport-pin.md (ENDOSSE, §A38)",
+  "date": "2026-07-26T00:33:20.740289",
+  "machine": "iluin-TwoRings3",
+  "regime": "severe",
+  "n_staircases": 4,
+  "pin": {
+    "jnd": 0.07334065957385666,
+    "jnd_pct": 7.334065957385666,
+    "ic": [
+      0.06033229334102097,
+      0.08673568621862042
+    ],
+    "ic_pct": [
+      6.0332293341020975,
+      8.673568621862042
+    ],
+    "methode_ic_du_pin": "min_max_seuils"
+  },
+  "gardes": {
+    "toutes_ok": true,
+    "echouees": [],
+    "gardes": [
+      {
+        "nom": "conditions_sans_gabarit",
+        "ok": true,
+        "conditions": "…ce que tu observes, heure comprise…",
+        "chevrons_trouves": [],
+        "motif": null
+      },
+      {
+        "nom": "ordre_des_chemins",
+        "ok": true,
+        "attendu": [
+          "r1",
+          "r1",
+          "viridis",
+          "r1"
+        ],
+        "obtenu": [
+          "r1",
+          "r1",
+          "viridis",
+          "r1"
+        ],
+        "motif": null
+      },
+      {
+        "nom": "validite_c5",
+        "ok": true,
+        "n_staircases": 4,
+        "staircases_invalides": [],
+        "motif": null
+      },
+      {
+        "nom": "liaison_sidecar_log",
+        "ok": true,
+        "details": [
+          {
+            "numero_staircase": 0,
+            "log_trouve": true,
+            "sidecar_trouve": true,
+            "sha256_log_sidecar": "a3345e22992c829f9eed110caf8328586c3e385e9bc75b5fea39da6b6ec099b2",
+            "sha256_log_recalcule": "a3345e22992c829f9eed110caf8328586c3e385e9bc75b5fea39da6b6ec099b2",
+            "chemin_sidecar": "r1",
+            "chemin_manifeste": "r1"
+          },
+          {
+            "numero_staircase": 1,
+            "log_trouve": true,
+            "sidecar_trouve": true,
+            "sha256_log_sidecar": "b8959e489d22b03ad7879e0cc479e0af552512657aae1b53342452ca35a52a45",
+            "sha256_log_recalcule": "b8959e489d22b03ad7879e0cc479e0af552512657aae1b53342452ca35a52a45",
+            "chemin_sidecar": "r1",
+            "chemin_manifeste": "r1"
+          },
+          {
+            "numero_staircase": 2,
+            "log_trouve": true,
+            "sidecar_trouve": true,
+            "sha256_log_sidecar": "bbbeea518f85a9516b57efa8af19475bc02059894d927de728df2e33c54ca3ee",
+            "sha256_log_recalcule": "bbbeea518f85a9516b57efa8af19475bc02059894d927de728df2e33c54ca3ee",
+            "chemin_sidecar": "viridis",
+            "chemin_manifeste": "viridis"
+          },
+          {
+            "numero_staircase": 3,
+            "log_trouve": true,
+            "sidecar_trouve": true,
+            "sha256_log_sidecar": "5830577e2319a7523574ec027425b12695159203f7b1abed420ee5ba8bf83b5d",
+            "sha256_log_recalcule": "5830577e2319a7523574ec027425b12695159203f7b1abed420ee5ba8bf83b5d",
+            "chemin_sidecar": "r1",
+            "chemin_manifeste": "r1"
+          }
+        ],
+        "motif": null
+      }
+    ]
+  },
+  "temoin": {
+    "ok": false,
+    "seuil": 0.05062286352621287,
+    "seuil_pct": 5.062286352621287,
+    "ic_pin": [
+      0.06033229334102097,
+      0.08673568621862042
+    ],
+    "ic_pin_pct": [
+      6.0332293341020975,
+      8.673568621862042
+    ],
+    "motif": "seuil temoin 5.06 % HORS de l'IC grave du pin [6.03, 8.67] % -- le sujet ou l'ecran a derive depuis Arc C"
+  },
+  "verdict": "INDETERMINEE",
+  "branche": "3",
+  "motif": "TEMOIN INVALIDE : seuil temoin 5.06 % HORS de l'IC grave du pin [6.03, 8.67] % -- le sujet ou l'ecran a derive depuis Arc C. Les seuils R1 ne sont PAS lus -- un ecart R1-vs-pin serait inattribuable (chemin ? derive ?)."
+}
