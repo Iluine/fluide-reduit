@@ -43,6 +43,22 @@
    Test : le sha du sidecar égale celui du log relu ; un log altéré d'un octet ⇒
    désaccord détectable.
 
+4. **[AJOUTÉ — §A38-CORRECTION-2] Critère de NATURE pour l'équivalence de la
+   cellule 2** (`scripts/run_p2_chiffrage.py`) : remplace la tolérance zéro,
+   falsifiée structurellement par ta propre remontée. Le runner prononce
+   mécaniquement, dans cet ordre : (1) équivalence structurelle — inchangée
+   (recopie + sha) ; (2) chaîne f64 à entrée castée f32 ⇒ ZÉRO désaccord exigé,
+   sinon AUTRE (ton harnais d'isolation existant) ; (3) chaque désaccord
+   résiduel de la chaîne f32 : |Δniveau| == 1 exactement, sinon AUTRE ;
+   (4) taux et `distance_max_a_la_bascule` surfacés au JSON, JAMAIS jugés.
+   **Champs test GRAVÉS** : rampe `linspace(0,1)` + 3 uniformes seedés (tes
+   seeds existants) ; le champ réel NE COMPTE PAS pour l'équivalence
+   (≤ 4096 valeurs distinctes — consigné insuffisant) et reste le champ de la
+   cellule 1. La règle des zones (branche 1 ≤ 0.5 ms ; branche 2 ≥ 2.199 ms ;
+   entre : rien, ratio surfacé) est désormais GRAVÉE au prereg — ton
+   implémentation du point n°1 est confirmée telle quelle. Tests à mettre à
+   jour en conséquence ; toujours AUCUN chrono verdict-grade par toi.
+
 ## Garde-fous (ils sont le contrat)
 
 - **`src/arcC_rendu.py` INTOUCHÉ** — l'empreinte c5ac8757… doit rester verte ;

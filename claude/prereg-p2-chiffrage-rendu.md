@@ -72,3 +72,41 @@ c5ac8757… doit rester verte).
 Lecture versionnée `claude/lectures/p2_chiffrage_rendu.lecture.json` (cellules,
 bandes, chiffres, branches prononcées mécaniquement) ; POINT D'ARRÊT après les
 deux cellules — remonter, aucune suite sans décision.
+
+---
+
+## CORRECTION EXPLICITE (2026-07-25, §A38-CORRECTION-2 — rien n'est réécrit)
+
+**1. Le critère d'équivalence de la cellule 2 est REMPLACÉ.** La « tolérance
+ZÉRO » est falsifiée structurellement (remontée mission, d875834) : 13 px sur
+2.07·10⁶ diffèrent de 1 niveau, tous à < 1.73·10⁻⁵ de la bascule de `rint`,
+cause isolée = l'arithmétique f32 de la puissance 1/2.4 — le risque que ce
+prereg avait nommé, réalisé. Le confondeur du champ test est démasqué : un champ
+64×64 a **au plus 4096 valeurs distinctes par construction** — le champ réel
+passait « tolérance zéro » par pauvreté d'échantillons, pas par équivalence.
+**Critère retenu (décision Romain, option A — critère de NATURE, aucun seuil)** :
+
+1. équivalence STRUCTURELLE : formules recopiées de `arcC_rendu.py`, sha cité
+   (inchangé, déjà en place) — c'est elle qui juge la FORMULE ;
+2. isolation des causes, booléenne : la chaîne f64 à entrée castée f32 doit
+   rendre **ZÉRO désaccord** (déjà mesuré : 0) — sinon AUTRE ;
+3. tout désaccord résiduel de la chaîne f32 doit être une **BASCULE PURE** :
+   |Δniveau| == 1 exactement (par monotonie de `rint`, exactement une frontière
+   d'arrondi encadrée) — tout désaccord ≥ 2 niveaux ⇒ AUTRE, formule fausse ;
+4. taux de désaccord et `distance_max_a_la_bascule` : SURFACÉS au JSON, jamais
+   jugés.
+
+Portée dite : le critère de nature juge l'ARITHMÉTIQUE ; un écart de formule
+sub-niveau systématique passerait (3) — il est couvert par (1), la recopie.
+**Champs test GRAVÉS** : rampe `linspace(0,1)` (le choix adverse — couvre les
+deux branches sRGB, 2.07·10⁶ valeurs distinctes) + 3 uniformes seedés ; le champ
+réel est consigné INSUFFISANT pour ce test. Écho consigné, à ne pas instruire :
+même bête que le fait d'instrument CPU/BLAS — une pièce au dossier de la
+proposition non endossée « quantification du commis par format » (note v2 §5).
+
+**2. La règle des zones de la cellule 2 est GRAVÉE** (le « ≪ » sans nombre de la
+branche 1 était un flou de plume, résolu sans inventer de seuil — uniquement des
+nombres déjà gravés) : branche 1 (« la dette se déplace ») prononcée si
+médiane ≤ 0.5 ms (haut de la bande, = 0.227 × marge) ; branche 2 (« le repli
+33.3 à instruire ») si médiane ≥ 2.199 ms (la marge V4) ; **entre les deux, RIEN
+n'est prononcé** — le ratio médiane/marge est surfacé et remonte tel quel.
