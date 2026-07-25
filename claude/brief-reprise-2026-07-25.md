@@ -44,9 +44,11 @@ contrat de fovéa (vivant comme étalon du harnais) ; **le contrat de la fovéa 
 C-STRAT version F-unique** (commis à l'identité-sous-JND, vivant au témoignage, juge =
 projection pondérée-observateur ; un seul F scale-aware, tirage de naissance, falsifieur
 unifié « aucune transition détectable ») ; principes v2 endossés gravés par référence
-(`note-orientation-v2-2026-07-25.md`). **Prochain livrable : la spec P1** (rendu
-minimal d'instrumentation, sa décision de périmètre en tête), puis P2 chiffrage, puis
-P3 transport du pin. (γ) et b-vs-c dormants sous la règle D17.
+(`note-orientation-v2-2026-07-25.md`). **Spec P1 ENDOSSÉE (§A37, 25/07 après revue :
+Option B pleine résolution, Y = A identité, inverse-EOTF sRGB, bilinéaire gravé ;
+fait de code : le pin a été mesuré à travers viridis) — prochain pas : ordre de
+mission Claude Code, sur décision explicite**, puis P2 chiffrage (du NOYAU seul,
+portée pré-écrite), puis P3 transport du pin. (γ) et b-vs-c dormants sous la règle D17.
 
 ## LE FAIT DOMINANT — défaut d'instrument confirmé par lecture de code (25/07)
 
@@ -199,4 +201,6 @@ pour sa config exacte ; le journal est append-only — les contradictions passen
 vérification du 25/07 est une lecture de code à coût nul, et le test §6 est le test
 unitaire manquant, utile quel que soit son résultat) ; concéder proprement et
 immédiatement — deux concessions de la session critique sont au dossier de cette
-séquence, dont « MORT-b n'est pas rouvert », retirée.
+séquence, dont « MORT-b n'est pas rouvert », retirée. **Un fait d'instrument porte
+sa date** — à la reprise, re-vérifier les moins chers (un `ls`, un `--version`)
+avant de les citer (règle gravée §A37, née du résidu « ruff absent »).
