@@ -167,8 +167,12 @@ iluin-tworings3 — **CONFIRMÉ**, lecture pré-écrite prononcée telle quelle
   citations à jour) —, EXNER 3533fd0b…. L'ancienne FIDELE 6dd207ca… (9248) reste
   **l'empreinte de datation** de l'ancre T1 0.924 et du coût 11.696 ms (chrono non
   re-daté : bit-exact à inv_dx=1 mais +1 multiplication/cellule/étage).
-- `ruff` **INSTALLÉ** (`.venv/bin/ruff`, vérifié le 25/07 — le « ruff absent » du brief
-  du 19/07 est PÉRIMÉ). OOM T2 = **RAM hôte** (escalade de `t_end`
+- `ruff` : le binaire vit dans **`pocCascade2phys/.venv/bin/ruff`** (0.15.20) —
+  **ABSENT de `pocPhysicator/.venv`**, et AUCUNE config ruff dans les dépôts
+  (« ruff clean » au sens d'un dépôt n'est pas prononçable ; lint effectif :
+  `--line-length 100 --select E,F,W`). Corrigé le 25/07 au soir, première
+  application payante de la règle §A37-3 : le « INSTALLÉ dans .venv » du matin
+  était imprécis de DÉPÔT, et avait pourtant été « vérifié ». OOM T2 = **RAM hôte** (escalade de `t_end`
   depuis le bas, RLIMIT_AS sur VmSize). À EPS = 0 **le cap 10 % mord** (budget H·W).
   **Δχ non monotone en erreur d'état** (les bras ne s'additionnent pas). **Masquer la
   DIFFÉRENCE, jamais le domaine.** Hypersensibilité : 6e-5 d'état ⇒ 0.077 de Δχ.
