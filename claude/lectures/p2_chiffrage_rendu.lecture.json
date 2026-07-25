@@ -1,0 +1,178 @@
+{
+  "prereg": "claude/prereg-p2-chiffrage-rendu.md (ENDOSSE, §A38)",
+  "date": "2026-07-25T22:30:37.169174",
+  "machine": "iluin-TwoRings3",
+  "versions": {
+    "python": "3.12.3",
+    "numpy": "2.4.6",
+    "cupy": "14.1.1"
+  },
+  "empreinte_r1": {
+    "sha256": "c5ac875798d7cdb770702e9d612683ab3448ec8556fa2e81b3d902d426e4fe10",
+    "octets": 15770
+  },
+  "verdict_grade": true,
+  "calibration": {
+    "ppd": 42.09946270918813,
+    "taille_domaine_px": 77,
+    "observation_cellule_pic_csf": {
+      "ppd": 42.09946270918813,
+      "porteuse_cyc_par_domaine": 5.5,
+      "c_deg_cible": 3.0,
+      "n_cellules": 64,
+      "domaine_px_pic_csf": 77,
+      "domaine_deg_pic_csf": 1.8290019645118865,
+      "cellule_arcmin_pic_csf": 1.7146893417298936,
+      "seuil_acuite_arcmin": 1.0,
+      "domaine_deg_max_plafond": 1.0666666666666667,
+      "ratio_cellule_sur_seuil": 1.7146893417298936
+    }
+  },
+  "portee": "P2 chiffre le NOYAU, PAS la composition (D-P1-1) -- premiere ancre de la moitie manquante, jamais la moitie entiere.",
+  "cellule_1": {
+    "objet": "rendu_r1 numpy (champ reel h_s101/s_L10)",
+    "taille_px": 77,
+    "forme_entree": [
+      64,
+      64
+    ],
+    "bande_ms": [
+      0.05,
+      5.0
+    ],
+    "verdict_bande": "DANS_BANDE",
+    "lecture": {
+      "branche": "1",
+      "texte": "mediane <= 5 ms : le rendu est INVISIBLE dans les timings de session P3 (regime severe, §C0). Aucune modification de protocole n'est requise.",
+      "seuil_ms": 5.0
+    },
+    "n_appels": 300,
+    "n_chauffe": 30,
+    "mediane_ms": 0.11936900045839138,
+    "p95_ms": 0.13001039515074808,
+    "min_ms": 0.11813200399046764,
+    "max_ms": 0.16922599752433598
+  },
+  "cellule_2": {
+    "objet": "etages sRGB + quantification uint8 (Y = A), f32, GPU",
+    "forme": [
+      1080,
+      1920
+    ],
+    "n_pixels": 2073600,
+    "bande_ms": [
+      0.02,
+      0.5
+    ],
+    "equivalence": {
+      "critere": "NATURE UNIFIE (§A38-CORRECTION-3) -- un seul critere, applique a CHAQUE bras ; l'attribution par cause est un DIAGNOSTIC, jamais un gate",
+      "equivalent": true,
+      "point1_recopie_a_jour": true,
+      "sha256_r1_recopie": "c5ac875798d7cdb770702e9d612683ab3448ec8556fa2e81b3d902d426e4fe10",
+      "sha256_r1_actuel": "c5ac875798d7cdb770702e9d612683ab3448ec8556fa2e81b3d902d426e4fe10",
+      "point2_bascule_pure_tous_bras": true,
+      "par_champ": {
+        "rampe_linspace": {
+          "n_pixels_total": 2073600,
+          "bras": {
+            "isolation_entree_f32": {
+              "n_desaccords": 0,
+              "fraction_desaccords": 0.0,
+              "ecart_max_niveaux": 0,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": null
+            },
+            "f32_complet": {
+              "n_desaccords": 13,
+              "fraction_desaccords": 6.26929012345679e-06,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 1.7344004817232417e-05
+            }
+          },
+          "bascule_pure": true,
+          "encode_f32_min": 0.0,
+          "encode_f32_max": 0.9999999403953552
+        },
+        "uniforme_seed0": {
+          "n_pixels_total": 2073600,
+          "bras": {
+            "isolation_entree_f32": {
+              "n_desaccords": 6,
+              "fraction_desaccords": 2.8935185185185184e-06,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 2.6786650835219916e-06
+            },
+            "f32_complet": {
+              "n_desaccords": 20,
+              "fraction_desaccords": 9.645061728395062e-06,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 2.0245063126367313e-05
+            }
+          },
+          "bascule_pure": true,
+          "encode_f32_min": 7.691842256463133e-06,
+          "encode_f32_max": 0.9999998211860657
+        },
+        "uniforme_seed1": {
+          "n_pixels_total": 2073600,
+          "bras": {
+            "isolation_entree_f32": {
+              "n_desaccords": 2,
+              "fraction_desaccords": 9.645061728395062e-07,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 1.6434472911441844e-06
+            },
+            "f32_complet": {
+              "n_desaccords": 19,
+              "fraction_desaccords": 9.162808641975309e-06,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 1.8415493855172826e-05
+            }
+          },
+          "bascule_pure": true,
+          "encode_f32_min": 9.964011951524299e-06,
+          "encode_f32_max": 0.9999998211860657
+        },
+        "uniforme_seed2": {
+          "n_pixels_total": 2073600,
+          "bras": {
+            "isolation_entree_f32": {
+              "n_desaccords": 4,
+              "fraction_desaccords": 1.9290123456790124e-06,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 1.8197174256329163e-06
+            },
+            "f32_complet": {
+              "n_desaccords": 23,
+              "fraction_desaccords": 1.109182098765432e-05,
+              "ecart_max_niveaux": 1,
+              "bascule_pure": true,
+              "distance_max_a_la_bascule": 2.1078224193615824e-05
+            }
+          },
+          "bascule_pure": true,
+          "encode_f32_min": 7.78325954797765e-07,
+          "encode_f32_max": 0.9999995827674866
+        }
+      }
+    },
+    "verdict_bande": "AUTRE",
+    "lecture": {
+      "branche": null,
+      "ratio_sur_marge_v4": 0.4461616629984725,
+      "texte": "mediane entre le haut de la bande gravee (0.5 ms) et la marge V4 (2.199 ms) : AUCUNE branche prononcee. Le prereg n'a grave aucun nombre dans cet intervalle ; le ratio est surface, la lecture appartient a Romain."
+    },
+    "n_appels": 300,
+    "n_chauffe": 30,
+    "mediane_ms": 0.9811094969336409,
+    "p95_ms": 1.005068700760603,
+    "min_ms": 0.9776430015335791,
+    "max_ms": 1.0513360030017793
+  }
+}
