@@ -39,8 +39,10 @@ from scripts.run_arcC_orchestration import (ANCRE_BUDGET, FRACTION_SOURCES_FORTE
                                             STATUT_STOP_TROP_EXCLUES,
                                             calcule_taille_affichage_px,
                                             construit_manifeste_exclusions, derive_seeds,
+                                            POSITION_TEMOIN_VIRIDIS, chemins_staircases,
                                             mesure_ancre_source, obtient_commit_harnais,
-                                            orchestre_campagne, selectionne_sources_fortes)
+                                            orchestre_campagne, orchestre_regime,
+                                            selectionne_sources_fortes)
 
 
 # =============================================================================
@@ -537,4 +539,135 @@ def test_run_arcC_session_replay_sans_luminosite_ni_conditions_ne_leve_pas_syste
            "--replay", str(tmp_path / "inexistant.jsonl")]
     monkeypatch.setattr(sys, "argv", argv)
     with pytest.raises(FileNotFoundError):
+        main()
+
+
+# =============================================================================
+# Famille 6 : support de session P3 -- sélection de régime, bras témoin
+# viridis en position gravée, sidecars par staircase (chantier 6 de
+# `mission-prerequis-p2p3.md`, précisions gravées au prereg P3).
+# =============================================================================
+
+
+def test_chemins_staircases_sans_temoin_est_uniforme():
+    """Sans `--temoin-viridis`, toutes les staircases suivent le même chemin —
+    le comportement historique, intact."""
+    assert chemins_staircases("r1", 4, False) == ("r1", "r1", "r1", "r1")
+    assert chemins_staircases("viridis", 3, False) == ("viridis",) * 3
+
+
+def test_chemins_staircases_place_le_temoin_en_troisieme_position():
+    """POSITION GRAVÉE au prereg P3 : la 3e des 4 staircases — deux R1, PUIS le
+    témoin viridis, PUIS la dernière R1.
+
+    Le motif est gravé aussi : répartir fatigue et apprentissage sur les DEUX
+    bras. Un témoin en 1re position mesurerait un sujet frais contre trois
+    staircases fatiguées ; en dernière, l'inverse. Ce test est le seul endroit
+    où cette position vit dans le code exécutable."""
+    assert chemins_staircases("r1", 4, True) == ("r1", "r1", "viridis", "r1")
+    assert POSITION_TEMOIN_VIRIDIS == 2
+
+
+def test_chemins_staircases_refuse_une_campagne_trop_courte():
+    """Fail-loud : la disposition gravée exige une 3e staircase pour le témoin
+    ET au moins une APRÈS lui.
+
+    `n = 3` est le cas PIÈGE, et c'est le DÉFAUT de `--n-staircases` (minimum
+    §C5 par régime) : il y a bien une 3e position, mais le témoin y serait le
+    DERNIER — précisément la disposition que le motif gravé écarte (un témoin
+    en fin de session mesure un sujet fatigué contre trois staircases
+    fraîches). Sans cette garde, `--temoin-viridis` sans `--n-staircases 4`
+    aurait rendu en SILENCE une disposition qui n'est pas celle du prereg."""
+    for n in (0, 1, 2, 3):
+        with pytest.raises(ValueError, match="temoin-viridis|témoin|TÉMOIN"):
+            chemins_staircases("r1", n, True)
+    assert chemins_staircases("r1", 4, True)[POSITION_TEMOIN_VIRIDIS] == "viridis"
+
+
+def test_restreindre_le_regime_ne_change_pas_les_seeds(tmp_path):
+    """`--regime severe` doit rejouer EXACTEMENT la campagne sévère de
+    `--regime tous` : l'indice passé à `derive_seeds` est celui du tuple
+    CANONIQUE, jamais celui de la sélection.
+
+    Sans ce verrou, restreindre les régimes re-seederait silencieusement le
+    régime conservé — et P3, qui tourne en sévère seul, ne serait pas
+    comparable à la campagne du pin, qui tournait avec les deux."""
+    fabrique = lambda k, regime_nom, seed_sujet: (  # noqa: E731
+        fabrique_sujet_synthetique(0.05, 0.015, seed=seed_sujet), lambda: None)
+    tous = orchestre_campagne(base_seed=7, n_staircases=3, ppd=40.0,
+                              fabrique_repondre=fabrique, out_dir=tmp_path / "tous")
+    severe = orchestre_campagne(base_seed=7, n_staircases=3, ppd=40.0,
+                                fabrique_repondre=fabrique, regimes=(REGIME_SEVERE.nom,),
+                                out_dir=tmp_path / "severe")
+
+    assert set(severe["regimes"]) == {REGIME_SEVERE.nom}
+    assert set(tous["regimes"]) == {REGIME_SEVERE.nom, REGIME_LAXISTE.nom}
+    graines = lambda m: [(s["seed_roving"], s["seed_catch"], s["seed_sujet"])  # noqa: E731
+                         for s in m["regimes"][REGIME_SEVERE.nom]["sessions"]]
+    assert graines(severe) == graines(tous)
+    assert severe["config_affichage"]["regimes_lances"] == [REGIME_SEVERE.nom]
+
+
+def test_sidecars_par_staircase_portent_le_chemin_et_le_sha_du_log(tmp_path):
+    """Chantiers 3 + 6 réunis : chaque staircase reçoit son PROPRE sidecar,
+    portant la provenance du chemin qu'elle a traversé ET le sha256 de SON log.
+
+    C'est ce qui rend le bras témoin lisible : le sidecar de la 3e staircase
+    dit `viridis` avec `sha256_arcC_rendu = None` (chaîne historique, R1 n'y
+    participe pas), les trois autres disent `r1` avec l'empreinte de R1. Sans
+    sidecars distincts, la session entière serait étiquetée d'un seul chemin."""
+    import hashlib
+    import json
+    from pathlib import Path
+
+    from scripts.run_arcC_session import provenance_rendu
+    from src.arcC_calibration import observation_cellule_pic_csf
+
+    ppd = 42.099
+    obs = observation_cellule_pic_csf(ppd)
+    chemins = chemins_staircases("r1", 4, True)
+    provenances = {c: provenance_rendu(c, ppd=ppd, taille_px=77, obs=obs) for c in set(chemins)}
+    fabrique = lambda k, regime_nom, seed_sujet: (  # noqa: E731
+        fabrique_sujet_synthetique(0.05, 0.015, seed=seed_sujet), lambda: None)
+
+    resultat = orchestre_regime(
+        regime=REGIME_SEVERE, regime_idx=0, n_staircases=4, base_seed=11,
+        sources_incluses=PAIRES_SOURCES, sources_catch=None, budget=ANCRE_BUDGET,
+        params=ParametresEscalier(), banques=BanqueBancs(), fabrique_repondre=fabrique,
+        out_dir=tmp_path, chemins=chemins, provenances=provenances)
+
+    sessions = resultat["sessions"]
+    assert [s["chemin_rendu"] for s in sessions] == list(chemins[:len(sessions)])
+    chemins_vus = set()
+    for session in sessions:
+        sidecar = json.loads(Path(session["conditions_path"]).read_text(encoding="utf-8"))
+        attendu = hashlib.sha256(Path(session["log_path"]).read_bytes()).hexdigest()
+        assert sidecar["sha256_log"] == attendu
+        assert sidecar["provenance_rendu"]["chemin_rendu"] == session["chemin_rendu"]
+        chemins_vus.add(session["chemin_rendu"])
+    if len(sessions) > POSITION_TEMOIN_VIRIDIS:
+        temoin = json.loads(
+            Path(sessions[POSITION_TEMOIN_VIRIDIS]["conditions_path"]).read_text("utf-8"))
+        assert temoin["provenance_rendu"]["chemin_rendu"] == "viridis"
+        assert temoin["provenance_rendu"]["sha256_arcC_rendu"] is None
+        assert chemins_vus == {"r1", "viridis"}
+
+
+@pytest.mark.parametrize("sujet,rendu", [("synthetique", None), ("humain", "viridis")])
+def test_temoin_viridis_refuse_hors_session_humaine_en_r1(monkeypatch, sujet, rendu):
+    """`--temoin-viridis` n'est valide qu'avec `--sujet humain --rendu r1` : un
+    témoin viridis ne témoigne de rien sans bras R1 à garder. `parser.error`
+    lève `SystemExit`, avant toute plomberie."""
+    import sys
+
+    from scripts.run_arcC_orchestration import main
+
+    argv = ["run_arcC_orchestration.py", "--base-seed", "1", "--sujet", sujet,
+            "--temoin-viridis", "--theta-sim", "0.05", "--sigma-sim", "0.015",
+            "--luminosite", "OSD 80%", "--conditions", "jour stable",
+            "--long-ref-px", "1920", "--long-ref-mm", "597", "--distance-mm", "750"]
+    if rendu is not None:
+        argv += ["--rendu", rendu]
+    monkeypatch.setattr(sys, "argv", argv)
+    with pytest.raises(SystemExit):
         main()

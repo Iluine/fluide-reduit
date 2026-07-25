@@ -256,6 +256,57 @@ def etages_srgb_quantif_cupy(cp, champ_f32):
     return cp.rint(v * np.float32(arcC_rendu.NIVEAU_MAX_UINT8)).astype(cp.uint8), v
 
 
+# Le MÊME calcul, en UN SEUL kernel — l'objet de la cellule 2b
+# (§A39-CORRECTION). Compilé paresseusement : importer ce module ne touche pas
+# cupy. Les constantes sont PASSÉES EN PARAMÈTRES plutôt qu'écrites en littéraux
+# CUDA, pour qu'elles soient bit-à-bit celles de la sonde élémentaire : sinon
+# `1.0f/2.4f` compilé par nvcc pourrait différer d'un ulp de
+# `np.float32(1.0/2.4)`, et la cellule 2b mesurerait cette différence-là au lieu
+# de la fusion.
+_KERNEL_FUSIONNE = None
+
+
+def _kernel_fusionne(cp):
+    """Le kernel élémentaire fusionné, compilé UNE fois par processus.
+
+    Le cache de module est le seul état de ce fichier ; il ne porte aucune
+    donnée de mesure (juste l'objet compilé), et le chrono ne démarre qu'après
+    la chauffe, donc la compilation n'entre dans aucun chiffre."""
+    global _KERNEL_FUSIONNE
+    if _KERNEL_FUSIONNE is None:
+        _KERNEL_FUSIONNE = cp.ElementwiseKernel(
+            'float32 y, float32 seuil, float32 pente, float32 gain, float32 decalage, '
+            'float32 inv_gamma, float32 niveau_max',
+            'uint8 v8',
+            '''
+            float p = gain * powf(fmaxf(y, 0.0f), inv_gamma) - decalage;
+            float v = (y <= seuil) ? (pente * y) : p;
+            v8 = (unsigned char) rintf(v * niveau_max);
+            ''',
+            'etages_srgb_quantif_fusionne')
+    return _KERNEL_FUSIONNE
+
+
+def etages_srgb_quantif_fusionne(cp, champ_f32):
+    """Étages 3 et 4 de R1, en UNE passe : une lecture f32, une écriture uint8,
+    aucun tableau intermédiaire matérialisé.
+
+    C'est l'objet que la bande [0.02, 0.5] ms a TOUJOURS modélisé (« ~10 Mo à
+    224 Go/s ») — le prereg gravait par ailleurs une implémentation élémentaire
+    qui en fait une dizaine : deux objets sous la même phrase, incohérence
+    tranchée par §A39-CORRECTION en créant cette cellule 2b, la 2a et son AUTRE
+    restant gravés tels quels.
+
+    Retourne `(uint8, None)` : il n'y a PAS de tableau encodé intermédiaire à
+    surfacer, et c'est exactement le point."""
+    v8 = _kernel_fusionne(cp)(
+        champ_f32,
+        np.float32(arcC_rendu.SEUIL_LINEAIRE_SRGB), np.float32(arcC_rendu.PENTE_LINEAIRE_SRGB),
+        np.float32(arcC_rendu.GAIN_SRGB), np.float32(arcC_rendu.DECALAGE_SRGB),
+        np.float32(1.0 / arcC_rendu.GAMMA_SRGB), np.float32(arcC_rendu.NIVEAU_MAX_UINT8))
+    return v8, None
+
+
 def champ_rampe() -> np.ndarray:
     """RAMPE `linspace(0, 1)` sur 1920x1080 — le CHOIX ADVERSE, gravé.
     Elle couvre la bande entière, les deux extrémités exactes (0.0 et 1.0), la
@@ -305,8 +356,13 @@ def compare_bras(attendu: np.ndarray, obtenu: np.ndarray, echelle: np.ndarray) -
         distance_max_a_la_bascule=(float(distances.max()) if n_desaccords else None))
 
 
-def _analyse_equivalence_champ(cp, champ: np.ndarray) -> dict:
+def _analyse_equivalence_champ(cp, champ: np.ndarray, sonde=None) -> dict:
     """Le critère unifié sur UN champ test, appliqué aux DEUX bras.
+
+    `sonde` est la fonction à juger — `etages_srgb_quantif_cupy` (cellule 2a)
+    ou `etages_srgb_quantif_fusionne` (cellule 2b). Une SEULE analyse pour les
+    deux cellules : c'est ce qui garantit qu'elles sont jugées au même étalon,
+    et non que la seconde bénéficie d'un critère plus doux.
 
     Bras `isolation_entree_f32` — la chaîne f64 alimentée par l'entrée CASTÉE
     en f32. Bras `f32_complet` — la sonde GPU entière. Leur comparaison reste
@@ -321,7 +377,8 @@ def _analyse_equivalence_champ(cp, champ: np.ndarray) -> dict:
     entree_f32 = np.asarray(champ, dtype=np.float32).astype(np.float64)
     isolation = quantifie_uint8(srgb_encode(entree_f32))
 
-    obtenu_gpu, encode_gpu = etages_srgb_quantif_cupy(cp, cp.asarray(champ, dtype=cp.float32))
+    sonde = sonde or etages_srgb_quantif_cupy
+    obtenu_gpu, encode_gpu = sonde(cp, cp.asarray(champ, dtype=cp.float32))
     obtenu = cp.asnumpy(obtenu_gpu)
 
     bras = dict(isolation_entree_f32=compare_bras(attendu, isolation, echelle),
@@ -329,11 +386,13 @@ def _analyse_equivalence_champ(cp, champ: np.ndarray) -> dict:
     return dict(
         n_pixels_total=int(attendu.size), bras=bras,
         bascule_pure=all(b["bascule_pure"] for b in bras.values()),
-        encode_f32_min=float(cp.asnumpy(encode_gpu.min())),
-        encode_f32_max=float(cp.asnumpy(encode_gpu.max())))
+        # `None` quand la sonde ne matérialise aucun encodage intermédiaire
+        # (cellule 2b, fusionnée) : c'est un chiffre surfacé, pas un critère.
+        encode_f32_min=(None if encode_gpu is None else float(cp.asnumpy(encode_gpu.min()))),
+        encode_f32_max=(None if encode_gpu is None else float(cp.asnumpy(encode_gpu.max()))))
 
 
-def verifie_equivalence(cp) -> dict:
+def verifie_equivalence(cp, sonde=None) -> dict:
     """CRITÈRE DE NATURE UNIFIÉ (§A38-CORRECTION-3), prononcé mécaniquement sur
     les champs test gravés. `equivalent` est vrai ssi les DEUX points jugeants
     le sont : recopie à jour (point 1) et bascule pure sur CHAQUE bras de CHAQUE
@@ -345,7 +404,7 @@ def verifie_equivalence(cp) -> dict:
     sha_actuel = empreinte_r1()["sha256"]
     recopie_a_jour = bool(sha_actuel == SHA256_R1_RECOPIE)      # point 1
 
-    par_champ = {nom: _analyse_equivalence_champ(cp, champ)
+    par_champ = {nom: _analyse_equivalence_champ(cp, champ, sonde)
                  for nom, champ in champs_equivalence()}
     bascule_pure = all(a["bascule_pure"] for a in par_champ.values())
     return dict(
@@ -358,13 +417,20 @@ def verifie_equivalence(cp) -> dict:
         par_champ=par_champ)
 
 
-def cellule2(cp, *, n_appels: int, n_chauffe: int) -> dict:
-    """Cellule 2 du prereg. L'équivalence GATE la mesure : si elle échoue, on
-    n'entre PAS dans le chrono — un chiffre sur une sonde qui ne calcule pas la
-    même chose que R1 ne mesurerait rien d'attribuable."""
-    equivalence = verifie_equivalence(cp)
-    base = dict(objet="etages sRGB + quantification uint8 (Y = A), f32, GPU",
-                forme=list(FORME_V4), n_pixels=FORME_V4[0] * FORME_V4[1],
+def _cellule_gpu(cp, sonde, objet: str, *, n_appels: int, n_chauffe: int) -> dict:
+    """Le corps COMMUN des cellules 2a et 2b — même bande, même critère de
+    nature unifié, mêmes zones, même protocole de chrono. La seule chose qui
+    change est la SONDE.
+
+    Écrit ainsi à dessein : deux corps séparés laisseraient un jour la 2b
+    dériver vers un étalon plus doux que la 2a, et la comparaison des deux
+    chiffres ne voudrait plus rien dire.
+
+    L'équivalence GATE la mesure : si elle échoue, on n'entre PAS dans le
+    chrono — un chiffre sur une sonde qui ne calcule pas la même chose que R1
+    ne mesurerait rien d'attribuable."""
+    equivalence = verifie_equivalence(cp, sonde)
+    base = dict(objet=objet, forme=list(FORME_V4), n_pixels=FORME_V4[0] * FORME_V4[1],
                 bande_ms=list(BANDE_CELLULE2_MS), equivalence=equivalence)
     if not equivalence["equivalent"]:
         causes = []
@@ -385,11 +451,37 @@ def cellule2(cp, *, n_appels: int, n_chauffe: int) -> dict:
     champ = cp.asarray(np.random.default_rng(SEED_SOURCE).uniform(0.0, 1.0, size=FORME_V4),
                        dtype=cp.float32)
     peripherique = cp.cuda.Device()
-    mesure = chronometre(lambda: etages_srgb_quantif_cupy(cp, champ),
-                         n_appels=n_appels, n_chauffe=n_chauffe,
+    mesure = chronometre(lambda: sonde(cp, champ), n_appels=n_appels, n_chauffe=n_chauffe,
                          synchronise=peripherique.synchronize)
     return dict(base, verdict_bande=classe_bande(mesure["mediane_ms"], BANDE_CELLULE2_MS),
                 lecture=lecture_cellule2(mesure["mediane_ms"]), **mesure)
+
+
+def cellule2(cp, *, n_appels: int, n_chauffe: int) -> dict:
+    """CELLULE 2a — la sonde CuPy ÉLÉMENTAIRE, telle que le prereg l'avait
+    gravée (une dizaine de kernels, autant de passes sur les données). Son
+    verdict `AUTRE` du 2026-07-25 reste gravé tel quel : c'est le coût de
+    l'implémentation naïve, et c'est une leçon, pas une erreur à effacer."""
+    return _cellule_gpu(
+        cp, etages_srgb_quantif_cupy,
+        "cellule 2a -- etages sRGB + quantification uint8 (Y = A), f32, GPU, "
+        "sonde CuPy ELEMENTAIRE (une dizaine de passes)",
+        n_appels=n_appels, n_chauffe=n_chauffe)
+
+
+def cellule2b(cp, *, n_appels: int, n_chauffe: int) -> dict:
+    """CELLULE 2b (§A39-CORRECTION) — le noyau FUSIONNÉ : un kernel, une
+    lecture f32, une écriture uint8. C'est l'objet que la bande a toujours
+    modélisé (« ~10 Mo à 224 Go/s »).
+
+    MÊME bande, MÊME critère, MÊMES zones, MÊME protocole que la 2a — la seule
+    différence est le nombre de passes. C'est précisément ce que la cellule
+    isole."""
+    return _cellule_gpu(
+        cp, etages_srgb_quantif_fusionne,
+        "cellule 2b -- etages sRGB + quantification uint8 (Y = A), f32, GPU, "
+        "noyau FUSIONNE (un kernel, une passe)",
+        n_appels=n_appels, n_chauffe=n_chauffe)
 
 
 # --- Provenance et CLI -------------------------------------------------------
@@ -416,7 +508,7 @@ def _versions() -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--cellule", choices=["1", "2", "toutes"], default="toutes")
+    parser.add_argument("--cellule", choices=["1", "2", "2b", "toutes"], default="toutes")
     parser.add_argument("--n-appels", type=int, default=N_APPELS_GRAVE,
                         help=f"GRAVÉ = {N_APPELS_GRAVE}. Le baisser produit un run NON "
                              "verdict-grade, marqué comme tel dans le JSON.")
@@ -466,21 +558,27 @@ def main() -> None:
         print(f"            lecture (branche {c1['lecture']['branche']}) : "
               f"{c1['lecture']['texte']}")
 
-    if args.cellule in ("2", "toutes"):
-        if not cupy_disponible():
-            rapport["cellule_2"] = dict(
+    cellules_gpu = [(cle, etiquette, fonction) for cle, etiquette, fonction in (
+        ("2", "cellule_2", cellule2), ("2b", "cellule_2b", cellule2b))
+        if args.cellule in (cle, "toutes")]
+    if cellules_gpu and not cupy_disponible():
+        for _, etiquette, _ in cellules_gpu:
+            rapport[etiquette] = dict(
                 verdict_bande=VERDICT_AUTRE,
                 lecture=dict(branche=None, texte=(
                     "CuPy/device CUDA indisponible -- AUCUNE mesure GPU. Le repli numpy "
                     "est interdit pour la mesure (B1) : un chiffre CPU serait un faux "
                     "chiffre. Machine attendue : iluin-tworings3, terminal natif.")))
-            print("\n[cellule 2] CuPy indisponible -- aucune mesure, verdict AUTRE.")
-        else:
-            import cupy as cp
-            c2 = cellule2(cp, n_appels=args.n_appels, n_chauffe=args.n_chauffe)
-            rapport["cellule_2"] = c2
-            eq = c2["equivalence"]
-            print(f"\n[cellule 2] equivalence, critere de NATURE UNIFIE : "
+            print(f"\n[{etiquette}] CuPy indisponible -- aucune mesure, verdict AUTRE.")
+        cellules_gpu = []
+    elif cellules_gpu:
+        import cupy as cp
+        for cle, etiquette, fonction in cellules_gpu:
+            resultat = fonction(cp, n_appels=args.n_appels, n_chauffe=args.n_chauffe)
+            rapport[etiquette] = resultat
+            eq = resultat["equivalence"]
+            print(f"\n[cellule {cle}] {resultat['objet']}")
+            print(f"            equivalence, critere de NATURE UNIFIE : "
                   f"equivalent={eq['equivalent']}  (1) recopie a jour="
                   f"{eq['point1_recopie_a_jour']}  (2) bascule pure sur tous les bras="
                   f"{eq['point2_bascule_pure_tous_bras']}")
@@ -493,11 +591,11 @@ def main() -> None:
                           f"{b['bascule_pure']}, distance max a la bascule "
                           f"{b['distance_max_a_la_bascule']}")
             if eq["equivalent"]:
-                print(f"            mediane={c2['mediane_ms']:.4f} ms  "
-                      f"p95={c2['p95_ms']:.4f} ms  bande={list(BANDE_CELLULE2_MS)} -> "
-                      f"{c2['verdict_bande']}")
-            print(f"            lecture (branche {c2['lecture']['branche']}) : "
-                  f"{c2['lecture']['texte']}")
+                print(f"            mediane={resultat['mediane_ms']:.4f} ms  "
+                      f"p95={resultat['p95_ms']:.4f} ms  bande={list(BANDE_CELLULE2_MS)} -> "
+                      f"{resultat['verdict_bande']}")
+            print(f"            lecture (branche {resultat['lecture']['branche']}) : "
+                  f"{resultat['lecture']['texte']}")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(rapport, indent=2, ensure_ascii=False), encoding="utf-8")

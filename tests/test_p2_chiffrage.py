@@ -11,6 +11,8 @@ natif, 300 appels) — aucun test ne mesure quoi que ce soit."""
 from __future__ import annotations
 
 import hashlib
+import inspect
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -44,6 +46,24 @@ def test_constantes_recopiees_du_prereg():
     assert SEUIL_TIMINGS_P3_MS == 5.0
     assert MARGE_V4_MS == 2.199
     assert (N_APPELS_GRAVE, N_CHAUFFE_GRAVE) == (300, 30)
+
+
+def test_cellule_2b_partage_bande_critere_et_zones_avec_2a():
+    """§A39-CORRECTION : la 2b a la MÊME bande, le MÊME critère et les MÊMES
+    zones que la 2a — seule la SONDE change. Le verrou est structurel, pas
+    déclaratif : les deux cellules passent par `_cellule_gpu`, il n'existe donc
+    qu'un seul corps, une seule bande et une seule règle de zones.
+
+    Sans ce test, rien n'empêcherait la 2b de dériver un jour vers un étalon
+    plus doux que la 2a — et la comparaison des deux chiffres, qui est TOUT
+    l'objet de la cellule, ne voudrait plus rien dire."""
+    source = Path(run_p2_chiffrage.__file__).read_text(encoding="utf-8")
+    assert source.count("BANDE_CELLULE2_MS: tuple") == 1, "une seule bande pour 2a et 2b"
+    for cellule in (run_p2_chiffrage.cellule2, run_p2_chiffrage.cellule2b):
+        corps = inspect.getsource(cellule)
+        assert "_cellule_gpu" in corps, f"{cellule.__name__} doit passer par le corps commun"
+        assert "BANDE" not in corps and "classe_bande" not in corps, (
+            f"{cellule.__name__} ne doit porter NI bande NI classement propre")
 
 
 # --- Classement de bande -----------------------------------------------------
@@ -234,20 +254,50 @@ def test_analyse_equivalence_est_decidable():
 
 
 @gpu_requis
-def test_critere_unifie_refuse_une_sonde_decalee_de_deux_niveaux(monkeypatch):
-    """FALSIFIEUR de bout en bout, sur le bras f32 : une sonde décalée de
-    2 niveaux fait tomber le verdict du CHAMP, pas seulement celui du bras.
-    Sans ce test, l'agrégation « et » serait une case toujours verte."""
+@pytest.mark.parametrize("nom_champ", ["rampe_linspace", "uniforme_seed0",
+                                       "uniforme_seed1", "uniforme_seed2"])
+def test_noyau_fusionne_satisfait_le_critere_sur_les_quatre_champs(nom_champ):
+    """CELLULE 2b — le noyau FUSIONNÉ est jugé au MÊME étalon que la sonde
+    élémentaire, sur les QUATRE champs gravés, en PLEIN format (2.07·10⁶ px) :
+    c'est la densité de valeurs distinctes qui rend le critère falsifiable, un
+    échantillon la détruirait.
+
+    Ici l'assertion est FERME (bascule pure), contrairement au test de
+    décidabilité : depuis §A38-CORRECTION-3 le critère est fixé, et la
+    conformité du kernel est une propriété que le code doit tenir — un garde de
+    non-régression, pas une branche ouverte. Les comptages restent IMPRIMÉS,
+    jamais assertés : ce sont des chiffres surfacés."""
     import cupy as cp
 
-    vraie = run_p2_chiffrage.etages_srgb_quantif_cupy
+    champ = dict(champs_equivalence())[nom_champ]
+    analyse = _analyse_equivalence_champ(cp, champ,
+                                         run_p2_chiffrage.etages_srgb_quantif_fusionne)
+    f32 = analyse["bras"]["f32_complet"]
+    print(f"\n[2b {nom_champ}] {f32['n_desaccords']}/{analyse['n_pixels_total']} desaccords, "
+          f"ecart max {f32['ecart_max_niveaux']}, distance max a la bascule "
+          f"{f32['distance_max_a_la_bascule']}")
+    assert analyse["bascule_pure"] is True
+    assert analyse["encode_f32_min"] is None and analyse["encode_f32_max"] is None, (
+        "la sonde fusionnee ne materialise AUCUN encodage intermediaire -- c'est le point")
+
+
+@gpu_requis
+@pytest.mark.parametrize("nom_sonde", ["etages_srgb_quantif_cupy",
+                                       "etages_srgb_quantif_fusionne"])
+def test_critere_unifie_refuse_une_sonde_decalee_de_deux_niveaux(nom_sonde):
+    """FALSIFIEUR de bout en bout, sur les DEUX sondes (2a et 2b) : décalée de
+    2 niveaux, chacune fait tomber le verdict du CHAMP, pas seulement celui de
+    son bras. Sans ce test, l'agrégation « et » serait une case toujours verte
+    — et la 2b, la plus récente, celle où l'on aurait le moins vu venir."""
+    import cupy as cp
+
+    vraie = getattr(run_p2_chiffrage, nom_sonde)
 
     def sonde_decalee(cp_mod, champ_f32):
         quantifie, encode = vraie(cp_mod, champ_f32)
         return cp_mod.clip(quantifie.astype(cp_mod.int16) + 2, 0, 255).astype(cp_mod.uint8), encode
 
-    monkeypatch.setattr(run_p2_chiffrage, "etages_srgb_quantif_cupy", sonde_decalee)
-    analyse = _analyse_equivalence_champ(cp, champ_rampe()[::37, ::41].copy())
+    analyse = _analyse_equivalence_champ(cp, champ_rampe()[::37, ::41].copy(), sonde_decalee)
     assert analyse["bras"]["f32_complet"]["ecart_max_niveaux"] >= 2
     assert analyse["bras"]["f32_complet"]["bascule_pure"] is False
     assert analyse["bascule_pure"] is False

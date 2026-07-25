@@ -93,6 +93,47 @@ N_EXCLUSIONS_STOP: int = 10                          # D-2, seuil de STOP
 FRACTION_SOURCES_FORTES: float = 0.5                # D-3, option --catch-sources-fortes
 GEOMETRIES: tuple[str, ...] = ("pic-csf", "plafond")  # D-4
 
+# Position du BRAS TÉMOIN viridis dans la session P3, GRAVÉE au prereg P3
+# (précisions du 2026-07-25 soir) : la 3e des 4 staircases — deux staircases R1,
+# PUIS le témoin, PUIS la dernière R1. Motif gravé : répartir fatigue et
+# apprentissage sur les deux bras. Indice 0-based, donc 2.
+POSITION_TEMOIN_VIRIDIS: int = 2
+REGIMES_CANONIQUES: tuple[Regime, ...] = (REGIME_SEVERE, REGIME_LAXISTE)
+CHOIX_REGIME: tuple[str, ...] = (REGIME_SEVERE.nom, REGIME_LAXISTE.nom, "tous")
+
+
+def chemins_staircases(rendu: str, n_staircases: int, temoin_viridis: bool) -> tuple[str, ...]:
+    """L'ORDRE EFFECTIF des chemins d'affichage, un par staircase — fonction
+    PURE, pour que la position gravée du témoin soit testable sans écran.
+
+    Sans `temoin_viridis`, toutes les staircases suivent `rendu`. Avec, la
+    staircase d'indice `POSITION_TEMOIN_VIRIDIS` bascule sur `viridis` :
+    (r1, r1, TÉMOIN, r1) à quatre staircases, la disposition gravée.
+
+    Lève si la campagne ne peut pas porter cette disposition — il faut une 3e
+    staircase pour le témoin ET au moins une APRÈS lui. Le gravé dit « la 3e
+    des 4 : deux staircases R1, PUIS le témoin, PUIS la dernière R1 » : à trois
+    staircases le témoin serait le DERNIER, ce qui est exactement la
+    disposition que le motif gravé écarte (répartir fatigue et apprentissage
+    sur les deux bras — un témoin en fin de session mesure un sujet fatigué
+    contre trois staircases fraîches). Le défaut `N_STAIRCASES = 3` est le
+    minimum §C5 par régime ; P3 exige donc `--n-staircases 4` explicitement, et
+    cette garde est ce qui le dit à voix haute plutôt que de rendre en silence
+    une disposition qui n'est pas celle du prereg."""
+    if temoin_viridis and n_staircases < POSITION_TEMOIN_VIRIDIS + 2:
+        raise ValueError(
+            f"chemins_staircases : --temoin-viridis exige au moins "
+            f"{POSITION_TEMOIN_VIRIDIS + 2} staircases (reçu {n_staircases}) -- la "
+            "disposition est GRAVÉE au prereg P3 : R1, R1, TÉMOIN, R1. Il faut une 3e "
+            "staircase pour le témoin ET au moins une après lui ; à "
+            f"{POSITION_TEMOIN_VIRIDIS + 1} le témoin serait le DERNIER, ce que le motif "
+            "gravé écarte.\n"
+            f"    CORRECTION : relance avec --n-staircases {POSITION_TEMOIN_VIRIDIS + 2}")
+    chemins = [rendu] * n_staircases
+    if temoin_viridis:
+        chemins[POSITION_TEMOIN_VIRIDIS] = "viridis"
+    return tuple(chemins)
+
 STATUT_STOP_TROP_EXCLUES: str = "STOP_TROP_DE_SOURCES_EXCLUES"
 
 # D-3 : collision RENDUE EXPLICITE (cf. docstring module) -- si un jour
@@ -243,7 +284,8 @@ def _fabrique_repondre_synthetique(theta_sim: float, sigma_sim: float) -> Fabriq
     return fabrique
 
 
-def _fabrique_repondre_humain(taille_px: int, out_dir: Path, rendu: str) -> FabriqueRepondre:
+def _fabrique_repondre_humain(taille_px: int, out_dir: Path, rendu: str,
+                              chemins: tuple[str, ...] | None = None) -> FabriqueRepondre:
     """Délègue à la coquille interactive (`scripts/run_arcC_session.py`) --
     **NON testé ici** (matplotlib + clavier), **non exécuté par ce build**
     (brief : « AUCUN humain lancé dans ce build »). Une figure/axes est créée
@@ -262,7 +304,13 @@ def _fabrique_repondre_humain(taille_px: int, out_dir: Path, rendu: str) -> Fabr
     P1 / §A37 : `rendu` est un paramètre REQUIS, transmis à `fabrique_affiche`
     (source UNIQUE du dispatch d'affichage, côté coquille) -- une campagne ne
     peut donc pas hériter d'un chemin d'affichage en silence, et la coquille et
-    la campagne ne peuvent pas diverger."""
+    la campagne ne peuvent pas diverger.
+
+    `chemins` (prereg P3) donne le chemin PAR STAIRCASE : c'est ce qui
+    matérialise le BRAS TÉMOIN viridis en 3e position. `None` = toutes les
+    staircases suivent `rendu`. Les fonctions d'affichage sont construites une
+    fois par chemin, jamais par staircase : la staircase 0 et la staircase 3
+    doivent traverser le MÊME objet, sinon le bras R1 ne serait pas un bras."""
     import os
 
     import matplotlib
@@ -280,10 +328,13 @@ def _fabrique_repondre_humain(taille_px: int, out_dir: Path, rendu: str) -> Fabr
     assert_backend_interactif(matplotlib.get_backend(), est_replay=False,
                               display=os.environ.get("DISPLAY"))
     plt.ion()
-    affiche = fabrique_affiche(rendu, taille_px)
+    affiches = {chemin: fabrique_affiche(chemin, taille_px)
+                for chemin in set(chemins or (rendu,))}
 
     def fabrique(numero_staircase: int, regime_nom: str, seed_sujet: int
                 ) -> tuple[Callable[[EssaiPropose], Reponse], Callable[[], None]]:
+        chemin = rendu if chemins is None else chemins[numero_staircase]
+        affiche = affiches[chemin]
         regime = REGIME_SEVERE if regime_nom == REGIME_SEVERE.nom else REGIME_LAXISTE
         fig, axes = _cree_figure(regime, taille_px)
         fig.suptitle("a : X ressemble à A     b : X ressemble à B     —     Échap / fermer : arrêter",
@@ -308,13 +359,24 @@ def orchestre_regime(*, regime: Regime, regime_idx: int, n_staircases: int, base
                      sources_incluses: tuple[tuple[int, int], ...],
                      sources_catch: tuple[tuple[int, int], ...] | None,
                      budget: int, params: ParametresEscalier, banques: BanqueBancs,
-                     fabrique_repondre: FabriqueRepondre, out_dir: Path) -> dict:
+                     fabrique_repondre: FabriqueRepondre, out_dir: Path,
+                     chemins: tuple[str, ...] | None = None,
+                     provenances: dict | None = None) -> dict:
     """Enchaîne `n_staircases` staircases pour UN régime : seeds dérivées
     (`derive_seeds`), roving restreint aux sources INCLUSES (D-2) et, pour
     le catch, au pool `sources_catch` (D-3, `None` = même pool que
     `sources_incluses`), écrit chaque log brut, arrête la boucle DÈS que
     `verifie_arret_2_invalides` (§C5) signale `STATUT_STOP_2_INVALIDES` --
-    la 3e staircase (ou plus) N'EST PAS lancée dans ce cas."""
+    la 3e staircase (ou plus) N'EST PAS lancée dans ce cas.
+
+    P3 (chantier 6) : `chemins` consigne le chemin d'affichage de CHAQUE
+    staircase (bras témoin viridis en 3e position) ; `provenances` (chemin ->
+    bloc de provenance) déclenche l'écriture d'un SIDECAR PAR STAIRCASE,
+    `session_<regime>_<k>.conditions.json`, portant la provenance du chemin
+    traversé ET le `sha256_log` du log qui vient d'être écrit (chantier 3) --
+    la lecture versionnée du verdict citera ce sha, plus d'appariement par nom.
+    Les deux sont `None` par défaut : une campagne synthétique n'affiche rien
+    et n'a aucun chemin à dater."""
     sessions: list[dict] = []
     historique_valide: list[bool] = []
     statut = STATUT_CONTINUE
@@ -334,12 +396,24 @@ def orchestre_regime(*, regime: Regime, regime_idx: int, n_staircases: int, base
         log_path = out_dir / f"session_{regime.nom}_{k}.jsonl"
         ecrit_log_jsonl(log_path, resultat.essais)
         historique_valide.append(bool(validite["valide"]))
-        sessions.append(dict(
+        chemin_rendu = None if chemins is None else chemins[k]
+        session = dict(
             numero_staircase=k, regime=regime.nom, seed_roving=seeds["seed_roving"],
             seed_catch=seeds["seed_catch"], seed_sujet=seeds["seed_sujet"],
-            log_path=str(log_path), n_essais=len(resultat.essais),
+            log_path=str(log_path), chemin_rendu=chemin_rendu,
+            n_essais=len(resultat.essais),
             n_reversals=len(resultat.reversals), complet=bool(resultat.complet),
-            seuil=resultat.seuil, validite=validite))
+            seuil=resultat.seuil, validite=validite)
+
+        if provenances is not None and chemin_rendu is not None:
+            from scripts.run_arcC_session import sha256_fichier
+            conditions_path = out_dir / f"session_{regime.nom}_{k}.conditions.json"
+            ecrit_manifeste_json(conditions_path, dict(
+                numero_staircase=k, regime=regime.nom, log_path=str(log_path),
+                provenance_rendu=provenances[chemin_rendu],
+                sha256_log=sha256_fichier(log_path)))
+            session["conditions_path"] = str(conditions_path)
+        sessions.append(session)
 
         statut = verifie_arret_2_invalides(historique_valide)
         if statut == STATUT_STOP_2_INVALIDES:
@@ -360,7 +434,9 @@ def orchestre_campagne(
         fraction_sources_fortes: float = FRACTION_SOURCES_FORTES,
         luminosite: str | None = None, conditions: str | None = None,
         long_ref_px: float | None = None, long_ref_mm: float | None = None,
-        distance_mm: float | None = None, provenance_rendu: dict | None = None) -> dict:
+        distance_mm: float | None = None, provenance_rendu: dict | None = None,
+        regimes: tuple[str, ...] | None = None, chemins: tuple[str, ...] | None = None,
+        provenances: dict | None = None) -> dict:
     """Orchestrateur de campagne complet (§C8) : applique D-2 (exclusion
     nommée -- STOP si >= `n_exclusions_stop`), D-3 (catch réserve forte,
     optionnellement restreint aux sources fortes), D-1 (ancre = `budget`,
@@ -393,7 +469,16 @@ def orchestre_campagne(
     sous `config_affichage`. Défaut `None` = campagne SYNTHÉTIQUE (aucun écran,
     aucun chemin d'affichage à dater) ; `main()` l'exige dès `--sujet humain`.
     Motif : « P3 date son verdict sur R1 » -- une campagne humaine dont on ne
-    sait pas quel chemin elle a traversé est inattribuable."""
+    sait pas quel chemin elle a traversé est inattribuable.
+
+    P3 (chantier 6) : `regimes` restreint les régimes lancés (`None` = les
+    deux, comportement historique ; P3 utilisera le SÉVÈRE seul, c'est jnd_sev
+    que T2 consomme). L'indice de régime passé à `derive_seeds` reste celui du
+    tuple CANONIQUE, jamais celui de la sélection : restreindre les régimes ne
+    doit RIEN changer aux seeds d'un régime conservé, sinon `--regime severe`
+    ne rejouerait pas la même campagne que `--regime tous`. `chemins` et
+    `provenances` matérialisent le bras témoin (cf. `orchestre_regime`) ;
+    l'ordre effectif est consigné sous `config_affichage`."""
     if geometrie not in GEOMETRIES:
         raise ValueError(
             f"orchestre_campagne : geometrie inconnue {geometrie!r} (attendu {GEOMETRIES!r}).")
@@ -417,7 +502,9 @@ def orchestre_campagne(
             catch_sources_fortes=catch_sources_fortes,
             fraction_sources_fortes=(fraction_sources_fortes if catch_sources_fortes else None)),
         config_affichage=dict(geometrie=geometrie, ppd=ppd, taille_domaine_px=taille_px,
-                              provenance_rendu=provenance_rendu),
+                              provenance_rendu=provenance_rendu,
+                              chemins_staircases=(list(chemins) if chemins else None),
+                              regimes_lances=list(regimes) if regimes else None),
         conditions_validite=dict(
             luminosite=luminosite, conditions=conditions,
             calibration=dict(ppd=ppd, long_ref_px=long_ref_px, long_ref_mm=long_ref_mm,
@@ -438,16 +525,22 @@ def orchestre_campagne(
     banques = BanqueBancs()
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    regimes: dict[str, dict] = {}
-    for regime_idx, regime in enumerate((REGIME_SEVERE, REGIME_LAXISTE)):
-        regimes[regime.nom] = orchestre_regime(
+    resultats: dict[str, dict] = {}
+    for regime_idx, regime in enumerate(REGIMES_CANONIQUES):
+        # `regime_idx` reste l'indice CANONIQUE, pas celui de la sélection --
+        # `derive_seeds` en dépend, et restreindre les régimes ne doit pas
+        # re-seeder ceux qu'on garde.
+        if regimes is not None and regime.nom not in regimes:
+            continue
+        resultats[regime.nom] = orchestre_regime(
             regime=regime, regime_idx=regime_idx, n_staircases=n_staircases,
             base_seed=base_seed, sources_incluses=sources_incluses,
             sources_catch=sources_catch, budget=budget, params=params, banques=banques,
-            fabrique_repondre=fabrique_repondre, out_dir=out_dir)
+            fabrique_repondre=fabrique_repondre, out_dir=out_dir,
+            chemins=chemins, provenances=provenances)
 
     manifeste["statut_global"] = STATUT_CONTINUE
-    manifeste["regimes"] = regimes
+    manifeste["regimes"] = resultats
     return manifeste
 
 
@@ -501,6 +594,14 @@ def main() -> None:
                         help="Chemin d'affichage (§A37) : 'viridis' (historique, pseudo-"
                              "couleur) ou 'r1' (noyau rendu-instrument). REQUIS si "
                              "--sujet humain.")
+    parser.add_argument("--regime", choices=list(CHOIX_REGIME), default="tous",
+                        help="Régime(s) lancé(s). Défaut 'tous' = comportement historique. "
+                             "P3 utilise 'severe' : c'est jnd_sev que T2 consomme, le "
+                             "laxiste n'est pas re-mesuré.")
+    parser.add_argument("--temoin-viridis", action="store_true", default=False,
+                        help="Insère UNE staircase témoin en chemin viridis, en 3e position "
+                             "(position GRAVÉE au prereg P3). Valide UNIQUEMENT avec "
+                             "--sujet humain --rendu r1.")
     parser.add_argument("--theta-sim", type=float, default=None,
                         help="Requis si --sujet synthetique.")
     parser.add_argument("--sigma-sim", type=float, default=None,
@@ -528,7 +629,18 @@ def main() -> None:
     from src.arcC_calibration import pixels_par_degre
     ppd = pixels_par_degre(args.long_ref_px, args.long_ref_mm, args.distance_mm)
 
+    # P3 (chantier 6) : le bras témoin n'a de sens que dans une session humaine
+    # en chemin R1 -- ailleurs, « témoin viridis » ne témoignerait de rien.
+    if args.temoin_viridis and not (args.sujet == "humain" and args.rendu == "r1"):
+        parser.error(
+            "--temoin-viridis est valide UNIQUEMENT avec --sujet humain --rendu r1 (prereg "
+            f"P3 : le bras témoin est une GARDE DE VALIDITÉ du bras R1 ; reçu --sujet "
+            f"{args.sujet!r} --rendu {args.rendu!r}).")
+
+    regimes = None if args.regime == "tous" else (args.regime,)
     provenance = None
+    chemins = None
+    provenances = None
     if args.sujet == "humain":
         # P1 / §A37 : le chemin d'affichage se DÉCLARE avant toute présentation
         # humaine (même idiome que --luminosite/--conditions, §C9).
@@ -551,7 +663,14 @@ def main() -> None:
         print(f"[provenance §A37] rendu={provenance['chemin_rendu']}  "
               f"sha256(arcC_rendu.py)={provenance['sha256_arcC_rendu']}  "
               f"etages={provenance['ordre_etages']}")
-        fabrique_repondre = _fabrique_repondre_humain(taille_px, args.out_dir, args.rendu)
+        chemins = chemins_staircases(args.rendu, args.n_staircases, args.temoin_viridis)
+        provenances = {chemin: provenance_rendu(chemin, ppd=ppd, taille_px=taille_px,
+                                                obs=observation_cellule_pic_csf(ppd))
+                       for chemin in set(chemins)}
+        print(f"[chemins §P3] ordre effectif des staircases : {list(chemins)}"
+              + ("  (témoin viridis en 3e position, GRAVÉE)" if args.temoin_viridis else ""))
+        fabrique_repondre = _fabrique_repondre_humain(taille_px, args.out_dir, args.rendu,
+                                                      chemins)
     else:
         if args.theta_sim is None or args.sigma_sim is None:
             parser.error("--sujet synthetique requiert --theta-sim et --sigma-sim.")
@@ -565,7 +684,8 @@ def main() -> None:
             fabrique_repondre=fabrique_repondre, out_dir=args.out_dir,
             luminosite=args.luminosite, conditions=args.conditions,
             long_ref_px=args.long_ref_px, long_ref_mm=args.long_ref_mm,
-            distance_mm=args.distance_mm, provenance_rendu=provenance)
+            distance_mm=args.distance_mm, provenance_rendu=provenance,
+            regimes=regimes, chemins=chemins, provenances=provenances)
     except SessionInterrompue as exc:
         print(f"[CAMPAGNE INTERROMPUE] {exc} -- AUCUN manifeste écrit (campagne inachevée = "
               "fait de session, pas de référent, §C10). Reprends au pré-vol si c'était "
