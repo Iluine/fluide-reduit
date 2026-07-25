@@ -85,6 +85,31 @@
    Tests : ordre des staircases vérifié ; `--temoin-viridis` sans humain/r1 ⇒
    erreur d'argparse ; sidecars distincts et liés à leurs logs (chantier 3).
 
+7. **[AJOUTÉ — 25/07 soir] LECTURE P3 MÉCANIQUE** (`scripts/run_p3_lecture.py`,
+   nouveau) : SANS lui, la session finirait en lecture à la main — interdit.
+   Lit `outputs/arcC/manifeste_p3.json`, et prononce dans cet ordre, tout
+   mécanique, rien à l'œil :
+   1. **gardes de validité, AVANT toute lecture de seuil** : chaque sidecar
+      lié à son log (sha256, chantier 3) ; `validite` §C5 de chaque staircase ;
+      la chaîne `--conditions` du manifeste NE CONTIENT PAS de chevrons `<`/`>`
+      (un gabarit n'est pas une observation — les deux pré-vols du 25/07 au
+      soir sont le cas d'école) ; ordre des chemins == (r1, r1, viridis, r1) ;
+   2. **le TÉMOIN d'abord** (staircase 3, viridis) : seuil ∈ [6.03, 8.67]
+      (IC gravé du pin) — sinon **session INDÉTERMINÉE**, AUCUNE lecture de
+      transport, les seuils R1 ne sont même pas imprimés ;
+   3. témoin valide ⇒ IC des TROIS staircases R1 (méthode gravée mean±2SEM,
+      importée, jamais réimplémentée) ; branches du prereg P3 prononcées
+      telles quelles (recouvrement d'IC ⇒ compatible-avec-1 avec son
+      anti-surclame ; disjoints ⇒ transport ≠ 1, T et IC par les bornes ;
+      gardes échouées ⇒ INDÉTERMINÉE) ;
+   4. écrit `outputs/arcC/p3_transport_pin.lecture.json` (la version
+      `claude/lectures/` se recopie après verdict, comme toujours).
+   Tests : chaque garde sait échouer (chevrons ⇒ refus ; témoin hors IC ⇒
+   INDÉTERMINÉE sans seuils R1 imprimés ; sha cassé ⇒ refus) ; branches sur
+   manifestes synthétiques. Les DEUX pré-vols du 25/07
+   (`outputs/arcC/p3_prevol_2026-07-25/`, `p3_prevol2_2026-07-25/`) doivent
+   être REFUSÉS par la garde 1 — c'est leur rôle posthume de champs d'essai.
+
 ## Garde-fous (ils sont le contrat)
 
 - **`src/arcC_rendu.py` INTOUCHÉ** — l'empreinte c5ac8757… doit rester verte ;
