@@ -307,3 +307,14 @@ développer, **le verdict P3 restera iluin-tworings3 natif** `[GRAVÉ]`.
 
 Gravure journal : §A37 (pocCascade2phys). Prochaine étape de §7 : ordre de mission
 Claude Code, **sur décision explicite** — rien ne se code avant.
+
+**CORRECTION EXPLICITE (2026-07-25, après endossement — rien n'est réécrit)** :
+l'ordre des étages 3-5 du tableau §2.3 (encodage → quantification →
+rééchantillonnage) est **REMPLACÉ** par l'ordre amendé de l'ordre de mission,
+tranché par Romain : **rééchantillonnage bilinéaire en espace LINÉAIRE (= A,
+puisque Y = A) → encodage sRGB → quantification uint8 unique en bout de chaîne**.
+Motif : pas d'interpolation de valeurs quantifiées, pas d'interpolation en espace
+gamma ; une moyenne de luminances est une luminance (l'intention de D-P1-4).
+Épistémique consignée : décision sans a priori, re-jugeable au résultat — l'ordre
+des étages est loggé dans la provenance de chaque session (attribuable si P3
+rend un transport ≠ 1).

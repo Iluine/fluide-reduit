@@ -15,7 +15,7 @@ R1 est une fonction **PURE, sans RNG, sans état** : champ albédo 64×64 float6
 **inverse-EOTF sRGB** gravé en formule, **rééchantillonnage bilinéaire** comme
 étage de R1. L'observable Δχ et le pin sont INTOUCHÉS.
 
-## AMENDEMENT-ÉTAGES (boîte de décision — Romain valide à la lecture de cet ordre)
+## AMENDEMENT-ÉTAGES — TRANCHÉ (Romain, 2026-07-25) : l'ordre AMENDÉ est retenu
 
 La spec (§2.3) ordonne : encodage sRGB → quantification → rééchantillonnage.
 Cet ordre interpole des valeurs quantifiées (double quantification) et en espace
@@ -27,9 +27,15 @@ A (64×64, [0,1]) → rééchantillonnage bilinéaire (espace LINÉAIRE = A, car
 ```
 
 Justification : une moyenne bilinéaire de luminances est une luminance (l'intention
-de D-P1-4) ; une seule quantification, en bout de chaîne. Si Romain refuse, l'ordre
-de la spec s'applique tel quel — le choix est LOGGÉ dans la provenance (cf. §
-« provenance » ci-dessous) quel qu'il soit.
+de D-P1-4) ; une seule quantification, en bout de chaîne.
+
+**Décision Romain (2026-07-25), consignée avec son épistémique** : « pas de réponse
+a priori — partons avec, et on verra au résultat si c'est un bon choix. » Le choix
+n'est pas revendiqué supérieur : il est GRAVÉ, LOGGÉ dans la provenance de chaque
+session, et re-jugeable — si P3 rend un transport ≠ 1, l'ordre des étages fait
+partie des pièces attribuables (c'est pour cela que la provenance le porte).
+L'ordre littéral de la spec §2.3 est remplacé par entrée de correction explicite
+(bloc REVUE de la spec), jamais réécrit.
 
 ## Ce qui se construit — et rien d'autre
 
