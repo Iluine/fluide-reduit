@@ -22,7 +22,8 @@ from scripts.run_p2_chiffrage import (BANDE_CELLULE1_MS, BANDE_CELLULE2_MS, MARG
                                       SEUIL_TIMINGS_P3_MS, VERDICT_AUTRE, VERDICT_DANS_BANDE,
                                       _analyse_equivalence_champ, champ_rampe,
                                       champs_equivalence, chronometre, classe_bande,
-                                      empreinte_r1, lecture_cellule1, lecture_cellule2)
+                                      compare_bras, empreinte_r1, lecture_cellule1,
+                                      lecture_cellule2)
 from scripts.run_arcC_session import (GEOMETRIE_DU_PIN, assert_geometrie_comparable,
                                       sha256_fichier)
 from src.f1_gpu.backend import cupy_disponible
@@ -185,37 +186,58 @@ def test_sha256_de_la_recopie_est_celui_du_verrou():
     assert SHA256_R1_RECOPIE == SHA256_ATTENDU
 
 
+@pytest.mark.parametrize("decalage,pure", [(0, True), (1, True), (2, False), (7, False)])
+def test_compare_bras_est_le_critere_unifie(decalage, pure):
+    """FALSIFIEUR du critère unifié, sur le prédicat LUI-MÊME — pur, sans GPU.
+
+    `compare_bras` est l'UNIQUE implémentation du critère : le bras d'isolation
+    et le bras f32 complet l'appellent tous deux (§A38-CORRECTION-3 : un seul
+    critère, appliqué à chaque bras). Le falsifier ici, c'est le falsifier pour
+    les deux — et c'est pour cela qu'il n'y a qu'une fonction.
+
+    0 et 1 niveau sont des bascules (`np.rint` est monotone : un désaccord d'un
+    seul niveau ne peut encadrer qu'UNE frontière d'arrondi) ; 2 et au-delà
+    signifient que les deux chaînes ne calculent pas la même chose."""
+    attendu = np.arange(120, dtype=np.uint8).reshape(10, 12)
+    obtenu = (attendu.astype(np.int16) + decalage).astype(np.uint8)
+    echelle = attendu.astype(np.float64) + 0.499     # collé à la bascule, mais surfacé seulement
+    bras = compare_bras(attendu, obtenu, echelle)
+    assert bras["bascule_pure"] is pure
+    assert bras["ecart_max_niveaux"] == decalage
+    assert bras["n_desaccords"] == (0 if decalage == 0 else attendu.size)
+
+
 @gpu_requis
 def test_analyse_equivalence_est_decidable():
-    """CRITÈRE DE NATURE, sur un ÉCHANTILLON (le plein 1920x1080 est pour le
-    runner, pas pour la suite).
+    """CRITÈRE DE NATURE UNIFIÉ, sur un ÉCHANTILLON (le plein 1920x1080 est
+    pour le runner, pas pour la suite).
 
-    Ce test ne présuppose AUCUNE branche — ni que l'isolation soit à zéro, ni
-    que la bascule soit pure : ce sont des FAITS que le runner mesure et
-    prononce. Il vérifie que l'analyse est DÉCIDABLE (tous les champs jugeants
-    et surfacés sont présents et cohérents entre eux) et IMPRIME ce qu'elle a
-    mesuré."""
+    Ce test ne présuppose AUCUNE branche — ni que l'isolation soit à zéro (elle
+    ne l'est pas sur les champs uniformes, §A38-CORRECTION-3), ni que la
+    bascule soit pure : ce sont des FAITS que le runner mesure et prononce.
+
+    Il verrouille en revanche la STRUCTURE du verdict : le champ est conforme
+    ssi les DEUX bras le sont, sans moyenne. Combiné au falsifieur pur de
+    `compare_bras`, cela couvre le bras d'isolation autant que le bras f32."""
     import cupy as cp
 
     analyse = _analyse_equivalence_champ(cp, champ_rampe()[::37, ::41].copy())
-    print(f"\n[critere de nature, echantillon] {analyse}")
+    print(f"\n[critere unifie, echantillon] {analyse}")
 
-    assert set(analyse) >= {"isolation_ok", "bascule_pure", "n_pixels_differents",
-                            "ecart_max_niveaux", "distance_max_a_la_bascule"}
-    assert analyse["isolation_ok"] == (analyse["isolation_entree_f32_desaccords"] == 0)
-    assert analyse["bascule_pure"] == (analyse["ecart_max_niveaux"] <= 1)
+    assert set(analyse["bras"]) == {"isolation_entree_f32", "f32_complet"}
+    for bras in analyse["bras"].values():
+        assert set(bras) >= {"n_desaccords", "fraction_desaccords", "ecart_max_niveaux",
+                             "bascule_pure", "distance_max_a_la_bascule"}
+        assert bras["bascule_pure"] == (bras["ecart_max_niveaux"] <= 1)
+    assert analyse["bascule_pure"] == all(b["bascule_pure"] for b in analyse["bras"].values())
     assert 0.0 <= analyse["encode_f32_min"] and analyse["encode_f32_max"] <= 1.0
 
 
 @gpu_requis
-def test_point3_refuse_un_ecart_de_deux_niveaux(monkeypatch):
-    """FALSIFIEUR du point 3 : une sonde décalée de 2 niveaux n'est PAS une
-    bascule — `np.rint` étant monotone, un désaccord d'un seul niveau ne peut
-    encadrer qu'UNE frontière d'arrondi ; au-delà, les deux chaînes ne
-    calculent pas la même chose et le verdict doit être AUTRE.
-
-    Sans ce test, `bascule_pure` serait une case toujours verte : on saurait
-    qu'elle passe, jamais qu'elle sait échouer."""
+def test_critere_unifie_refuse_une_sonde_decalee_de_deux_niveaux(monkeypatch):
+    """FALSIFIEUR de bout en bout, sur le bras f32 : une sonde décalée de
+    2 niveaux fait tomber le verdict du CHAMP, pas seulement celui du bras.
+    Sans ce test, l'agrégation « et » serait une case toujours verte."""
     import cupy as cp
 
     vraie = run_p2_chiffrage.etages_srgb_quantif_cupy
@@ -226,7 +248,8 @@ def test_point3_refuse_un_ecart_de_deux_niveaux(monkeypatch):
 
     monkeypatch.setattr(run_p2_chiffrage, "etages_srgb_quantif_cupy", sonde_decalee)
     analyse = _analyse_equivalence_champ(cp, champ_rampe()[::37, ::41].copy())
-    assert analyse["ecart_max_niveaux"] >= 2
+    assert analyse["bras"]["f32_complet"]["ecart_max_niveaux"] >= 2
+    assert analyse["bras"]["f32_complet"]["bascule_pure"] is False
     assert analyse["bascule_pure"] is False
 
 

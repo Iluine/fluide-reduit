@@ -34,18 +34,27 @@ mesure. Ce qui est gravé désormais, prononcé mécaniquement DANS CET ORDRE :
   1. équivalence STRUCTURELLE — les formules sont RECOPIÉES de `arcC_rendu.py`
      et son sha est cité ; le runner vérifie que ce sha est encore celui du
      fichier. C'est elle qui juge la FORMULE.
-  2. ISOLATION DES CAUSES, booléenne — la chaîne f64 à entrée castée f32 doit
-     rendre ZÉRO désaccord, sinon AUTRE. Elle sépare « l'entrée a perdu des
-     bits » de « l'arithmétique a arrondi ailleurs ».
-  3. BASCULE PURE — tout désaccord résiduel de la chaîne f32 vaut
-     |Δniveau| == 1 EXACTEMENT ; un écart ≥ 2 niveaux est une formule fausse,
-     verdict AUTRE.
-  4. taux de désaccord et distance à la bascule : SURFACÉS au JSON, JAMAIS
-     jugés.
+  2. BASCULE PURE, critère UNIFIÉ appliqué à CHAQUE BRAS (§A38-CORRECTION-3) —
+     bras d'ISOLATION (chaîne f64, entrée castée f32) COMME bras f32 COMPLET :
+     tout désaccord vaut |Δniveau| == 1 EXACTEMENT, sinon AUTRE. Un écart de
+     2 niveaux ou plus est une formule fausse, dans l'un ou l'autre bras.
+  3. taux de désaccord, écart max et distance à la bascule : SURFACÉS au JSON,
+     PAR CHAMP ET PAR BRAS, JAMAIS jugés. L'attribution par cause est un
+     DIAGNOSTIC, elle ne décide de rien.
+
+POURQUOI L'ISOLATION N'EST PLUS UNE CLAUSE À PART (§A38-CORRECTION-3, né d'une
+mesure de ce runner). Elle exigeait ZÉRO désaccord ; mesuré sur les champs
+gravés : 0 (rampe) mais 6/2/4 (uniformes seeds 0/1/2), tous de 1 niveau, tous à
+≤ 2.68·10⁻⁶ de la bascule. Le cast f64→f32 perturbe `v·255` d'environ 10⁻⁶ ;
+sur 2·10⁶ valeurs distinctes, quelques franchissements de frontière de `rint`
+sont l'ATTENTE, pas l'exception. Un comptage ZÉRO n'est exigible d'aucun bras
+dès que la couverture est dense — et le 0 de la rampe est un TIRAGE, pas une
+propriété. La clause reproduisait sur l'ENTRÉE la structure même que le critère
+de nature venait de remplacer sur la SORTIE.
 
 Portée dite : le critère de nature juge l'ARITHMÉTIQUE ; un écart de formule
-sub-niveau SYSTÉMATIQUE passerait le point 3 — il est couvert par le point 1,
-la recopie.
+sub-niveau SYSTÉMATIQUE le passerait — il est couvert par le point 1, la
+recopie.
 
 QUI LANCE QUOI. Les 300 appels officiels sont VERDICT-GRADE : iluin-tworings3,
 terminal natif, **lancés par Romain**. `--n-appels`/`--n-chauffe` existent pour
@@ -270,76 +279,82 @@ def champs_equivalence() -> tuple[tuple[str, np.ndarray], ...]:
     return tuple(champs)
 
 
+def compare_bras(attendu: np.ndarray, obtenu: np.ndarray, echelle: np.ndarray) -> dict:
+    """LE critère unifié, sur UN bras (§A38-CORRECTION-3) — une seule
+    implémentation, appliquée à l'isolation comme au f32 complet : il ne peut
+    donc pas y avoir deux exigences là où le gravé n'en pose qu'une.
+
+    BASCULE PURE : tout désaccord vaut |Δniveau| == 1 EXACTEMENT. `np.rint`
+    étant monotone, un désaccord d'un seul niveau ne peut encadrer qu'UNE
+    frontière d'arrondi ; deux niveaux ou plus signifient que les deux chaînes
+    ne calculent pas la même chose — c'est AUTRE. C'est aussi ce qui
+    attraperait un enroulement `astype(uint8)` (256.0 -> 0 ferait 255 niveaux).
+
+    `echelle` = les valeurs de référence en unités de niveau (`v · 255`) : elle
+    sert la DISTANCE À LA BASCULE, surfacée et jamais jugée."""
+    ecarts = np.abs(attendu.astype(np.int16) - obtenu.astype(np.int16))
+    differents = ecarts != 0
+    n_desaccords = int(differents.sum())
+    ecart_max = int(ecarts.max())
+    distances = np.abs(echelle - (np.floor(echelle) + 0.5))[differents]
+    return dict(
+        n_desaccords=n_desaccords,                                    # surfacé
+        fraction_desaccords=n_desaccords / attendu.size,              # surfacé
+        ecart_max_niveaux=ecart_max,                                  # JUGÉ
+        bascule_pure=bool(n_desaccords == 0 or ecart_max == 1),
+        distance_max_a_la_bascule=(float(distances.max()) if n_desaccords else None))
+
+
 def _analyse_equivalence_champ(cp, champ: np.ndarray) -> dict:
-    """Les points 2, 3 et 4 du critère de NATURE sur UN champ test.
+    """Le critère unifié sur UN champ test, appliqué aux DEUX bras.
 
-    Point 2 — ISOLATION DES CAUSES : la chaîne f64 alimentée par l'entrée
-    CASTÉE en f32 doit rendre les mêmes uint8 que la chaîne f64 pleine. Zéro
-    désaccord exigé. Ce point sépare « l'entrée a perdu des bits » de
-    « l'arithmétique a arrondi ailleurs » : sans lui, un désaccord de bascule
-    serait inattribuable.
-
-    Point 3 — BASCULE PURE : tout désaccord résiduel de la chaîne f32 vaut
-    |Δniveau| == 1 exactement. `np.rint` étant monotone, un désaccord d'un seul
-    niveau ne peut encadrer qu'UNE frontière d'arrondi ; deux niveaux ou plus
-    signifient que les deux chaînes ne calculent pas la même chose, et c'est
-    AUTRE. C'est aussi ce point qui attraperait un enroulement `astype(uint8)`
-    (256.0 -> 0 ferait un écart de 255 niveaux).
-
-    Point 4 — le taux et la distance à la bascule sont SURFACÉS, jamais jugés :
-    ils rendent le chiffre lisible (« arrondi » vs « formule différente »), ils
-    ne décident de rien."""
+    Bras `isolation_entree_f32` — la chaîne f64 alimentée par l'entrée CASTÉE
+    en f32. Bras `f32_complet` — la sonde GPU entière. Leur comparaison reste
+    un DIAGNOSTIC précieux (« l'entrée a perdu des bits » vs « l'arithmétique a
+    arrondi ailleurs ») : les comptages sont surfacés par bras. Mais aucun des
+    deux ne porte d'exigence propre — le champ est conforme ssi les DEUX bras
+    sont en bascule pure."""
     encode64 = srgb_encode(champ)
     attendu = quantifie_uint8(encode64)
+    echelle = encode64 * float(arcC_rendu.NIVEAU_MAX_UINT8)
 
     entree_f32 = np.asarray(champ, dtype=np.float32).astype(np.float64)
-    n_isolation = int((attendu != quantifie_uint8(srgb_encode(entree_f32))).sum())
+    isolation = quantifie_uint8(srgb_encode(entree_f32))
 
     obtenu_gpu, encode_gpu = etages_srgb_quantif_cupy(cp, cp.asarray(champ, dtype=cp.float32))
     obtenu = cp.asnumpy(obtenu_gpu)
-    ecarts = np.abs(attendu.astype(np.int16) - obtenu.astype(np.int16))
-    differents = ecarts != 0
-    n_differents = int(differents.sum())
-    ecart_max = int(ecarts.max())
 
-    echelle = encode64 * float(arcC_rendu.NIVEAU_MAX_UINT8)
-    distances = np.abs(echelle - (np.floor(echelle) + 0.5))[differents]
+    bras = dict(isolation_entree_f32=compare_bras(attendu, isolation, echelle),
+                f32_complet=compare_bras(attendu, obtenu, echelle))
     return dict(
-        n_pixels_total=int(attendu.size),
-        isolation_entree_f32_desaccords=n_isolation,       # point 2 (doit valoir 0)
-        isolation_ok=bool(n_isolation == 0),
-        n_pixels_differents=n_differents,                  # point 4 (surfacé)
-        fraction_differents=n_differents / attendu.size,   # point 4 (surfacé)
-        ecart_max_niveaux=ecart_max,                       # point 3 (jugé)
-        bascule_pure=bool(n_differents == 0 or ecart_max == 1),
-        distance_max_a_la_bascule=(float(distances.max()) if n_differents else None),
+        n_pixels_total=int(attendu.size), bras=bras,
+        bascule_pure=all(b["bascule_pure"] for b in bras.values()),
         encode_f32_min=float(cp.asnumpy(encode_gpu.min())),
         encode_f32_max=float(cp.asnumpy(encode_gpu.max())))
 
 
 def verifie_equivalence(cp) -> dict:
-    """CRITÈRE DE NATURE (§A38-CORRECTION-2), prononcé mécaniquement sur les
-    champs test gravés. `equivalent` est vrai ssi les trois points jugeants le
-    sont : recopie à jour (point 1), isolation à zéro sur CHAQUE champ
-    (point 2), bascule pure sur CHAQUE champ (point 3).
+    """CRITÈRE DE NATURE UNIFIÉ (§A38-CORRECTION-3), prononcé mécaniquement sur
+    les champs test gravés. `equivalent` est vrai ssi les DEUX points jugeants
+    le sont : recopie à jour (point 1) et bascule pure sur CHAQUE bras de CHAQUE
+    champ (point 2).
 
-    Un seul champ suffit à faire AUTRE : la densité de valeurs distinctes est
-    précisément ce qui rend le test capable d'échouer, et une moyenne sur les
-    champs le re-neutraliserait."""
+    Un seul bras d'un seul champ suffit à faire AUTRE : la densité de valeurs
+    distinctes est précisément ce qui rend le test capable d'échouer, et une
+    moyenne sur les champs ou sur les bras le re-neutraliserait."""
     sha_actuel = empreinte_r1()["sha256"]
     recopie_a_jour = bool(sha_actuel == SHA256_R1_RECOPIE)      # point 1
 
     par_champ = {nom: _analyse_equivalence_champ(cp, champ)
                  for nom, champ in champs_equivalence()}
-    isolation_ok = all(a["isolation_ok"] for a in par_champ.values())
     bascule_pure = all(a["bascule_pure"] for a in par_champ.values())
     return dict(
-        critere="NATURE (§A38-CORRECTION-2) -- la tolerance ZERO est falsifiee "
-                "structurellement, elle n'est plus le critere",
-        equivalent=bool(recopie_a_jour and isolation_ok and bascule_pure),
+        critere="NATURE UNIFIE (§A38-CORRECTION-3) -- un seul critere, applique a CHAQUE "
+                "bras ; l'attribution par cause est un DIAGNOSTIC, jamais un gate",
+        equivalent=bool(recopie_a_jour and bascule_pure),
         point1_recopie_a_jour=recopie_a_jour, sha256_r1_recopie=SHA256_R1_RECOPIE,
         sha256_r1_actuel=sha_actuel,
-        point2_isolation_ok=isolation_ok, point3_bascule_pure=bascule_pure,
+        point2_bascule_pure_tous_bras=bascule_pure,
         par_champ=par_champ)
 
 
@@ -355,10 +370,12 @@ def cellule2(cp, *, n_appels: int, n_chauffe: int) -> dict:
         causes = []
         if not equivalence["point1_recopie_a_jour"]:
             causes.append("point 1 (recopie perimee : R1 a bouge depuis la recopie)")
-        if not equivalence["point2_isolation_ok"]:
-            causes.append("point 2 (isolation : la chaine f64 a entree castee f32 desaccorde)")
-        if not equivalence["point3_bascule_pure"]:
-            causes.append("point 3 (ecart >= 2 niveaux : ce n'est plus une bascule)")
+        if not equivalence["point2_bascule_pure_tous_bras"]:
+            causes.append("point 2 (ecart >= 2 niveaux sur au moins un bras : ce n'est plus "
+                          "une bascule) -- bras en cause : " + ", ".join(
+                              f"{nom}/{bras}"
+                              for nom, a in equivalence["par_champ"].items()
+                              for bras, b in a["bras"].items() if not b["bascule_pure"]))
         return dict(base, verdict_bande=VERDICT_AUTRE, lecture=dict(
             branche=None, texte=(
                 "EQUIVALENCE ECHOUEE au critere de NATURE -- " + " ; ".join(causes) + ". "
@@ -463,17 +480,18 @@ def main() -> None:
             c2 = cellule2(cp, n_appels=args.n_appels, n_chauffe=args.n_chauffe)
             rapport["cellule_2"] = c2
             eq = c2["equivalence"]
-            print(f"\n[cellule 2] equivalence, critere de NATURE : "
+            print(f"\n[cellule 2] equivalence, critere de NATURE UNIFIE : "
                   f"equivalent={eq['equivalent']}  (1) recopie a jour="
-                  f"{eq['point1_recopie_a_jour']}  (2) isolation="
-                  f"{eq['point2_isolation_ok']}  (3) bascule pure="
-                  f"{eq['point3_bascule_pure']}")
+                  f"{eq['point1_recopie_a_jour']}  (2) bascule pure sur tous les bras="
+                  f"{eq['point2_bascule_pure_tous_bras']}")
             for nom, a in eq["par_champ"].items():
-                print(f"            {nom:18s} : {a['n_pixels_differents']:6d}/"
-                      f"{a['n_pixels_total']} differents ({a['fraction_differents']:.3e}), "
-                      f"ecart max {a['ecart_max_niveaux']} niveau(x), isolation "
-                      f"{a['isolation_entree_f32_desaccords']} desaccord(s), distance max "
-                      f"a la bascule {a['distance_max_a_la_bascule']}")
+                for nom_bras, b in a["bras"].items():
+                    print(f"            {nom:15s} {nom_bras:20s} : "
+                          f"{b['n_desaccords']:6d}/{a['n_pixels_total']} desaccords "
+                          f"({b['fraction_desaccords']:.3e}), ecart max "
+                          f"{b['ecart_max_niveaux']} niveau(x) -> bascule_pure="
+                          f"{b['bascule_pure']}, distance max a la bascule "
+                          f"{b['distance_max_a_la_bascule']}")
             if eq["equivalent"]:
                 print(f"            mediane={c2['mediane_ms']:.4f} ms  "
                       f"p95={c2['p95_ms']:.4f} ms  bande={list(BANDE_CELLULE2_MS)} -> "
