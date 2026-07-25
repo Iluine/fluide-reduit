@@ -1,7 +1,8 @@
 # PRÉ-ENREGISTREMENT P3 — transport du pin à travers R1 (gravé AVANT toute mesure)
 
-> **Statut : BROUILLON soumis à revue Romain — rien ne se mesure avant
-> endossement, aucune session humaine avant gravure au journal.** Gate P3 de
+> **Statut : ENDOSSÉ (Romain, 2026-07-25) — gravé §A38.** Les pré-requis de
+> build passent par `mission-prerequis-p2p3.md` ; **aucune session humaine avant
+> pré-requis verts, P2 couru, et décision explicite de Romain.** Gate P3 de
 > l'arc projection (§A36) : le falsifieur de l'atténuation D14, celui qui donne
 > son échelle au gate (iii′). Sources : §A37 (R1 verrouillé c5ac8757…), §C0–§C5
 > (harnais ABX, escalier, catch trials), §C11–§C12 (le pin), spec P1 §4.

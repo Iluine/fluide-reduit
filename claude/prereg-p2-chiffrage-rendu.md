@@ -1,7 +1,9 @@
 # PRÉ-ENREGISTREMENT P2 — chiffrage du noyau de rendu (gravé AVANT toute mesure)
 
-> **Statut : BROUILLON soumis à revue Romain — rien ne se mesure, rien ne se
-> construit avant endossement.** Gate P2 de l'arc projection (§A36) : « première
+> **Statut : ENDOSSÉ (Romain, 2026-07-25) — gravé §A38.** Le build de la
+> cellule 2 et le runner passent par l'ordre de mission `mission-prerequis-p2p3.md` ;
+> **les cellules sont LANCÉES PAR ROMAIN, verdict-grade natif.**
+> Gate P2 de l'arc projection (§A36) : « première
 > ancre de la moitié manquante du budget V4 ». Sources : spec P1 endossée (§A37,
 > bloc REVUE + correction d'étages), remontée mission P1 (commit 2bbcca2, R1
 > verrouillé c5ac8757…). Règle D17 : chaque cellule nomme la décision qui la
