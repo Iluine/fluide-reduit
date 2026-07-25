@@ -62,6 +62,15 @@ sur les deux bras ; gravée AVANT la session, l'outillage la matérialise
 stable, OSD 80 %, sujet frais — une session de nuit a été explicitement
 refusée le 25/07 au soir (le pin est pré-enregistré pour sa config exacte ;
 brûler une session pour un INDÉTERMINÉ prévisible n'est pas une mesure).
+(3) **`base_seed = 20260705`, GRAVÉ (décision Romain, 2026-07-26)** — la graine
+canonique de la campagne du pin : le témoin (3e staircase) rejoue la séquence
+de roving de la staircase appariée du pin ; l'appariement est SURFACÉ en
+diagnostic, jamais un critère — la garde du témoin reste l'IC gravé
+[6.03, 8.67]. Graine neuve consignée NON RETENUE (l'indépendance achetait une
+protection — mémoire d'essais — qui ne vaut rien à trois semaines, au prix de
+l'appariement). (4) **Le bras R1 exige ses TROIS staircases complètes** —
+sinon INDÉTERMINÉE (clause portée explicitement par la lecture depuis la
+bascule min/max : un bras amputé ne se lit pas, §A38-CORRECTION-4).
 
 **CORRECTION — MÉTHODE D'IC (2026-07-26, §A38-CORRECTION-4, rien n'est
 réécrit)** : « mean±2SEM combiné » attribuait au pin une méthode qui n'est pas
