@@ -273,7 +273,7 @@ class CompacteurL3:
                                   count=1)
         self.hote[0] = 0          # frame 0 : aucun précédent (warmup, B6)
         # Évènement enregistré juste APRÈS le memcpyAsync du compteur
-        # (review 28/07, M8) : sans lui, `taille_precedente()` lisait
+        # (review 29/07, M8) : sans lui, `taille_precedente()` lisait
         # `hote[0]` en espérant que la copie de la frame n−1 avait atterri
         # — vrai seulement grâce aux synchronisations INCIDENTES d'autres
         # composants (chrono B6, observateur, `remonter`). L'évènement rend

@@ -2,8 +2,8 @@
 
 > **Statut : BROUILLON v2 soumis à revue Romain — rien ne se construit, rien ne
 > se mesure avant endossement et gravure (§A42 à venir ; §A41 est l'entrée de
-> correction du 28/07).** La v1 a été REFUSÉE par la review en profondeur du
-> 2026-07-28 (deux bloquants : B1a graine = feuille de réponses, B1b branche 1
+> correction du 29/07).** La v1 a été REFUSÉE par la review en profondeur du
+> 2026-07-29 (deux bloquants : B1a graine = feuille de réponses, B1b branche 1
 > promouvant un non-rejet en « ÉTABLIE » ; plus M2/M3/M4/M5) ; cette v2 intègre
 > les corrections, chacune marquée `[v2]`. Ce document ne contient AUCUNE
 > commande, à dessein : l'outillage (chantier 8) vient après la revue, et la

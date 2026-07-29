@@ -178,7 +178,7 @@ def main() -> None:
         instrument_muet = bool(data["instrument_muet"])
         # Fail-loud EXPLICITE, jamais `assert` nu : un assert disparaît sous
         # `python -O` et le combinateur lirait une grille désaxée en silence
-        # (la règle que summary_quadtree.py s'impose déjà — review 28/07).
+        # (la règle que summary_quadtree.py s'impose déjà — review 29/07).
         for nom, attendu, obtenu in (("seeds", list(SEEDS), list(data["seeds"])),
                                      ("dts", list(DTS), list(data["dts"])),
                                      ("budgets", list(BUDGETS), list(data["budgets"]))):

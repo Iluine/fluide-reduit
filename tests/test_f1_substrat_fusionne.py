@@ -45,7 +45,7 @@ def test_equivalence_motif_un_pas(cp):
 
 
 def _etat_dense(n_fenetres: int, n: int, graine: int) -> np.ndarray:
-    """Champ DENSE (review 28/07, M9) : gradients non nuls PARTOUT, hu/hv non
+    """Champ DENSE (review 29/07, M9) : gradients non nuls PARTOUT, hu/hv non
     nuls. `etat_initial_jetable` construit par `np.kron` des blocs constants
     6×6 à vitesses nulles : `minmod` y vaut 0 au premier pas et la
     reconstruction MUSCL — la partie délicate du portage — contribuait ZÉRO

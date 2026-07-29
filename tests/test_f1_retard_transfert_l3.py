@@ -321,7 +321,7 @@ def test_aucune_synchronisation_ajoutee(monkeypatch):
     ON-DEVICE (celle que le pipeline emploie — la réduction du jetable,
     elle, synchronise par conception et n'est pas ce chemin).
 
-    SEULE attente autorisée (M8, review 28/07) : l'évènement du memcpy du
+    SEULE attente autorisée (M8, review 29/07) : l'évènement du memcpy du
     compteur — 4 octets soumis une frame plus tôt, attente quasi nulle en
     régime. Elle est VOULUE : sans elle, `taille_precedente()` ne tenait
     que par les synchronisations incidentes des voisins. Les attentes de

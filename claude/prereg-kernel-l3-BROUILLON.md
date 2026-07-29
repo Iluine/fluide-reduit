@@ -1,6 +1,6 @@
 # Pré-enregistrement du KERNEL L3 (borne de la remontée) — SOUMIS À ENDOSSEMENT
 
-> **CLÔTURE (2026-07-28, hygiène review) : ENDOSSÉ ET EXÉCUTÉ.** L'arbitrage
+> **CLÔTURE (2026-07-29, hygiène review) : ENDOSSÉ ET EXÉCUTÉ.** L'arbitrage
 > du §4 a été rendu — **§A18-complément-2 (2026-07-19) : agrégation par warp,
 > décision Romain** — et le kernel a été construit et mesuré (journal §A19 et
 > suivants : bug d'offset attrapé, empreintes-verrous, borne consignée dans

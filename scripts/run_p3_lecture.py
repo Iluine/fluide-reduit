@@ -34,7 +34,7 @@ fuite du gabarit, la session de nuit du 26/07 et le fait de conditions faux du
 journal (§A41). Les deux pré-vols du 25/07 ET la session P3 du 26/07 sont ses
 champs d'essai posthumes : tous trois doivent être REFUSÉS par elle. NOTE DE
 PROVENANCE : cette garde et la garde de dispersion ci-dessous sont POSTÉRIEURES
-au verdict P3 du 26/07 (review du 28/07, constats M2/M3) — le verdict archivé
+au verdict P3 du 26/07 (review du 29/07, constats M2/M3) — le verdict archivé
 (`claude/lectures/p3_transport_pin.lecture.json`) reste le prononcé qui fait
 foi ; rejouer la lecture sur le manifeste du 26/07 refuse désormais la session
 à la garde des conditions au lieu du témoin, INDÉTERMINÉE dans les deux cas.
@@ -283,7 +283,7 @@ def lecture_transport(seuils_r1: list[float]) -> dict:
     bras amputé est un intervalle sur autre chose. Un seul seuil rendrait même
     l'intervalle dégénéré `[x, x]` — un IC ne se fabrique pas.
 
-    GARDE DE DISPERSION (§C5, review 28/07 M3) : la méthodologie du pin exige
+    GARDE DE DISPERSION (§C5, review 29/07 M3) : la méthodologie du pin exige
     CV <= 30 % (`evalue_dispersion`, IMPORTÉE, jamais réimplémentée) — le pin
     aurait été INDÉTERMINÉ au-delà ; un bras R1 plus dispersé que ce que le
     pin se serait permis ne se lit pas contre le pin. Fait de référence : le

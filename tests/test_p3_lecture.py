@@ -158,7 +158,7 @@ def test_garde_conditions_refuse_une_absence():
 def test_garde_conditions_refuse_une_heure_incoherente():
     """LE cas §A41 : session à 00h27 sous une chaîne qui dit « 14h » — la
     session de nuit consignée « lumière du jour » meurt ici, mécaniquement.
-    C'est le falsificateur le moins cher de la review du 28/07."""
+    C'est le falsificateur le moins cher de la review du 29/07."""
     nuit = _MAINTENANT.replace(hour=0, minute=27)
     conditions = f"lumière du jour stable, le {nuit:%d/%m/%Y} vers 14h00, volets ouverts"
     garde = garde_conditions(_manifeste_conditions(conditions,
@@ -322,7 +322,7 @@ def test_branche_2_transport_different_de_1(tmp_path):
 
 
 def test_bras_r1_disperse_rend_indeterminee():
-    """GARDE DE DISPERSION (§C5, review 28/07 M3) : CV > 30 % ⇒ INDÉTERMINÉE.
+    """GARDE DE DISPERSION (§C5, review 29/07 M3) : CV > 30 % ⇒ INDÉTERMINÉE.
     La méthodologie du pin (`evalue_dispersion`) aurait rendu un tel bras
     INDÉTERMINÉ — il ne se lit pas contre le pin. Les seuils sont EXACTEMENT
     ceux du bras R1 du 26/07 (CV ≈ 42.8 %) : si cette garde avait existé et que

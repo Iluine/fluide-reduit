@@ -83,7 +83,7 @@ class TransfertComptable:
         """D2H : rapatriement explicite. Compte `nbytes` et le temps dans la
         direction remontée.
 
-        `hote_out` (review 28/07, M10) : sans lui, `.get()` alloue un tampon
+        `hote_out` (review 29/07, M10) : sans lui, `.get()` alloue un tampon
         hôte PAGEABLE neuf à chaque appel — un « d2h pinned » qui passerait
         par là ne mesurerait PAS un transfert vers mémoire pinned (c'était le
         cas de la vérif d'instrument #4 : étiquette fausse, biais

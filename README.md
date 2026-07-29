@@ -1,6 +1,6 @@
 # POC — Simulateur réduit appris de fluide 2D (shallow-water)
 
-> **ÉTAT RÉEL AU 2026-07-28 (ce README décrit les phases v1–v2.5, closes).**
+> **ÉTAT RÉEL AU 2026-07-29 (ce README décrit les phases v1–v2.5, closes).**
 > Le travail courant vit ailleurs dans ce dépôt : **F1/GPU** (`src/f1_gpu/`,
 > `scripts/run_f1_*`, manche 2 §A13 : verdict **REGISTRE_FERME**, scellé dans
 > `claude/lectures/m2_verdict.lecture.json` ; MORT-b re-prononcé §A34 ; gate

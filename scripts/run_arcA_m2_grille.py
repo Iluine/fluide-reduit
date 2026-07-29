@@ -520,7 +520,7 @@ def phase_assemble() -> Path:
     payload["delta_chi"] = tenseur
     payload["taille_commits"] = tailles
 
-    # Invariant Δχ₁ ≡ 0.0 (review 28/07, M7) : la PREMIÈRE émission de chaque
+    # Invariant Δχ₁ ≡ 0.0 (review 29/07, M7) : la PREMIÈRE émission de chaque
     # cellule suit la re-dérivation fraîche — son Δχ est zéro exact PAR
     # CONSTRUCTION. C'est l'invariant qui détecte une vérité en cache PÉRIMÉE
     # entre deux sessions de reprise (la grille a couru sur plusieurs jours) :

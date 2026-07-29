@@ -570,7 +570,7 @@ def valide_conditions_requises_si_humain(
     pertinentes, aucun humain devant l'écran) -- `erreur` n'est alors JAMAIS
     appelé.
 
-    DURCIE (§A41, review 28/07 M2) : la non-nullité ne suffisait pas — le
+    DURCIE (§A41, review 29/07 M2) : la non-nullité ne suffisait pas — le
     gabarit à ellipses du 26/07 est passé ici. L'observation est désormais
     VÉRIFIÉE À L'ENTRÉE contre l'horloge machine (`verifie_observation_
     conditions`, IMPORTÉE de src/arcC_abx.py — même exemplaire que la

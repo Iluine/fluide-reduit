@@ -413,7 +413,7 @@ MARQUEURS_GABARIT: tuple[str, ...] = ("<", ">", "…", "...", "[", "]", "{", "}"
 
 # Une heure explicite : `14h`, `14h30`, `0h27`, `23:45`. Ancrée des deux côtés
 # — `(?<!\d)` et `(?![0-9A-Za-z])` — pour que « 144hz » ne fabrique PAS une
-# heure fantôme (review 2026-07-28, constat M2 sur la version morphologique).
+# heure fantôme (review 2026-07-29, constat M2 sur la version morphologique).
 _MOTIF_HEURE = re.compile(
     r"(?<!\d)([01]?\d|2[0-3])(?:\s*h\s*([0-5]\d)?|:([0-5]\d))(?![0-9A-Za-z])")
 

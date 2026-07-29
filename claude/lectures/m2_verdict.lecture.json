@@ -1,6 +1,6 @@
 {
   "meta": {
-    "scellement": "§A41-c (review 2026-07-28) : les artefacts verdict-grade de la manche 2 n'étaient ni trackés ni hashés — la provenance était un nom de fichier. Cette lecture versionnée scelle le verdict et l'empreinte de son entrée. Le document ci-dessous est le m2_verdict.json du 18/07 VERBATIM, non régénéré.",
+    "scellement": "§A41-c (review 2026-07-29) : les artefacts verdict-grade de la manche 2 n'étaient ni trackés ni hashés — la provenance était un nom de fichier. Cette lecture versionnée scelle le verdict et l'empreinte de son entrée. Le document ci-dessous est le m2_verdict.json du 18/07 VERBATIM, non régénéré.",
     "artefacts": {
       "m2_verdict.json": {
         "sha256": "93b073dc048bfcc1dfd664ed677746569520ada9a6ad9dcaf778daef9320a34e",

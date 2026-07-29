@@ -1,6 +1,6 @@
 # Cascade — état des lieux au 2026-07-19
 
-> **⚠ PÉRIMÉ (marqué le 2026-07-28).** Photographie du 19/07 : plusieurs de
+> **⚠ PÉRIMÉ (marqué le 2026-07-29).** Photographie du 19/07 : plusieurs de
 > ses chiffres ont été déclarés PÉRIMÉS depuis (ex. `0.111 ms / 0,7 %` de
 > marge V4 → remplacé par `14.490 ms / 2.199 ms`, §A23-2b ; cf.
 > `seance-e2-2026-07-24.md` et `brief-reprise-2026-07-25.md`). Ne rien citer
