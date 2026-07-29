@@ -520,6 +520,14 @@ def phase_assemble() -> Path:
     payload["delta_chi"] = tenseur
     payload["taille_commits"] = tailles
 
+    # Invariant Δχ₁ ≡ 0.0 (review 28/07, M7) : la PREMIÈRE émission de chaque
+    # cellule suit la re-dérivation fraîche — son Δχ est zéro exact PAR
+    # CONSTRUCTION. C'est l'invariant qui détecte une vérité en cache PÉRIMÉE
+    # entre deux sessions de reprise (la grille a couru sur plusieurs jours) :
+    # le contrôle ferm ne couvre que sa seed ; celui-ci couvre les 45 cellules.
+    dchi1_viole = [f"seed={SEEDS[si]},dt={DTS[di]},k={BUDGETS[ki]}"
+                   for si, di, ki in zip(*np.nonzero(tenseur[..., 0] != 0.0))]
+
     # Contrôle ferm (Δχ = 0.0 exact partout, tout Δt).
     ferm_viole = []
     for dt in DTS:
@@ -539,6 +547,7 @@ def phase_assemble() -> Path:
                   if not v["premiere_rederivation_supra_jnd"]]
     spot = controles["spot_e2_e3"]
     violations = {
+        "dchi1_cellules_violees": dchi1_viole,
         "ferm_dts_violes": ferm_viole,
         "shuf_budgets_violes": shuf_viole,
         "e2_viole": not spot["e2_rederive_egale_emis"],
@@ -546,7 +555,7 @@ def phase_assemble() -> Path:
         # corruption : détection SEULEMENT (§A13-4-3) — consignée, PAS muette.
         "corruption_detection": controles["corruption"],
     }
-    instrument_muet = bool(ferm_viole or shuf_viole
+    instrument_muet = bool(dchi1_viole or ferm_viole or shuf_viole
                            or violations["e2_viole"] or violations["e3_viole"])
     payload["instrument_muet"] = np.bool_(instrument_muet)
 

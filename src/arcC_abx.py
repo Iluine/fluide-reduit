@@ -26,8 +26,10 @@ from __future__ import annotations
 
 import itertools
 import json
+import re
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Callable, Literal
 
@@ -397,6 +399,82 @@ def statut_condition(validites_sessions: list[bool], dispersion: dict) -> str:
     if not dispersion["coherent"]:
         return STATUT_INSTRUMENT_NE_PEUT_PAS_REPONDRE
     return STATUT_RESOLU
+
+
+# --- Observation de conditions ancrée sur l'horodatage machine (§A41) -------
+
+# Marqueurs de gabarit — liste FERMÉE ; chacun trahit un modèle non rempli ou
+# recopié. La liste ne PORTE pas la garde (une liste se contourne) : l'ancrage
+# date/heure ci-dessous porte ; les marqueurs ne font qu'attraper tôt. Un seul
+# exemplaire de cette logique, importé partout (lecture ET orchestrateur) —
+# jamais recopié : la sonde v1 est morte d'un désaccord entre deux exemplaires.
+MARQUEURS_GABARIT: tuple[str, ...] = ("<", ">", "…", "...", "[", "]", "{", "}",
+                                      "p. ex", "p.ex", "exemple", "CONDITIONS")
+
+# Une heure explicite : `14h`, `14h30`, `0h27`, `23:45`. Ancrée des deux côtés
+# — `(?<!\d)` et `(?![0-9A-Za-z])` — pour que « 144hz » ne fabrique PAS une
+# heure fantôme (review 2026-07-28, constat M2 sur la version morphologique).
+_MOTIF_HEURE = re.compile(
+    r"(?<!\d)([01]?\d|2[0-3])(?:\s*h\s*([0-5]\d)?|:([0-5]\d))(?![0-9A-Za-z])")
+
+ECART_HEURE_MAX_MIN: int = 120  # ±2 h entre heure déclarée et horodatage machine
+
+
+def heures_declarees_minutes(texte: str) -> list[int]:
+    """Toutes les heures lisibles dans la chaîne, en minutes depuis minuit."""
+    minutes = []
+    for m in _MOTIF_HEURE.finditer(texte):
+        heure = int(m.group(1))
+        minute = int(m.group(2) or m.group(3) or 0)
+        minutes.append(60 * heure + minute)
+    return minutes
+
+
+def verifie_observation_conditions(conditions: str | None, luminosite: str | None,
+                                   instant: datetime) -> list[str]:
+    """Une observation de conditions est DATÉE et se vérifie contre `instant`
+    — l'horodatage machine (`date_session` à la lecture, l'horloge au
+    lancement), que personne ne tape (§A41 : « la machine lit, la session ne
+    recopie pas »). Renvoie la liste des MOTIFS DE REFUS (vide = acceptée) :
+
+      (a) la chaîne `conditions` contient la DATE du jour (`2026-07-26`,
+          `26/07[/2026]`), cohérente avec `instant` ;
+      (b) elle contient au moins une HEURE explicite à <= 2 h (écart
+          circulaire) de `instant` — le copié-collé d'une observation d'hier
+          soir meurt ici, la session de nuit sous « lumière du jour » aussi ;
+      (c) ni `conditions` ni `luminosite` ne portent un marqueur de gabarit.
+
+    La garde ne juge pas la QUALITÉ de l'observation (elle ne le peut pas) ;
+    elle vérifie que l'observation est datée, du bon jour, à la bonne heure,
+    et qu'aucun modèle n'a été rendu tel quel."""
+    texte = "" if conditions is None else str(conditions)
+    motifs: list[str] = []
+    if conditions is None:
+        motifs.append("--conditions ABSENT : « rien » n'est pas une observation")
+    marqueurs = sorted({m for m in MARQUEURS_GABARIT
+                        for champ in (texte, "" if luminosite is None else str(luminosite))
+                        if m in champ})
+    if marqueurs:
+        motifs.append(f"marqueur(s) de GABARIT dans conditions/luminosite : {marqueurs}")
+    if conditions is not None:
+        formes_date = {instant.strftime("%Y-%m-%d"),
+                       instant.strftime("%d/%m/%Y"), instant.strftime("%d/%m"),
+                       f"{instant.day}/{instant.month:02d}",
+                       f"{instant.day:02d}/{instant.month}"}
+        if not any(f in texte for f in formes_date):
+            motifs.append(f"aucune DATE du jour de session ({instant.date()}) dans la chaine "
+                          "-- une observation datee porte sa date")
+        heures = heures_declarees_minutes(texte)
+        minute_ref = 60 * instant.hour + instant.minute
+        ecarts = [min(abs(m - minute_ref), 1440 - abs(m - minute_ref)) for m in heures]
+        if not heures:
+            motifs.append("aucune HEURE lisible dans la chaine -- une observation datee "
+                          "porte son heure")
+        elif min(ecarts) > ECART_HEURE_MAX_MIN:
+            motifs.append(f"aucune heure declaree a moins de 2 h de l'horodatage machine "
+                          f"({instant.strftime('%Hh%M')}) -- la chaine ne decrit pas CETTE "
+                          "session")
+    return motifs
 
 
 # --- Session d'une staircase (roving + catch + escalier + logs) ------------

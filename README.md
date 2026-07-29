@@ -1,5 +1,17 @@
 # POC — Simulateur réduit appris de fluide 2D (shallow-water)
 
+> **ÉTAT RÉEL AU 2026-07-28 (ce README décrit les phases v1–v2.5, closes).**
+> Le travail courant vit ailleurs dans ce dépôt : **F1/GPU** (`src/f1_gpu/`,
+> `scripts/run_f1_*`, manche 2 §A13 : verdict **REGISTRE_FERME**, scellé dans
+> `claude/lectures/m2_verdict.lecture.json` ; MORT-b re-prononcé §A34 ; gate
+> (iii) échoué §A35, gate (iii′) né) et **Arc C perceptuel** (`src/arcC_*`,
+> `scripts/run_arcC_*`/`run_p3_lecture.py` : pin gravé [6.03, 8.67] %, session
+> P3 INDÉTERMINÉE §A40, prereg **P3′ v2 en revue** —
+> `claude/prereg-p3prime-transport-intra-session.md`). **La source de vérité
+> est le journal `../pocCascade2phys/PREREGISTRATION.md`** (append-only,
+> §A41 = dernière entrée) ; les lectures versionnées sont sous
+> `claude/lectures/`. Ne rien réamorcer depuis ce README seul.
+
 Modèle d'ordre réduit (POD + DMD) approximant un solveur shallow-water 2D, pour
 trancher trois hypothèses : H1 (colonne vertébrale POD+DMD viable), H2 (rollout
 long-horizon stable et borné), H3 (couture multirésolution mobile cohérente).

@@ -10,8 +10,9 @@ ORDRE DU PRONONCÉ, et l'ordre est le contrat :
 
   1. GARDES DE VALIDITÉ, AVANT toute lecture de seuil — chaque sidecar lié à
      son log par sha256 (chantier 3) ; `validite` §C5 de chaque staircase ;
-     la chaîne `--conditions` NE CONTIENT PAS de chevrons ; l'ordre des chemins
-     est bien (r1, r1, viridis, r1).
+     la chaîne `--conditions` est ANCRÉE sur `date_session` (date + heure ±2 h,
+     zéro marqueur de gabarit — §A41) ; l'ordre des chemins est bien
+     (r1, r1, viridis, r1). Puis, dans la lecture du bras : CV <= 30 % (§C5).
   2. LE TÉMOIN D'ABORD — la staircase viridis en 3e position. Son seuil doit
      tomber dans l'IC gravé du pin, sinon la session est INDÉTERMINÉE et **les
      seuils R1 ne sont ni imprimés ni écrits** : quand l'instrument est
@@ -22,12 +23,21 @@ ORDRE DU PRONONCÉ, et l'ordre est le contrat :
   4. Écriture de `outputs/arcC/p3_transport_pin.lecture.json`. La version
      `claude/lectures/` se recopie APRÈS verdict, jamais par la machine.
 
-POURQUOI LA GARDE DES CHEVRONS. Les deux pré-vols du 25/07 au soir portent, au
-champ `conditions`, un GABARIT non rempli — le second dit littéralement
-« sans chevrons » tout en gardant les siens. Un gabarit n'est pas une
-observation, et §C9 exige des conditions « consignées par écrit, pas par
-habitude ». Ces deux pré-vols ont désormais un rôle posthume : ils sont les
-champs d'essai de cette garde, et ils doivent être REFUSÉS par elle.
+POURQUOI LA GARDE DES CONDITIONS EST ANCRÉE SUR `date_session` (§A41). La
+version « chevrons seuls » a laissé passer les ellipses du 26/07 (§A40), et
+toute garde purement MORPHOLOGIQUE reste contournable (crochets, « p. ex. »,
+copié-collé d'une observation d'hier). La vérité de référence est
+`date_session` — un horodatage machine, jamais tapé par un humain : la chaîne
+`--conditions` doit contenir la DATE du jour de session et une HEURE cohérente
+avec cet horodatage à ±2 h. C'est la garde qui aurait attrapé à la fois la
+fuite du gabarit, la session de nuit du 26/07 et le fait de conditions faux du
+journal (§A41). Les deux pré-vols du 25/07 ET la session P3 du 26/07 sont ses
+champs d'essai posthumes : tous trois doivent être REFUSÉS par elle. NOTE DE
+PROVENANCE : cette garde et la garde de dispersion ci-dessous sont POSTÉRIEURES
+au verdict P3 du 26/07 (review du 28/07, constats M2/M3) — le verdict archivé
+(`claude/lectures/p3_transport_pin.lecture.json`) reste le prononcé qui fait
+foi ; rejouer la lecture sur le manifeste du 26/07 refuse désormais la session
+à la garde des conditions au lieu du témoin, INDÉTERMINÉE dans les deux cas.
 
 MÉTHODE D'IC — RÉTABLIE (§A38-CORRECTION-4). Le prereg disait « même méthode
 d'IC (mean±2SEM combiné) » ; l'IC GRAVÉ du pin, [6.03, 8.67] %, est en fait
@@ -52,6 +62,8 @@ sys.path.insert(0, str(ROOT))
 
 import numpy as np
 
+from src.arcC_abx import (evalue_dispersion, heures_declarees_minutes,
+                          verifie_observation_conditions)
 from scripts.run_arcC_pins import calcule_ic, calcule_ic_combine
 
 # --- Constantes RECOPIÉES (unités = FRACTION : 0.04 = 4 %) -------------------
@@ -122,19 +134,31 @@ def sha256_fichier(chemin: Path) -> str:
 
 
 def garde_conditions(manifeste: dict) -> dict:
-    """Les conditions de session sont une OBSERVATION, pas un gabarit. Un
-    chevron `<` ou `>` dans la chaîne trahit un modèle non rempli.
-
-    Garde volontairement bête : elle ne juge pas la qualité de l'observation
-    (elle ne le peut pas), seulement qu'on a bien remplacé le gabarit."""
-    conditions = (manifeste.get("conditions_validite") or {}).get("conditions")
+    """Les conditions de session sont une OBSERVATION DATÉE, pas un gabarit —
+    la garde est ANCRÉE sur `date_session`, l'horodatage machine que personne
+    ne tape (§A41 : « la machine lit, la session ne recopie pas »). La logique
+    vit dans `verifie_observation_conditions` (src/arcC_abx.py, IMPORTÉE,
+    jamais recopiée) : date du jour exigée dans la chaîne, heure déclarée
+    cohérente avec `date_session` à ±2 h, zéro marqueur de gabarit dans
+    `conditions` ET `luminosite`."""
+    validite = manifeste.get("conditions_validite") or {}
+    conditions = validite.get("conditions")
+    luminosite = validite.get("luminosite")
     texte = "" if conditions is None else str(conditions)
-    chevrons = [c for c in ("<", ">") if c in texte]
-    return dict(nom="conditions_sans_gabarit", ok=(conditions is not None and not chevrons),
-                conditions=texte, chevrons_trouves=chevrons,
-                motif=(None if not chevrons else
-                       "la chaine --conditions contient un GABARIT non rempli "
-                       f"(chevrons {chevrons}) -- un gabarit n'est pas une observation"))
+
+    date_session = None
+    motifs: list[str] = []
+    try:
+        date_session = datetime.fromisoformat(str(manifeste.get("date_session")))
+    except (TypeError, ValueError):
+        motifs.append("date_session ILLISIBLE au manifeste -- rien pour ancrer la garde")
+    if date_session is not None:
+        motifs.extend(verifie_observation_conditions(conditions, luminosite, date_session))
+    return dict(nom="conditions_ancrees_date_session", ok=(not motifs),
+                conditions=texte, luminosite=luminosite,
+                heures_declarees_minutes=heures_declarees_minutes(texte),
+                date_session=(date_session.isoformat() if date_session else None),
+                motif=(None if not motifs else " ; ".join(motifs)))
 
 
 def garde_chemins(manifeste: dict) -> dict:
@@ -257,18 +281,38 @@ def lecture_transport(seuils_r1: list[float]) -> dict:
     Le bras R1 doit avoir ses TROIS staircases complètes. Deux ne suffisent
     pas : le prereg lit « l'IC des TROIS staircases R1 », et un min/max sur un
     bras amputé est un intervalle sur autre chose. Un seul seuil rendrait même
-    l'intervalle dégénéré `[x, x]` — un IC ne se fabrique pas."""
+    l'intervalle dégénéré `[x, x]` — un IC ne se fabrique pas.
+
+    GARDE DE DISPERSION (§C5, review 28/07 M3) : la méthodologie du pin exige
+    CV <= 30 % (`evalue_dispersion`, IMPORTÉE, jamais réimplémentée) — le pin
+    aurait été INDÉTERMINÉ au-delà ; un bras R1 plus dispersé que ce que le
+    pin se serait permis ne se lit pas contre le pin. Fait de référence : le
+    bras R1 du 26/07 était à CV 42.7 % — cette garde n'existait pas alors."""
     if len(seuils_r1) != N_STAIRCASES_R1:
         return dict(verdict=VERDICT_INDETERMINEE, branche="3", ic=None,
                     n_staircases=len(seuils_r1),
                     motif=(f"le bras R1 a {len(seuils_r1)} staircase(s) COMPLETE(s), il en "
                            f"faut {N_STAIRCASES_R1} -- escalier non convergent (prereg P3, "
                            "lecture 3). Un IC ne se fabrique pas sur un bras ampute."))
+    dispersion = evalue_dispersion(seuils_r1)
+    cv = dispersion["dispersion_relative"]
+    dispersion_rapport = dict(
+        n=dispersion["n"], cv=(None if not np.isfinite(cv) else float(cv)),
+        cv_pct=(None if not np.isfinite(cv) else 100.0 * float(cv)),
+        seuil_cv=dispersion["seuil_dispersion_relative"], coherent=dispersion["coherent"])
+    if not dispersion["coherent"]:
+        return dict(verdict=VERDICT_INDETERMINEE, branche="3", ic=None,
+                    n_staircases=len(seuils_r1), dispersion=dispersion_rapport,
+                    motif=(f"DISPERSION du bras R1 hors clous : CV = {100.0 * cv:.1f} % > "
+                           f"{100.0 * dispersion['seuil_dispersion_relative']:.0f} % (§C5) -- "
+                           "la methode du pin aurait rendu ce bras INDETERMINE ; il ne se lit "
+                           "pas contre le pin."))
     ic = calcule_ic(seuils_r1)
     ic_diagnostic = calcule_ic_combine(seuils_r1)
     jnd = float(np.mean(seuils_r1))
     recouvre = not (ic[1] < PIN_IC[0] or ic[0] > PIN_IC[1])
     commun = dict(n_staircases=len(seuils_r1), seuils=[float(s) for s in seuils_r1],
+                  dispersion=dispersion_rapport,
                   jnd_r1=jnd, jnd_r1_pct=100.0 * jnd,
                   ic_minmax_decideur=ic, ic_minmax_decideur_pct=[100.0 * b for b in ic],
                   ic_mean2sem_surface=ic_diagnostic, ic_pin=list(PIN_IC),

@@ -230,9 +230,14 @@ class CompacteurL3:
 
     CHOIX 6 PRÉSERVÉ, ET C'EST VÉRIFIABLE : le correctif n'ajoute qu'une
     allocation à la construction (B2) et un basculement d'indice Python.
-    Aucun `synchronize()`, aucun `int(tableau_device)`, aucune copie
-    bloquante par frame — un test l'impose en interdisant les points
-    d'entrée de synchronisation pendant une série de frames.
+    Aucun `synchronize()` de stream ou de device, aucun
+    `int(tableau_device)`, aucune copie bloquante par frame — un test
+    l'impose en interdisant ces points d'entrée pendant une série de
+    frames. SEULE attente autorisée (M8) : l'évènement du memcpy du
+    compteur (4 octets, soumis une frame entière plus tôt — attente quasi
+    nulle en régime), parce que sans lui l'invariant « taille et données
+    du même tour » ne tenait que par les synchronisations incidentes des
+    voisins (chrono B6, observateur, `remonter`).
 
     COÛT : les buffers d'émission doublent. Ils étaient dimensionnés au
     PIRE CAS (choix 5) ; `octets_buffers()` reporte le total réel pour que
@@ -267,6 +272,17 @@ class CompacteurL3:
         self.hote = np.frombuffer(self._memoire_pinned, dtype=np.uint32,
                                   count=1)
         self.hote[0] = 0          # frame 0 : aucun précédent (warmup, B6)
+        # Évènement enregistré juste APRÈS le memcpyAsync du compteur
+        # (review 28/07, M8) : sans lui, `taille_precedente()` lisait
+        # `hote[0]` en espérant que la copie de la frame n−1 avait atterri
+        # — vrai seulement grâce aux synchronisations INCIDENTES d'autres
+        # composants (chrono B6, observateur, `remonter`). L'évènement rend
+        # l'invariant vrai PAR CONSTRUCTION ; l'attente est quasi nulle en
+        # régime (4 octets déjà partis depuis une frame entière). Préalloué
+        # ici (B2), réutilisé à chaque frame ; jamais enregistré = attente
+        # nulle (sémantique CUDA), ce qui couvre la frame 0.
+        self._evenement_compteur = cp.cuda.Event(block=False,
+                                                 disable_timing=True)
         self.tailles_vues: list[int] = []
         self.compteur_final = 0
 
@@ -284,10 +300,15 @@ class CompacteurL3:
         return self._indices[self._jeu]
 
     def taille_precedente(self) -> int:
-        """Compteur de la frame précédente — lecture HÔTE, sans blocage.
+        """Compteur de la frame précédente — lecture HÔTE, garantie par
+        l'évènement du memcpy (M8), pas par des syncs incidentes.
 
         C'est la taille du jeu PRÉCÉDENT, celui que `vues_a_transferer`
-        rend : les deux viennent du même tour."""
+        rend : les deux viennent du même tour. Sans l'attente d'évènement,
+        une lecture qui précéderait l'atterrissage du memcpy découperait le
+        jeu de n−1 avec la taille de n−2 — exactement les défauts (α)/(β)
+        que le ping-pong prétend éliminer par construction."""
+        self._evenement_compteur.synchronize()
         return int(min(int(self.hote[0]), self.taille_max))
 
     def noter_taille(self, taille: int) -> None:
@@ -309,6 +330,9 @@ class CompacteurL3:
             self._memoire_pinned.ptr, self.compteur.data.ptr, 4,
             cp.cuda.runtime.memcpyDeviceToHost,
             cp.cuda.Stream.null.ptr)
+        # L'évènement marque l'atterrissage du memcpy ci-dessus (M8) :
+        # `taille_precedente()` attendra LUI, pas le stream entier.
+        self._evenement_compteur.record(cp.cuda.Stream.null)
         self.compteur.fill(0)
         self._jeu = (self._jeu + 1) % self.N_JEUX
 

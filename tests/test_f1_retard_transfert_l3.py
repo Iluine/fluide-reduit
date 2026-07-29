@@ -321,9 +321,13 @@ def test_aucune_synchronisation_ajoutee(monkeypatch):
     ON-DEVICE (celle que le pipeline emploie — la réduction du jetable,
     elle, synchronise par conception et n'est pas ce chemin).
 
-    Si le ping-pong avait introduit la moindre attente, ce test lèverait.
-    La lecture `int(compacteur.compteur[0])` des autres tests est
-    volontairement absente ici : elle est un artefact de TEST."""
+    SEULE attente autorisée (M8, review 28/07) : l'évènement du memcpy du
+    compteur — 4 octets soumis une frame plus tôt, attente quasi nulle en
+    régime. Elle est VOULUE : sans elle, `taille_precedente()` ne tenait
+    que par les synchronisations incidentes des voisins. Les attentes de
+    stream/device restent interdites, et le test VÉRIFIE DÉSORMAIS DES
+    DONNÉES (le trou noté par la review) : le compteur lu à chaque frame
+    est celui de la frame précédente, pas un zéro périmé."""
     import cupy as cp
 
     from scripts.run_f1_s2_batche import reduction_cfl_on_device
@@ -343,6 +347,7 @@ def test_aucune_synchronisation_ajoutee(monkeypatch):
 
     # `cp.cuda.Device` est un type immuable : sa synchronisation passe de
     # toute façon par `runtime.deviceSynchronize`, qui est couvert.
+    # `eventSynchronize` n'est PAS interdit : c'est l'attente bornée M8.
     monkeypatch.setattr(cp.cuda.Stream, "synchronize", interdit)
     monkeypatch.setattr(cp.cuda.runtime, "deviceSynchronize", interdit)
     monkeypatch.setattr(cp.cuda.runtime, "streamSynchronize", interdit)
@@ -363,6 +368,34 @@ def test_aucune_synchronisation_ajoutee(monkeypatch):
         if taille:
             compacteur.vues_a_transferer(taille)
         compacteur.cloturer_frame()
+
+    # VÉRIFICATION DE DONNÉES (le trou noté par la review : ce test ne
+    # vérifiait RIEN). Vérité-terrain : la MÊME série rejouée sur un
+    # compacteur frais par le chemin instrumenté (lecture directe du
+    # compteur, synchronisante — artefact de TEST, hors boucle armée).
+    # Les tailles vues par la boucle sans-sync doivent être les cardinaux
+    # d'émission de la frame précédente — un compteur périmé (zéro, ou
+    # taille d'une frame plus vieille) casse ici. C'est exactement la
+    # donnée que l'évènement M8 garantit.
+    monkeypatch.undo()
+    q2 = _etat_initial(cp)
+    compacteur2 = CompacteurL3(cp, taille_sortie_max(q2))
+    reference2 = _reference_emettant(cp, q2, np.arange(48))
+    tampon2 = cp.empty_like(q2)
+    emissions = []
+    for _ in range(6):
+        taille = compacteur2.taille_precedente()
+        compacteur2.noter_taille(taille)
+        pas_f_l3(q2, cp, reference2, compacteur2, sortie=q2,
+                 tampon_etage=tampon2, eps=EPS_FIGE,
+                 reduction=reduction_cfl_on_device)
+        cp.cuda.Stream.null.synchronize()
+        emissions.append(int(compacteur2.compteur[0]))
+        if taille:
+            compacteur2.vues_a_transferer(taille)
+        compacteur2.cloturer_frame()
+    assert compacteur.tailles_vues == [0] + emissions[:-1]
+    assert emissions[0] == 48        # la frame 1 du cas construit tient
 
 
 @gpu_requis

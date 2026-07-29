@@ -79,11 +79,27 @@ class TransfertComptable:
         self._courant["h2d_n"] += 1
         return resultat
 
-    def remonter(self, tableau_gpu) -> np.ndarray:
-        """D2H : rapatriement explicite (`.get()` sous cupy). Compte
-        `nbytes` et le temps dans la direction remontée."""
+    def remonter(self, tableau_gpu, hote_out: np.ndarray | None = None) -> np.ndarray:
+        """D2H : rapatriement explicite. Compte `nbytes` et le temps dans la
+        direction remontée.
+
+        `hote_out` (review 28/07, M10) : sans lui, `.get()` alloue un tampon
+        hôte PAGEABLE neuf à chaque appel — un « d2h pinned » qui passerait
+        par là ne mesurerait PAS un transfert vers mémoire pinned (c'était le
+        cas de la vérif d'instrument #4 : étiquette fausse, biais
+        conservateur). Fournir le tampon page-locked ici (`get(out=...)`)
+        rend l'étiquette vraie."""
         if self._cupy:
-            resultat, ms = self._chronometrer(tableau_gpu.get)
+            if hote_out is not None:
+                resultat, ms = self._chronometrer(
+                    lambda: tableau_gpu.get(out=hote_out))
+            else:
+                resultat, ms = self._chronometrer(tableau_gpu.get)
+        elif hote_out is not None:
+            def _copie():
+                np.copyto(hote_out, tableau_gpu)
+                return hote_out
+            resultat, ms = self._chronometrer(_copie)
         else:
             resultat, ms = self._chronometrer(
                 lambda: np.array(tableau_gpu, copy=True))
@@ -153,7 +169,12 @@ def mesurer_bande_passante_a_vide(cp, tailles: tuple[int, ...] = TAILLES_A_VIDE,
                 device = comptable.descendre(hote)
                 comptable.frame_suivante()
                 h2d_ms.append(comptable.bilans[-1]["h2d_ms"])
-                comptable.remonter(device)
+                # M10 : le d2h « pinned » atterrit dans LE tampon pinned
+                # (`get(out=...)`) — avant, `.get()` allouait un pageable
+                # neuf et l'étiquette était fausse. Le pageable garde son
+                # chemin historique (allocation comprise, comme en prod).
+                comptable.remonter(device,
+                                   hote_out=(hote if nom == "pinned" else None))
                 comptable.frame_suivante()
                 d2h_ms.append(comptable.bilans[-1]["d2h_ms"])
                 del device

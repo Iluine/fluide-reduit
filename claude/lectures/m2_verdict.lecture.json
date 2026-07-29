@@ -1,0 +1,424 @@
+{
+  "meta": {
+    "scellement": "§A41-c (review 2026-07-28) : les artefacts verdict-grade de la manche 2 n'étaient ni trackés ni hashés — la provenance était un nom de fichier. Cette lecture versionnée scelle le verdict et l'empreinte de son entrée. Le document ci-dessous est le m2_verdict.json du 18/07 VERBATIM, non régénéré.",
+    "artefacts": {
+      "m2_verdict.json": {
+        "sha256": "93b073dc048bfcc1dfd664ed677746569520ada9a6ad9dcaf778daef9320a34e",
+        "mtime": "2026-07-18T14:21:55.674600"
+      },
+      "m2_measures.npz": {
+        "sha256": "1bda1601e94a193b47a8625ce91a6f1405e02b5590b7881b340c82f9b2e3202f",
+        "mtime": "2026-07-18T14:19:07.965095"
+      }
+    },
+    "note": "run_arcA_m2_verdict.py embarque désormais measures_sha256/pins_sha256 dans toute provenance FUTURE ; ce fichier scelle l'EXISTANT sans le réécrire (un verdict prononcé ne se régénère pas)."
+  },
+  "verdict_document_verbatim": {
+    "verdict": "REGISTRE_FERME",
+    "pins": {
+      "severe": {
+        "jnd": 0.07334065957385666,
+        "ic": [
+          0.06033229334102097,
+          0.08673568621862042
+        ]
+      },
+      "laxiste": {
+        "jnd": 0.11539774590849085,
+        "ic": [
+          0.09365491373275102,
+          0.13873727413266454
+        ]
+      }
+    },
+    "colonnes_severe": [
+      {
+        "jnd": 0.06033229334102097,
+        "kstar_chaine": {
+          "1": 256,
+          "4": 256,
+          "16": 256
+        },
+        "fermee": true,
+        "ouverte_mur": false,
+        "detail_budgets": {
+          "1": {
+            "128": {
+              "mediane_max": 0.07505860230676475,
+              "pire_seed_max": 0.12371092724102195,
+              "ferme": false
+            },
+            "256": {
+              "mediane_max": 0.05618909341074052,
+              "pire_seed_max": 0.10290335114889448,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.04151421203166916,
+              "pire_seed_max": 0.10380742970396717,
+              "ferme": true
+            }
+          },
+          "4": {
+            "128": {
+              "mediane_max": 0.09633330966990417,
+              "pire_seed_max": 0.1170963985644311,
+              "ferme": false
+            },
+            "256": {
+              "mediane_max": 0.0553997937278754,
+              "pire_seed_max": 0.08945036319509958,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.05831578247043523,
+              "pire_seed_max": 0.08603707360357649,
+              "ferme": true
+            }
+          },
+          "16": {
+            "128": {
+              "mediane_max": 0.05804664697173845,
+              "pire_seed_max": 0.12290243933643441,
+              "ferme": false
+            },
+            "256": {
+              "mediane_max": 0.02654512025646838,
+              "pire_seed_max": 0.08646845862199637,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.02531317238202835,
+              "pire_seed_max": 0.13691159039815037,
+              "ferme": false
+            }
+          }
+        }
+      },
+      {
+        "jnd": 0.07334065957385666,
+        "kstar_chaine": {
+          "1": 256,
+          "4": 256,
+          "16": 128
+        },
+        "fermee": true,
+        "ouverte_mur": false,
+        "detail_budgets": {
+          "1": {
+            "128": {
+              "mediane_max": 0.07505860230676475,
+              "pire_seed_max": 0.12371092724102195,
+              "ferme": false
+            },
+            "256": {
+              "mediane_max": 0.05618909341074052,
+              "pire_seed_max": 0.10290335114889448,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.04151421203166916,
+              "pire_seed_max": 0.10380742970396717,
+              "ferme": true
+            }
+          },
+          "4": {
+            "128": {
+              "mediane_max": 0.09633330966990417,
+              "pire_seed_max": 0.1170963985644311,
+              "ferme": false
+            },
+            "256": {
+              "mediane_max": 0.0553997937278754,
+              "pire_seed_max": 0.08945036319509958,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.05831578247043523,
+              "pire_seed_max": 0.08603707360357649,
+              "ferme": true
+            }
+          },
+          "16": {
+            "128": {
+              "mediane_max": 0.05804664697173845,
+              "pire_seed_max": 0.12290243933643441,
+              "ferme": true
+            },
+            "256": {
+              "mediane_max": 0.02654512025646838,
+              "pire_seed_max": 0.08646845862199637,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.02531317238202835,
+              "pire_seed_max": 0.13691159039815037,
+              "ferme": true
+            }
+          }
+        }
+      },
+      {
+        "jnd": 0.08673568621862042,
+        "kstar_chaine": {
+          "1": 128,
+          "4": 256,
+          "16": 128
+        },
+        "fermee": true,
+        "ouverte_mur": false,
+        "detail_budgets": {
+          "1": {
+            "128": {
+              "mediane_max": 0.07505860230676475,
+              "pire_seed_max": 0.12371092724102195,
+              "ferme": true
+            },
+            "256": {
+              "mediane_max": 0.05618909341074052,
+              "pire_seed_max": 0.10290335114889448,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.04151421203166916,
+              "pire_seed_max": 0.10380742970396717,
+              "ferme": true
+            }
+          },
+          "4": {
+            "128": {
+              "mediane_max": 0.09633330966990417,
+              "pire_seed_max": 0.1170963985644311,
+              "ferme": false
+            },
+            "256": {
+              "mediane_max": 0.0553997937278754,
+              "pire_seed_max": 0.08945036319509958,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.05831578247043523,
+              "pire_seed_max": 0.08603707360357649,
+              "ferme": true
+            }
+          },
+          "16": {
+            "128": {
+              "mediane_max": 0.05804664697173845,
+              "pire_seed_max": 0.12290243933643441,
+              "ferme": true
+            },
+            "256": {
+              "mediane_max": 0.02654512025646838,
+              "pire_seed_max": 0.08646845862199637,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.02531317238202835,
+              "pire_seed_max": 0.13691159039815037,
+              "ferme": true
+            }
+          }
+        }
+      }
+    ],
+    "diagnostic_laxiste_non_verdictal": [
+      {
+        "jnd": 0.09365491373275102,
+        "kstar_chaine": {
+          "1": 128,
+          "4": 256,
+          "16": 128
+        },
+        "fermee": true,
+        "ouverte_mur": false,
+        "detail_budgets": {
+          "1": {
+            "128": {
+              "mediane_max": 0.07505860230676475,
+              "pire_seed_max": 0.12371092724102195,
+              "ferme": true
+            },
+            "256": {
+              "mediane_max": 0.05618909341074052,
+              "pire_seed_max": 0.10290335114889448,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.04151421203166916,
+              "pire_seed_max": 0.10380742970396717,
+              "ferme": true
+            }
+          },
+          "4": {
+            "128": {
+              "mediane_max": 0.09633330966990417,
+              "pire_seed_max": 0.1170963985644311,
+              "ferme": false
+            },
+            "256": {
+              "mediane_max": 0.0553997937278754,
+              "pire_seed_max": 0.08945036319509958,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.05831578247043523,
+              "pire_seed_max": 0.08603707360357649,
+              "ferme": true
+            }
+          },
+          "16": {
+            "128": {
+              "mediane_max": 0.05804664697173845,
+              "pire_seed_max": 0.12290243933643441,
+              "ferme": true
+            },
+            "256": {
+              "mediane_max": 0.02654512025646838,
+              "pire_seed_max": 0.08646845862199637,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.02531317238202835,
+              "pire_seed_max": 0.13691159039815037,
+              "ferme": true
+            }
+          }
+        }
+      },
+      {
+        "jnd": 0.11539774590849085,
+        "kstar_chaine": {
+          "1": 128,
+          "4": 128,
+          "16": 128
+        },
+        "fermee": true,
+        "ouverte_mur": false,
+        "detail_budgets": {
+          "1": {
+            "128": {
+              "mediane_max": 0.07505860230676475,
+              "pire_seed_max": 0.12371092724102195,
+              "ferme": true
+            },
+            "256": {
+              "mediane_max": 0.05618909341074052,
+              "pire_seed_max": 0.10290335114889448,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.04151421203166916,
+              "pire_seed_max": 0.10380742970396717,
+              "ferme": true
+            }
+          },
+          "4": {
+            "128": {
+              "mediane_max": 0.09633330966990417,
+              "pire_seed_max": 0.1170963985644311,
+              "ferme": true
+            },
+            "256": {
+              "mediane_max": 0.0553997937278754,
+              "pire_seed_max": 0.08945036319509958,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.05831578247043523,
+              "pire_seed_max": 0.08603707360357649,
+              "ferme": true
+            }
+          },
+          "16": {
+            "128": {
+              "mediane_max": 0.05804664697173845,
+              "pire_seed_max": 0.12290243933643441,
+              "ferme": true
+            },
+            "256": {
+              "mediane_max": 0.02654512025646838,
+              "pire_seed_max": 0.08646845862199637,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.02531317238202835,
+              "pire_seed_max": 0.13691159039815037,
+              "ferme": true
+            }
+          }
+        }
+      },
+      {
+        "jnd": 0.13873727413266454,
+        "kstar_chaine": {
+          "1": 128,
+          "4": 128,
+          "16": 128
+        },
+        "fermee": true,
+        "ouverte_mur": false,
+        "detail_budgets": {
+          "1": {
+            "128": {
+              "mediane_max": 0.07505860230676475,
+              "pire_seed_max": 0.12371092724102195,
+              "ferme": true
+            },
+            "256": {
+              "mediane_max": 0.05618909341074052,
+              "pire_seed_max": 0.10290335114889448,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.04151421203166916,
+              "pire_seed_max": 0.10380742970396717,
+              "ferme": true
+            }
+          },
+          "4": {
+            "128": {
+              "mediane_max": 0.09633330966990417,
+              "pire_seed_max": 0.1170963985644311,
+              "ferme": true
+            },
+            "256": {
+              "mediane_max": 0.0553997937278754,
+              "pire_seed_max": 0.08945036319509958,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.05831578247043523,
+              "pire_seed_max": 0.08603707360357649,
+              "ferme": true
+            }
+          },
+          "16": {
+            "128": {
+              "mediane_max": 0.05804664697173845,
+              "pire_seed_max": 0.12290243933643441,
+              "ferme": true
+            },
+            "256": {
+              "mediane_max": 0.02654512025646838,
+              "pire_seed_max": 0.08646845862199637,
+              "ferme": true
+            },
+            "400": {
+              "mediane_max": 0.02531317238202835,
+              "pire_seed_max": 0.13691159039815037,
+              "ferme": true
+            }
+          }
+        }
+      }
+    ],
+    "cap_floats": 409.6,
+    "instrument_muet": false,
+    "provenance": {
+      "measures": "m2_measures.npz",
+      "pins": "outputs/arcC/pins_spatial.json",
+      "contrat": "PREREGISTRATION.md §A13 (pocCascade2phys 811b11d)"
+    }
+  }
+}

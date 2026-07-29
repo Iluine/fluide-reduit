@@ -437,12 +437,31 @@ def test_valide_conditions_requises_leve_erreur_si_humain_sans_luminosite_ni_con
 
 
 def test_valide_conditions_requises_ok_si_humain_avec_les_deux():
+    """DURCIE (§A41) : « bureau » ne suffit plus — l'observation doit porter la
+    date du jour et une heure cohérente avec l'horloge machine (±2 h)."""
+    from datetime import datetime
+
     from scripts.run_arcC_orchestration import valide_conditions_requises_si_humain
 
     def _erreur_jamais_appelee(message: str) -> None:
         raise AssertionError(f"erreur() ne doit PAS être appelé ici : {message}")
 
-    valide_conditions_requises_si_humain("humain", "120 nits", "bureau", _erreur_jamais_appelee)
+    maintenant = datetime.now()
+    observation = (f"bureau, lumière du jour stable, le {maintenant:%d/%m/%Y} vers "
+                   f"{maintenant.hour}h{maintenant.minute:02d}")
+    valide_conditions_requises_si_humain("humain", "120 nits", observation,
+                                         _erreur_jamais_appelee)
+
+
+def test_valide_conditions_refuse_un_gabarit_a_l_entree():
+    """§A41 / M2 : le gabarit du 26/07 (« …ce que tu observes… ») doit être
+    refusé À L'ENTRÉE — pas quatre staircases plus tard, à la lecture."""
+    from scripts.run_arcC_orchestration import valide_conditions_requises_si_humain
+
+    appels: list[str] = []
+    valide_conditions_requises_si_humain(
+        "humain", "OSD 80%", "…ce que tu observes, heure comprise…", appels.append)
+    assert appels and "REFUSÉES" in appels[0]
 
 
 def test_valide_conditions_requises_ok_si_synthetique_sans_rien():

@@ -598,6 +598,16 @@ def main() -> None:
                   f"{resultat['lecture']['texte']}")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
+    # UN RUN NE S'ÉCRASE PAS EN PLACE (§A41-c) : le run-contrôle de §A39
+    # (44.682) n'existe plus sur disque parce que cette ligne écrasait.
+    # L'existant est archivé À CÔTÉ, horodaté depuis son mtime (la date de
+    # l'artefact, pas celle de la session), avant toute écriture.
+    if args.out.exists():
+        mtime = datetime.fromtimestamp(args.out.stat().st_mtime)
+        archive = args.out.with_name(
+            f"{args.out.stem}.{mtime:%Y-%m-%dT%H%M%S}{args.out.suffix}")
+        args.out.rename(archive)
+        print(f"[ARCHIVE] run precedent -> {archive}")
     args.out.write_text(json.dumps(rapport, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\n[REPORT] -> {args.out}")
     print("POINT D'ARRET : la lecture versionnee "

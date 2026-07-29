@@ -72,7 +72,7 @@ from src.arcC_abx import (BUDGET_CATCH, PAIRES_SOURCES, REGIME_LAXISTE, REGIME_S
                           STATUT_CONTINUE, STATUT_STOP_2_INVALIDES, BanqueBancs,
                           EssaiPropose, ParametresEscalier, Regime, Reponse,
                           ecrit_log_jsonl, evalue_validite_session, run_escalier,
-                          verifie_arret_2_invalides)
+                          verifie_arret_2_invalides, verifie_observation_conditions)
 from src.arcC_calibration import (C_DEG_CIBLE_DEFAUT, PORTEUSE_CYC_PAR_DOMAINE_DEFAUT,
                                   SEUIL_ACUITE_ARCMIN_DEFAUT, observation_cellule_pic_csf,
                                   plafond_texture, taille_domaine_px)
@@ -568,11 +568,25 @@ def valide_conditions_requises_si_humain(
     `erreur(message)` (typiquement `parser.error`, qui lève `SystemExit`) si
     l'une des deux manque. OPTIONNELLES pour `sujet == "synthetique"` (non
     pertinentes, aucun humain devant l'écran) -- `erreur` n'est alors JAMAIS
-    appelé."""
-    if sujet == "humain" and (luminosite is None or conditions is None):
+    appelé.
+
+    DURCIE (§A41, review 28/07 M2) : la non-nullité ne suffisait pas — le
+    gabarit à ellipses du 26/07 est passé ici. L'observation est désormais
+    VÉRIFIÉE À L'ENTRÉE contre l'horloge machine (`verifie_observation_
+    conditions`, IMPORTÉE de src/arcC_abx.py — même exemplaire que la
+    lecture) : mieux vaut refuser AVANT de faire courir une session humaine
+    qu'à la lecture, quatre staircases trop tard."""
+    if sujet != "humain":
+        return
+    if luminosite is None or conditions is None:
         erreur(
             "--sujet humain requiert --luminosite ET --conditions (§C9 : consignées par "
             "écrit, pas par habitude, AVANT toute donnée humaine).")
+        return
+    motifs = verifie_observation_conditions(conditions, luminosite, datetime.now())
+    if motifs:
+        erreur("--conditions REFUSÉES (garde ancrée §A41, observation datée exigée) : "
+               + " ; ".join(motifs))
 
 
 def main() -> None:

@@ -51,6 +51,7 @@ Usage :
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -175,9 +176,15 @@ def main() -> None:
     with np.load(MEASURES_PATH) as data:
         delta_chi = np.array(data["delta_chi"], dtype=np.float64)
         instrument_muet = bool(data["instrument_muet"])
-        assert list(data["seeds"]) == list(SEEDS)
-        assert list(data["dts"]) == list(DTS)
-        assert list(data["budgets"]) == list(BUDGETS)
+        # Fail-loud EXPLICITE, jamais `assert` nu : un assert disparaît sous
+        # `python -O` et le combinateur lirait une grille désaxée en silence
+        # (la règle que summary_quadtree.py s'impose déjà — review 28/07).
+        for nom, attendu, obtenu in (("seeds", list(SEEDS), list(data["seeds"])),
+                                     ("dts", list(DTS), list(data["dts"])),
+                                     ("budgets", list(BUDGETS), list(data["budgets"]))):
+            if attendu != obtenu:
+                raise RuntimeError(f"verdict : axe '{nom}' du npz != grille gravée "
+                                   f"({obtenu} != {attendu}) — STOP.")
     if np.isnan(delta_chi).any():
         raise RuntimeError("verdict : NaN dans le tenseur de mesures — grille "
                            "incomplète, STOP (jamais de verdict partiel).")
@@ -197,8 +204,16 @@ def main() -> None:
         "diagnostic_laxiste_non_verdictal": colonnes_lax,
         "cap_floats": CAP_FLOATS,
         "instrument_muet": instrument_muet,
+        # Provenance SCELLÉE (§A41-c) : le sha256 de l'artefact lu, pas
+        # seulement son nom — un npz ré-assemblé depuis d'autres parts sous
+        # le même nom devient visible.
         "provenance": {"measures": str(MEASURES_PATH.name),
+                       "measures_sha256": hashlib.sha256(
+                           MEASURES_PATH.read_bytes()).hexdigest(),
                        "pins": "outputs/arcC/pins_spatial.json",
+                       "pins_sha256": hashlib.sha256(
+                           (ROOT / "outputs" / "arcC" /
+                            "pins_spatial.json").read_bytes()).hexdigest(),
                        "contrat": "PREREGISTRATION.md §A13 (pocCascade2phys 811b11d)"},
     }
     OUT_JSON_PATH.write_text(json.dumps(document, indent=2, ensure_ascii=False),

@@ -1,5 +1,13 @@
 # Pré-enregistrement du KERNEL L3 (borne de la remontée) — SOUMIS À ENDOSSEMENT
 
+> **CLÔTURE (2026-07-28, hygiène review) : ENDOSSÉ ET EXÉCUTÉ.** L'arbitrage
+> du §4 a été rendu — **§A18-complément-2 (2026-07-19) : agrégation par warp,
+> décision Romain** — et le kernel a été construit et mesuré (journal §A19 et
+> suivants : bug d'offset attrapé, empreintes-verrous, borne consignée dans
+> `outputs/f1/borne_l3.json`). Ce document était le seul des six BROUILLON
+> sans pointeur de sortie ; le voici. Le contenu ci-dessous reste tel quel —
+> c'est le protocole qui a fait foi pendant le build.
+
 > **Statut : BROUILLON soumis. AUCUNE ligne de code écrite.** Achat A endossé
 > §A18-complément (pocCascade2phys b1a8a13). Ce document fige les choix
 > d'implémentation AVANT la première ligne, comme le garde-fou (4) l'exige.

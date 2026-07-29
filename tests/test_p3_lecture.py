@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -26,7 +27,12 @@ from scripts.run_p3_lecture import (CHEMINS_ATTENDUS, PIN_IC, PIN_JND_SEV, REGIM
                                     VERDICT_INDETERMINEE, garde_chemins, garde_conditions,
                                     garde_validite_c5, lecture_transport, prononce)
 
-CONDITIONS_OK = "repère à 750 mm, lumière du jour stable, 14h, volets ouverts"
+# La garde des conditions est ANCRÉE sur `date_session` (§A41) : une
+# observation valide porte la date du jour et une heure à ±2 h de l'horodatage
+# machine. Les manifestes synthétiques dérivent donc TOUT du même instant.
+_MAINTENANT = datetime.now()
+CONDITIONS_OK = (f"repère à 750 mm, lumière du jour stable, le {_MAINTENANT:%d/%m/%Y} "
+                 f"vers {_MAINTENANT.hour}h{_MAINTENANT.minute:02d}, volets ouverts")
 
 
 def _fabrique_manifeste(tmp_path: Path, *, seuils=(0.070, 0.075, 0.073, 0.072),
@@ -55,7 +61,8 @@ def _fabrique_manifeste(tmp_path: Path, *, seuils=(0.070, 0.075, 0.073, 0.072),
 
     chemin_manifeste = tmp_path / "manifeste_p3.json"
     chemin_manifeste.write_text(json.dumps(dict(
-        sujet="humain", conditions_validite=dict(luminosite="OSD 80%", conditions=conditions),
+        sujet="humain", date_session=_MAINTENANT.isoformat(),
+        conditions_validite=dict(luminosite="OSD 80%", conditions=conditions),
         config_affichage=dict(chemins_staircases=list(chemins)),
         regimes={REGIME_P3: dict(sessions=sessions)})), encoding="utf-8")
     return chemin_manifeste
@@ -112,31 +119,82 @@ def test_le_decideur_est_min_max_la_methode_du_pin():
 # --- Les gardes savent échouer ----------------------------------------------
 
 
+def _manifeste_conditions(conditions, luminosite="OSD 80%",
+                          date_session=None) -> dict:
+    return dict(date_session=(date_session or _MAINTENANT.isoformat()),
+                conditions_validite=dict(conditions=conditions, luminosite=luminosite))
+
+
 @pytest.mark.parametrize("conditions", [
     "<repère de distance + lumière du jour stable, tel qu'observé>",
     "<ce que tu OBSERVES : repère, éclairage, heure — sans chevrons>",
     "repère à 750 mm <à compléter>",
+    "…ce que tu observes, heure comprise…",       # la chaîne EXACTE du 26/07 (§A40)
+    "repère à 750 mm [à compléter], 14h",
+    "conditions p. ex. lumière du jour, 14h",
 ])
 def test_garde_conditions_refuse_un_gabarit(conditions):
-    """Un GABARIT n'est pas une observation. Les deux premières chaînes sont
-    celles des pré-vols réels du 25/07 — la seconde dit littéralement « sans
-    chevrons » tout en gardant les siens, ce qui est exactement pourquoi la
-    garde est bête et mécanique plutôt que fine."""
-    garde = garde_conditions(dict(conditions_validite=dict(conditions=conditions)))
+    """Un GABARIT n'est pas une observation. Les trois premières chaînes sont
+    celles des pré-vols réels du 25/07 ; la quatrième est celle qui a TRAVERSÉ
+    la garde anti-chevrons le 26/07 (§A40) — les marqueurs sont désormais une
+    liste fermée, et la garde porteuse est l'ancrage date/heure."""
+    garde = garde_conditions(_manifeste_conditions(conditions))
     assert garde["ok"] is False
-    assert garde["chevrons_trouves"]
+    assert "GABARIT" in garde["motif"]
 
 
 def test_garde_conditions_accepte_une_observation():
-    assert garde_conditions(
-        dict(conditions_validite=dict(conditions=CONDITIONS_OK)))["ok"] is True
+    assert garde_conditions(_manifeste_conditions(CONDITIONS_OK))["ok"] is True
 
 
 def test_garde_conditions_refuse_une_absence():
     """Absente vaut gabarit : §C9 exige des conditions consignées, et « rien »
-    n'est pas une observation non plus."""
-    assert garde_conditions(dict(conditions_validite=dict(conditions=None)))["ok"] is False
+    n'est pas une observation non plus. Un manifeste SANS `date_session` est
+    refusé aussi : rien pour ancrer la garde."""
+    assert garde_conditions(_manifeste_conditions(None))["ok"] is False
     assert garde_conditions({})["ok"] is False
+
+
+def test_garde_conditions_refuse_une_heure_incoherente():
+    """LE cas §A41 : session à 00h27 sous une chaîne qui dit « 14h » — la
+    session de nuit consignée « lumière du jour » meurt ici, mécaniquement.
+    C'est le falsificateur le moins cher de la review du 28/07."""
+    nuit = _MAINTENANT.replace(hour=0, minute=27)
+    conditions = f"lumière du jour stable, le {nuit:%d/%m/%Y} vers 14h00, volets ouverts"
+    garde = garde_conditions(_manifeste_conditions(conditions,
+                                                   date_session=nuit.isoformat()))
+    assert garde["ok"] is False
+    assert "moins de 2 h" in garde["motif"]
+
+
+def test_garde_conditions_refuse_la_date_d_hier():
+    """Le copié-collé d'une VRAIE observation d'hier (bien formée, heure
+    plausible) meurt sur la date — c'est ce que la version morphologique ne
+    pouvait pas voir."""
+    hier = _MAINTENANT - timedelta(days=1)
+    conditions = (f"repère à 750 mm, lumière du jour stable, le {hier:%d/%m/%Y} "
+                  f"vers {_MAINTENANT.hour}h{_MAINTENANT.minute:02d}")
+    garde = garde_conditions(_manifeste_conditions(conditions))
+    assert garde["ok"] is False
+    assert "DATE du jour" in garde["motif"]
+
+
+def test_144hz_ne_fabrique_pas_une_heure_fantome():
+    """« écran 144hz » n'est pas une heure (M2) : le motif est ancré des deux
+    côtés, sinon `44h`/`4h` matcherait dans un mot technique."""
+    conditions = f"écran 144hz, le {_MAINTENANT:%d/%m/%Y}, volets ouverts"
+    garde = garde_conditions(_manifeste_conditions(conditions))
+    assert garde["heures_declarees_minutes"] == []
+    assert garde["ok"] is False
+
+
+def test_garde_conditions_verifie_aussi_luminosite():
+    """Le champ `luminosite` n'était JAMAIS vérifié (M2) : un gabarit peut s'y
+    loger aussi."""
+    garde = garde_conditions(_manifeste_conditions(CONDITIONS_OK,
+                                                   luminosite="[à remplir]"))
+    assert garde["ok"] is False
+    assert "GABARIT" in garde["motif"]
 
 
 @pytest.mark.parametrize("chemins", [
@@ -188,7 +246,7 @@ def test_toutes_les_gardes_sont_evaluees_pas_court_circuitees(tmp_path):
                                     chemins=("r1", "viridis", "r1", "r1"), casse_sha=True)
     rapport = _prononce(manifeste)
     assert set(rapport["gardes"]["echouees"]) == {
-        "conditions_sans_gabarit", "ordre_des_chemins", "liaison_sidecar_log"}
+        "conditions_ancrees_date_session", "ordre_des_chemins", "liaison_sidecar_log"}
     assert len(rapport["gardes"]["gardes"]) == 4      # la 4e a bien été évaluée aussi
 
 
@@ -263,6 +321,29 @@ def test_branche_2_transport_different_de_1(tmp_path):
     assert "pin NOUVEAU" in r1["texte"]
 
 
+def test_bras_r1_disperse_rend_indeterminee():
+    """GARDE DE DISPERSION (§C5, review 28/07 M3) : CV > 30 % ⇒ INDÉTERMINÉE.
+    La méthodologie du pin (`evalue_dispersion`) aurait rendu un tel bras
+    INDÉTERMINÉ — il ne se lit pas contre le pin. Les seuils sont EXACTEMENT
+    ceux du bras R1 du 26/07 (CV ≈ 42.8 %) : si cette garde avait existé et que
+    le témoin était passé, P3 aurait quand même refusé de prononcer."""
+    lecture = lecture_transport([0.025914125248894065, 0.015443609037015341,
+                                 0.03799628704481502])
+    assert lecture["verdict"] == VERDICT_INDETERMINEE and lecture["branche"] == "3"
+    assert lecture["dispersion"]["coherent"] is False
+    assert lecture["dispersion"]["cv"] > 0.30
+    assert "DISPERSION" in lecture["motif"]
+
+
+def test_bras_r1_coherent_surface_sa_dispersion(tmp_path):
+    """Sur un bras sain, la dispersion est SURFACÉE au rapport (cv, seuil,
+    coherent=True) — un chiffre qu'on ne voit jamais n'est pas une garde."""
+    manifeste = _fabrique_manifeste(tmp_path, seuils=(0.070, 0.075, 0.073, 0.072))
+    r1 = _prononce(manifeste)["r1"]
+    assert r1["dispersion"]["coherent"] is True
+    assert r1["dispersion"]["cv"] <= 0.30
+
+
 @pytest.mark.parametrize("seuils", [[], [0.07], [0.07, 0.075], [0.07, 0.072, 0.074, 0.076]])
 def test_bras_r1_ampute_ou_surnumeraire_rend_indeterminee(seuils):
     """Le prereg lit « l'IC des TROIS staircases R1 ». Deux ne suffisent pas :
@@ -318,6 +399,6 @@ def test_les_prevols_du_25_07_sont_refuses_par_la_garde_des_conditions(chemin):
     if not complet.exists():
         pytest.skip(f"artefact local absent (outputs/ gitignoré) : {chemin}")
     rapport = prononce(json.loads(complet.read_text(encoding="utf-8")), complet.parent)
-    assert "conditions_sans_gabarit" in rapport["gardes"]["echouees"]
+    assert "conditions_ancrees_date_session" in rapport["gardes"]["echouees"]
     assert rapport["verdict"] == VERDICT_INDETERMINEE
     assert "r1" not in rapport and "temoin" not in rapport
