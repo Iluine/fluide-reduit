@@ -1,18 +1,26 @@
 # PRÉ-ENREGISTREMENT P3′ — transport du pin, mesure INTRA-SESSION (gravé AVANT toute mesure)
 
-> **Statut : BROUILLON v2 soumis à revue Romain — rien ne se construit, rien ne
-> se mesure avant endossement et gravure (§A42 à venir ; §A41 est l'entrée de
-> correction du 29/07).** La v1 a été REFUSÉE par la review en profondeur du
-> 2026-07-29 (deux bloquants : B1a graine = feuille de réponses, B1b branche 1
-> promouvant un non-rejet en « ÉTABLIE » ; plus M2/M3/M4/M5) ; cette v2 intègre
-> les corrections, chacune marquée `[v2]`. Ce document ne contient AUCUNE
-> commande, à dessein : l'outillage (chantier 8) vient après la revue, et la
-> commande finale sera tapée le jour de session, jamais fournie pré-remplie.
+> **Statut : ENDOSSÉ (Romain, 2026-07-29) — version faisant foi : §A42.**
+> La revue critique de la v2 (2026-07-29, soir) a rendu : ENDOSSABLE avec deux
+> corrections nommées, gravées ici en `[v2.1]` À L'ENDOSSEMENT, avant toute
+> construction : (1) plage horaire de session — la version OUTILLÉE de
+> « lumière du jour », qui n'était qu'un surclame en v2 (la garde (b) vérifie
+> l'honnêteté de l'heure, pas la lumière : une session nocturne VÉRIDIQUE
+> passait) ; (2) graines BRÛLÉES — une graine humaine ne sert qu'une fois, la
+> garde refuse la liste, pas une valeur nominative. **D-P3′-1 et D-P3′-2 :
+> TRANCHÉS (§A42), voir en place.** Chantier 8 DÉBLOQUÉ — sur ordre de mission
+> explicite, aucun enchaînement.
+> Historique : la v1 a été REFUSÉE par la review en profondeur du 2026-07-29
+> (deux bloquants : B1a graine = feuille de réponses, B1b branche 1 promouvant
+> un non-rejet en « ÉTABLIE » ; plus M2/M3/M4/M5) ; la v2 intègre ces
+> corrections, marquées `[v2]`. Ce document ne contient AUCUNE commande, à
+> dessein : la commande finale sera tapée le jour de session, jamais fournie
+> pré-remplie.
 > Sources : §A40 (P3 INDÉTERMINÉE ; décision α/β/γ laissée OUVERTE — le chemin α
-> est celui que CE prereg propose à l'endossement, la décision appartient à
-> Romain), prereg P3 + corrections (tout ce qui n'est pas contredit ici reste
-> gravé), §A38-CORRECTION-4 (méthode d'IC), §A41 (faits de conditions et
-> d'antidatage ; règle « la machine lit, la session ne recopie pas »).
+> est celui que CE prereg proposait, endossé en §A42), prereg P3 + corrections
+> (tout ce qui n'est pas contredit ici reste gravé), §A38-CORRECTION-4 (méthode
+> d'IC), §A41 + §A41-ERRATUM (faits de conditions et d'antidatage ; règle « la
+> machine lit, la session ne recopie pas »).
 
 ## La question, re-posée sur le fait de §A40
 
@@ -35,13 +43,18 @@ session.
 
 ## Protocole
 
-- **SIX staircases, deux bras entrelacés, ordre GRAVÉ** — **D-P3′-1, à trancher
-  en revue** : `[recommandation]` **V, R, R, V, V, R** (contre-balancement
-  ABBA-AB : positions viridis {1,4,5}, R1 {2,3,6}, sommes 10/11 — la dérive
-  linéaire intra-session, fatigue ou chauffe, se répartit presque également ;
-  l'alternance stricte V,R,V,R,V,R donnerait 9/12, penchée). L'ordre effectif
-  est vérifié par une garde, comme pour P3 : un ordre déplacé en silence n'est
-  plus le protocole pré-enregistré.
+- **SIX staircases, deux bras entrelacés, ordre GRAVÉ** — **D-P3′-1 : TRANCHÉ
+  (§A42)** : **V, R, R, V, V, R** (contre-balancement ABBA-AB : positions
+  viridis {1,4,5}, R1 {2,3,6}, sommes 10/11 — la dérive linéaire
+  intra-session, fatigue ou chauffe, se répartit presque également ;
+  l'alternance stricte V,R,V,R,V,R donnerait 9/12, penchée). `[v2.1]` Raison
+  du choix, adverse et nommée : après échauffement, le résidu dominant est la
+  FATIGUE de fin de session, qui pèse sur le bras de plus grand Σk² — R
+  ({2,3,6}, Σk² = 49 contre V = 42) — donc gonfle jnd_R, donc biaise T VERS 1,
+  CONTRE la branche 2 anticipée (T ≈ 0.5, non-cécité ci-dessous). **Le miroir
+  R,V,V,R,R,V est REFUSÉ explicitement** : il biaiserait dans le sens
+  confortable. L'ordre effectif est vérifié par une garde, comme pour P3 : un
+  ordre déplacé en silence n'est plus le protocole pré-enregistré.
 - **Chaque bras : TROIS staircases COMPLÈTES exigées** (clause du bras complet,
   §A38-CORRECTION-4 — étendue aux DEUX bras : un bras amputé ne se lit pas,
   verdict INDÉTERMINÉE).
@@ -59,7 +72,12 @@ session.
   indépendamment des réponses du sujet — la graine encode la FEUILLE DE
   RÉPONSES, que le sujet a déjà rejouée quatre fois (pin, deux pré-vols, P3).
   La re-dérivabilité est préservée par CONSIGNATION de la graine neuve, pas
-  par sa reconduction.
+  par sa reconduction. `[v2.1]` **GRAINES BRÛLÉES, le principe remplace la
+  valeur** : une graine présentée à un sujet humain ne sert qu'UNE fois. La
+  garde refuse toute graine de la liste des graines brûlées — aujourd'hui
+  {20260705} ; après la session P3′, 20260729 y ENTRE. Refuser `20260705`
+  nominativement (la v2) laissait un futur P3″ reconduire `20260729` avec
+  exactement la faille B1a.
 - **`[v2]` Bloc d'échauffement NON ANALYSÉ, gravé d'avance** : N = 15 essais
   ABX non scorés (niveau fixe supra-seuil, mêmes sources, aucun seuil produit),
   AVANT la staircase 1. Raison chiffrée : la position 1 est la plus contaminée
@@ -96,7 +114,14 @@ session.
    journal (§A41) ;
    (c) elle ne contient AUCUN marqueur de gabarit : chevrons, ellipses (`…` ou
    `...`), crochets ou accolades, « p. ex. », « exemple », le mot nu
-   « CONDITIONS ».
+   « CONDITIONS » ;
+   (d) `[v2.1]` **PLAGE HORAIRE DE SESSION : `date_session` ∈ [09:00, 19:00]
+   locale**, sinon session REFUSÉE. C'est la version OUTILLÉE de « lumière du
+   jour » : les clauses (a)-(b) vérifient que l'heure déclarée est HONNÊTE,
+   pas qu'il fait jour — une session nocturne véridique (« 00h30,
+   plafonnier », date du jour) passait (a)-(c) intégralement, et la v2
+   surclamait « lumière du jour VÉRIFIÉE par la garde ». La condition du pin
+   redevient mécanique : hors plage, la machine refuse, personne ne déclare.
    La garde s'applique aux DEUX champs `conditions` ET `luminosite` (jamais
    vérifié en v1). Absente vaut gabarit, inchangé. Ironie consignée : le
    manifeste du pin porte `conditions: "CONDITIONS"` — le référent ne
@@ -138,7 +163,12 @@ IC_T = [min_R/max_V, max_R/min_V] :
    ÉTABLIE** par cette branche ; elle reste ouverte, consignée comme telle.
    Le gate (iii′) ne reçoit rien ; l'anti-surclame voyage inchangé.
 1b. **`[v2]` IC_T ⊂ [1/λ, λ] ⇒ TRANSPORT ÉQUIVALENT À 1, à la marge λ gravée**
-   — **D-P3′-2, à trancher en revue : `[recommandation]` λ = 1.5.** C'est la
+   — **D-P3′-2 : TRANCHÉ (§A42), λ = 1.5.** `[v2.1]` Raison chiffrée :
+   [1/1.5, 1.5] est une fenêtre de largeur 2.25 face à un IC_T attendu de
+   largeur ~2.5–3 — la branche n'est atteignable que par une session à faible
+   dispersion centrée sur 1, exactement la sémantique que « ÉTABLIE » doit
+   exiger ; λ = 1.25 la rendrait lettre morte, λ = 2 affaiblirait D14 sous
+   l'utile. C'est la
    SEULE branche qui ÉTABLIT la condition du caveat D14 — dans sa version
    intra-session, la plus forte disponible, et bornée par λ en toutes lettres
    (« établie à un facteur ≤ 1.5 près »). Coût nommé : avec un IC_T large d'un
@@ -185,7 +215,7 @@ prononcé mécanique du verdict.
 | transport ≠ 1 | l'échelle relative du gate (iii′) ; le consommateur de `r_fovea` ; la spec du compositeur héritera de T |
 | INDÉTERMINÉE | la décision suivante appartient à Romain — aucune lecture par défaut |
 
-## Outillage (chantier 8 — GATÉ sur l'endossement de ce prereg, rien avant)
+## Outillage (chantier 8 — débloqué par §A42, lancé sur ordre de mission explicite)
 
 Orchestration : plan d'entrelacement gravé (l'ordre D-P3′-1), bloc
 d'échauffement non scoré, les six staircases, manifeste avec ordre effectif et
@@ -194,12 +224,17 @@ garde CV par bras, IC min/max par bras, ratio, branches 1a/1b/2/3 ci-dessus,
 diagnostic de dérive et seuils-par-position surfacés). `[v2]` Champs d'essai
 imposés : les deux pré-vols du 25/07 ET la session P3 du 26/07 doivent être
 REFUSÉS — les pré-vols par les marqueurs, la session P3 par la garde (b)
-heure↔`date_session` (session de nuit, 00h27) ET par les marqueurs (ellipses) ;
+heure↔`date_session` (session de nuit, 00h27) ET par les marqueurs (ellipses)
+`[v2.1]` ET par la clause (d) (00h27 est hors plage [09:00, 19:00]) ;
 un manifeste synthétique au CV > 30 % sur un bras doit rendre INDÉTERMINÉE ;
-un manifeste portant `base_seed = 20260705` doit être REFUSÉ. Chaque branche
-de lecture prouvée falsifiable sur manifestes synthétiques, comme au
+`[v2.1]` un manifeste portant une graine de la LISTE DES GRAINES BRÛLÉES doit
+être REFUSÉ (aujourd'hui {20260705} ; le test porte sur la liste, pas sur une
+valeur) ; un manifeste véridique à `date_session` hors plage (« 00h30,
+plafonnier », date et heure honnêtes) doit être REFUSÉ par (d) seule. Chaque
+branche de lecture prouvée falsifiable sur manifestes synthétiques, comme au
 chantier 7.
 
-**POINT D'ARRÊT : revue de cette v2 par Romain (D-P3′-1 et D-P3′-2 comprises) ;
-sur endossement — gravure §A42, chantier 8, puis la session, un jour neuf,
-lumière du jour VÉRIFIÉE par la garde, pas déclarée. Aucun enchaînement.**
+**POINT D'ARRÊT : v2.1 ENDOSSÉE, gravure §A42 FAITE (2026-07-29). Prochain
+pas : ordre de mission chantier 8 (décision explicite), puis la session, un
+jour neuf, `date_session` dans la plage gravée [09:00, 19:00], garde 1
+(a)-(d) verte. Aucun enchaînement.**
