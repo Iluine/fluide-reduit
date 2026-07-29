@@ -1,9 +1,12 @@
 # ORDRE DE MISSION — chantier 8 : outillage P3′ (orchestration, lecture, champs d'essai)
 
-> **Statut : BROUILLON v2 (2026-07-29, 23h30 — horloge lue) — revue Romain
-> intégrée : cinq corrections + cinq décisions tranchées AU DOCUMENT, plus
-> quatre affûtages de la session critique consignés en place. Le build ne
-> démarre qu'après le feu vert explicite. Aucun enchaînement.**
+> **Statut : BROUILLON v3 (2026-07-29, 23h45 — horloge lue) — v2 = revue
+> Romain intégrée (cinq corrections + cinq décisions) + quatre affûtages ;
+> v3 = les deux trous résiduels de la re-scrutée du feu vert, gravés
+> §A42-COMPLÉMENT : précédence 1b/2 (résolution β, partition close avec
+> branche 2-équiv) et portée de la garde-liste (entrée seule, lecture par
+> égalité, archive re-jouable après brûlage). Le build ne démarre qu'après
+> le feu vert explicite. Aucun enchaînement.**
 > **Pour : session Claude Code.** Développement possible sur la VM Cowork
 > (aucun GPU requis ; le conteneur n'est PAS l'instrument — aucune mesure
 > verdict-grade, aucune session humaine ne t'appartient). **Sources qui font
@@ -31,12 +34,14 @@
    niveau, durée. Sa graine est dérivée du schéma existant avec un indice
    RÉSERVÉ (hors 0..5), surfacée au manifeste — les staircases gardent leurs
    indices canoniques.
-3. **Graine** : `base_seed = 20260729` recopié au manifeste et vérifié.
-   **GRAINES BRÛLÉES** : liste `GRAINES_BRULEES = {20260705}` en UN exemplaire
-   (`src/arcC_abx.py`, importée partout — jamais recopiée). Refus à l'entrée
-   sous `--sujet humain` ET à la lecture. **PORTÉE NOMMÉE : la garde ne mord
-   que les sessions HUMAINES nouvelles** — replay et synthétique consomment
-   légitimement les graines historiques (re-dérivabilité du pin préservée).
+3. **Graine — garde d'ENTRÉE, double** : sous `--sujet humain` en mode P3′,
+   `base_seed` doit ÉGALER le `20260729` gravé ET être ABSENT de la liste
+   `GRAINES_BRULEES = {20260705}` (UN exemplaire, `src/arcC_abx.py`, importée
+   — jamais recopiée). **[v3] La LISTE ne mord qu'ICI, à l'entrée** — c'est
+   elle qui empêchera un P3″ de reconduire `20260729` après son brûlage.
+   Portée nommée : sessions HUMAINES nouvelles seulement — replay et
+   synthétique consomment légitimement les graines historiques
+   (re-dérivabilité du pin préservée).
 4. **Garde 1 (a)-(d) à l'entrée** : la clause (d) — `date_session` ∈
    [09:00, 19:00] locale — s'ajoute à `verifie_observation_conditions`
    (UN exemplaire, paramètre de plage avec défaut gravé ; à l'entrée
@@ -74,11 +79,14 @@ court-circuite les autres** (§A38-CORRECTION-4, choix endossé : une mesure
 humaine ne se relance pas une garde à la fois) ; l'ordre ci-dessous ne
 gouverne que le PRONONCÉ du motif principal — et les seuils ne se DESCELLENT
 que TOUT VERT. Les gardes : liaison sidecar↔log (sha256, les six) ; garde
-conditions (a)-(d) ; **[rev] garde graine DOUBLE : égalité au `base_seed`
-GRAVÉ (20260729) ET absence de la liste des brûlées** — l'égalité pinne CETTE
-session (une graine quelconque, ni brûlée ni gravée, ne se lit pas), la liste
-protège les P3″ futurs ; portée : mode P3′ seulement, le mode P3 historique
-lit légitimement son manifeste archivé à 20260705 ; garde chemins (== plan
+conditions (a)-(d) ; **[v3] garde graine à la lecture : ÉGALITÉ SEULE au
+`base_seed` gravé (20260729)** — elle pinne tout : une graine quelconque
+(12345) ET `20260705` tombent par l'égalité. **La liste des brûlées ne mord
+PAS ici** (§A42-COMPLÉMENT) : sinon l'acte de brûlage rendrait l'archive P3′
+illisible — la re-dérivabilité promise exige qu'une archive à `20260729`
+reste re-jouable après brûlage. Portée : mode P3′ seulement, le mode P3
+historique lit légitimement son manifeste archivé à 20260705 ; garde chemins
+(== plan
 D-P3′-1) ; validité §C5 par staircase + bras complets 3+3 ; **dispersion
 CV ≤ 30 % PAR BRAS — les deux bras, viridis compris** (`evalue_dispersion`
 importée, jamais réimplémentée). Tant qu'une garde est rouge : INDÉTERMINÉE,
@@ -88,9 +96,14 @@ Puis, gardes vertes : IC min/max par bras (`calcule_ic` importée),
 T = jnd_R1/jnd_V, IC_T = [min_R/max_V, max_R/min_V], branches prononcées
 TELLES QUELLES : 1a (recouvrement sans IC_T ⊂ [1/λ, λ] — rien ne s'établit),
 1b (IC_T ⊂ [1/λ, λ], **λ = 1.5 gravé §A42**, constante nommée avec sa source),
-2 (IC disjoints — direction et facteur), 3 (INDÉTERMINÉE). **[rev] CONVENTION
-DE BORNE, gravée ici : ⊂ à BORNES INCLUSES** — IC_T = [x, 1.5] exactement ⇒
-1b. Ce qui tranche : la symétrie avec la convention du pin (« un témoin pile
+2 (IC disjoints sans inclusion — direction et facteur), **[v3] 2-équiv (IC
+disjoints ET IC_T ⊆ [1/λ, λ] ⇒ PRONONCÉ DOUBLE : ≠ 1 avec direction/facteur
+ET équivalence à λ établie au sens borné — §A42-COMPLÉMENT, résolution β ;
+la partition vit sur la grille inclusion × recouvrement, close et exclusive,
+1b exige désormais AUSSI le recouvrement)**, 3 (INDÉTERMINÉE). **[rev]
+CONVENTION DE BORNE, gravée : ⊂ à BORNES INCLUSES** — IC_T = [x, 1.5]
+exactement ⇒ la cellule d'inclusion (1b ou 2-équiv selon le recouvrement).
+Ce qui tranche : la symétrie avec la convention du pin (« un témoin pile
 à la borne n'est pas une dérive »). L'argument adverse (bornes strictes, 1b
 plus dur) est nommé et ÉCARTÉ : sur des seuils mesurés, l'égalité exacte est
 de mesure nulle — la convention pèse sur le déterminisme du prononcé et les
@@ -109,14 +122,18 @@ seuils-par-position.
   distingue la plage du simple contrôle d'honnêteté.
 - CV > 30 % sur UN bras (l'un puis l'autre) ⇒ INDÉTERMINÉE, seuils non
   divulgués.
-- Graine de la liste ⇒ REFUSÉ ; le test étend la liste avec une valeur de
-  test — il prouve que la garde lit la LISTE, pas une constante. **[rev]
-  Graine ni brûlée ni gravée (ex. 12345) ⇒ REFUSÉ** — c'est le test de
-  l'égalité au 20260729, l'autre moitié de la garde double.
-- Chaque branche 1a/1b/2/3 prouvée ATTEIGNABLE sur manifestes synthétiques
-  (dont le cas-frontière : recouvrement des IC sans inclusion de IC_T ⇒ 1a,
-  jamais 1b ; **[rev] et le cas-frontière de BORNE : IC_T = [x, 1.5]
-  exactement ⇒ 1b, bornes incluses**).
+- **[v3] Graine, les deux côtés testés là où ils mordent** : à l'ENTRÉE,
+  graine de la liste ⇒ REFUSÉ (le test étend la liste — il prouve qu'elle lit
+  la LISTE, pas une constante) ; à la LECTURE, graine ni brûlée ni gravée
+  (ex. 12345) ⇒ REFUSÉ par l'égalité, `20260705` ⇒ REFUSÉ par l'égalité, ET
+  **le test du brûlage** : une archive à `20260729` avec `20260729` AJOUTÉ à
+  la liste reste LISIBLE en lecture et REFUSÉE à l'entrée.
+- Chaque branche 1a/1b/2/2-équiv/3 prouvée ATTEIGNABLE sur manifestes
+  synthétiques (dont le cas-frontière : recouvrement des IC sans inclusion de
+  IC_T ⇒ 1a, jamais 1b ; **[rev] le cas-frontière de BORNE : IC_T = [x, 1.5]
+  exactement ⇒ cellule d'inclusion, bornes incluses ; [v3] et le cas 2-équiv
+  GRAVÉ : V = {0.070, 0.071, 0.072}, R = {0.080, 0.081, 0.083} ⇒ EXACTEMENT
+  le prononcé double, jamais 1b ni 2 seule**).
 - Non-régression : mode P3 historique et campagnes du pin inchangés (leurs
   tests existants verts, empreintes de seeds identiques en replay).
 

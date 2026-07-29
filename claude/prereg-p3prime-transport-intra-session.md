@@ -1,6 +1,9 @@
 # PRÉ-ENREGISTREMENT P3′ — transport du pin, mesure INTRA-SESSION (gravé AVANT toute mesure)
 
-> **Statut : ENDOSSÉ (Romain, 2026-07-29) — version faisant foi : §A42.**
+> **Statut : ENDOSSÉ (Romain, 2026-07-29) — version faisant foi : §A42,
+> complété §A42-COMPLÉMENT (`[v2.2]` : partition 1b/2/2-équiv sur la grille
+> inclusion × recouvrement — résolution β, α refusée ; portée de la liste des
+> graines : entrée seule, lecture par égalité, archive re-jouable).**
 > La revue critique de la v2 (2026-07-29, soir) a rendu : ENDOSSABLE avec deux
 > corrections nommées, gravées ici en `[v2.1]` À L'ENDOSSEMENT, avant toute
 > construction : (1) plage horaire de session — la version OUTILLÉE de
@@ -77,7 +80,13 @@ session.
   garde refuse toute graine de la liste des graines brûlées — aujourd'hui
   {20260705} ; après la session P3′, 20260729 y ENTRE. Refuser `20260705`
   nominativement (la v2) laissait un futur P3″ reconduire `20260729` avec
-  exactement la faille B1a.
+  exactement la faille B1a. `[v2.2]` **PORTÉE DE LA LISTE (§A42-COMPLÉMENT) :
+  la liste ne mord qu'à L'ENTRÉE** (empêcher la réutilisation sur un sujet) ;
+  à la LECTURE, l'ÉGALITÉ au `base_seed` gravé suffit et pinne tout — une
+  graine quelconque est refusée par l'égalité, `20260705` aussi, et l'archive
+  P3′ reste RE-JOUABLE à l'identique après le brûlage de `20260729` (la
+  re-dérivabilité promise plus haut ; sans cette portée, la garde double de
+  lecture rendait l'archive illisible dès l'acte de gravure).
 - **`[v2]` Bloc d'échauffement NON ANALYSÉ, gravé d'avance** : N = 15 essais
   ABX non scorés (niveau fixe supra-seuil, mêmes sources, aucun seuil produit),
   AVANT la staircase 1. Raison chiffrée : la position 1 est la plus contaminée
@@ -157,12 +166,29 @@ Sous gardes vertes (dispersion comprise, garde 4), avec IC_V = min/max des
 trois seuils viridis et IC_R = idem R1, T = jnd_R1/jnd_V (points),
 IC_T = [min_R/max_V, max_R/min_V] :
 
+`[v2.2]` **PARTITION GRAVÉE (§A42-COMPLÉMENT) — les branches vivent sur la
+grille inclusion × recouvrement, CLOSE et EXCLUSIVE** : la revue du feu vert
+(Romain, 2026-07-29) a montré que 1b et 2 telles qu'écrites pouvaient tirer
+EN MÊME TEMPS (IC disjoints ET IC_T ⊆ [1/λ, λ] — le cas existe : V =
+{0.070, 0.071, 0.072}, R = {0.080, 0.081, 0.083} donne IC disjoints et
+IC_T = [1.11, 1.19] ⊂ [0.667, 1.5]). Résolution β gravée, α REFUSÉE :
+sous α (1b exigerait le recouvrement, disjoint ⇒ branche 2 toujours), une
+session strictement PLUS PRÉCISE perdrait l'établissement de D14 qu'une
+session plus bruitée obtiendrait — dégrader la mesure jusqu'au recouvrement
+achèterait la branche confortable : le mécanisme de B1b réincarné,
+non-monotone en qualité d'instrument. β est monotone (moins de bruit
+n'affaiblit jamais l'établissement) et statistiquement propre (TOST :
+« ≠ 1 ET borné dans la marge » est cohérent et plus fort). **L'inclusion de
+IC_T décide de D14-à-λ ; la disjonction décide du prononcé ≠ 1 ; les deux
+vraies = la branche 2-équiv, prononcé DOUBLE.**
+
 1a. **`[v2]` IC_R ∩ IC_V ≠ ∅ ET IC_T ⊄ [1/λ, λ] ⇒ TRANSPORT NON DISTINGUÉ
    DE 1 (α ≈ 0.10, puissance ci-dessus).** C'est un NON-REJET, pas une
    équivalence : **la condition « transport ≈ 1 » du caveat D14 N'EST PAS
    ÉTABLIE** par cette branche ; elle reste ouverte, consignée comme telle.
    Le gate (iii′) ne reçoit rien ; l'anti-surclame voyage inchangé.
-1b. **`[v2]` IC_T ⊂ [1/λ, λ] ⇒ TRANSPORT ÉQUIVALENT À 1, à la marge λ gravée**
+1b. **`[v2]` IC_T ⊂ [1/λ, λ] `[v2.2]` ET IC_R ∩ IC_V ≠ ∅ ⇒ TRANSPORT
+   ÉQUIVALENT À 1, à la marge λ gravée**
    — **D-P3′-2 : TRANCHÉ (§A42), λ = 1.5.** `[v2.1]` Raison chiffrée :
    [1/1.5, 1.5] est une fenêtre de largeur 2.25 face à un IC_T attendu de
    largeur ~2.5–3 — la branche n'est atteignable que par une session à faible
@@ -178,10 +204,17 @@ IC_T = [min_R/max_V, max_R/min_V] :
    mesurée (stimulus fovéal ~2°), la scission D14 ne se referme pas ici ; le
    gate (iii′) mesure avec le pin d'instrument via R1 — le juge se durcit, le
    contrat ne s'affaiblit pas (§A36 P0-b).
-2. **IC disjoints ⇒ TRANSPORT ≠ 1, prononcé, avec direction et facteur** :
-   T et IC_T comme ci-dessus. Le gate (iii′) reçoit son échelle RELATIVE ;
-   `r_fovea` reçoit son consommateur ; **AUCUN seuil d'état ne bouge** — le pin
-   gravé reste le pin du harnais, jnd du jour et T sont des grandeurs NOUVELLES.
+2. **IC disjoints `[v2.2]` ET IC_T ⊄ [1/λ, λ] ⇒ TRANSPORT ≠ 1, prononcé,
+   avec direction et facteur** : T et IC_T comme ci-dessus. Le gate (iii′)
+   reçoit son échelle RELATIVE ; `r_fovea` reçoit son consommateur ; **AUCUN
+   seuil d'état ne bouge** — le pin gravé reste le pin du harnais, jnd du
+   jour et T sont des grandeurs NOUVELLES.
+2-équiv. **`[v2.2]` IC disjoints ET IC_T ⊆ [1/λ, λ] ⇒ PRONONCÉ DOUBLE** :
+   TRANSPORT ≠ 1 (direction et facteur — l'échelle part au gate (iii′),
+   `r_fovea` reçoit son consommateur) **ET équivalence à la marge λ ÉTABLIE
+   (T ≠ 1, borné)** — la condition D14 est établie à λ près, au sens borné,
+   jamais au sens d'identité. Les deux moitiés du prononcé voyagent
+   ENSEMBLE ; en citer une sans l'autre est un surclame.
 3. **Gardes échouées, bras amputé, catch/dispersion §C5 hors clous ⇒
    INDÉTERMINÉE** — un résultat, consigné, jamais re-couru en relâchant.
 
@@ -212,7 +245,8 @@ prononcé mécanique du verdict.
 |---|---|
 | 1a — non distingué de 1 | `[v2]` RIEN ne se décide : la condition D14 reste OUVERTE (consignée « non distinguée, non établie ») ; la suite appartient à Romain |
 | 1b — équivalent à 1 (marge λ) | le caveat D14 (condition transport ÉTABLIE à λ près) ; le gate (iii′) mesurera avec le pin d'instrument via R1 |
-| transport ≠ 1 | l'échelle relative du gate (iii′) ; le consommateur de `r_fovea` ; la spec du compositeur héritera de T |
+| 2 — transport ≠ 1 | l'échelle relative du gate (iii′) ; le consommateur de `r_fovea` ; la spec du compositeur héritera de T |
+| 2-équiv — ≠ 1 ET borné à λ `[v2.2]` | les DEUX : D14 établie à λ près (au sens borné) ET l'échelle T au gate (iii′) / `r_fovea` / compositeur — le prononcé double voyage entier |
 | INDÉTERMINÉE | la décision suivante appartient à Romain — aucune lecture par défaut |
 
 ## Outillage (chantier 8 — débloqué par §A42, lancé sur ordre de mission explicite)
@@ -227,12 +261,18 @@ REFUSÉS — les pré-vols par les marqueurs, la session P3 par la garde (b)
 heure↔`date_session` (session de nuit, 00h27) ET par les marqueurs (ellipses)
 `[v2.1]` ET par la clause (d) (00h27 est hors plage [09:00, 19:00]) ;
 un manifeste synthétique au CV > 30 % sur un bras doit rendre INDÉTERMINÉE ;
-`[v2.1]` un manifeste portant une graine de la LISTE DES GRAINES BRÛLÉES doit
-être REFUSÉ (aujourd'hui {20260705} ; le test porte sur la liste, pas sur une
-valeur) ; un manifeste véridique à `date_session` hors plage (« 00h30,
-plafonnier », date et heure honnêtes) doit être REFUSÉ par (d) seule. Chaque
-branche de lecture prouvée falsifiable sur manifestes synthétiques, comme au
-chantier 7.
+`[v2.2]` côté ENTRÉE : une graine de la LISTE DES GRAINES BRÛLÉES doit être
+REFUSÉE (le test étend la liste — il prouve qu'elle lit la liste, pas une
+constante) ; côté LECTURE : une graine ni brûlée ni gravée (ex. 12345) ET
+`20260705` doivent être REFUSÉES par L'ÉGALITÉ seule, et une archive à
+`20260729` doit rester LISIBLE même quand `20260729` figure dans la liste
+(le test du brûlage : re-jouable en lecture, refusée à l'entrée) ; un
+manifeste véridique à `date_session` hors plage (« 00h30, plafonnier », date
+et heure honnêtes) doit être REFUSÉ par (d) seule ; `[v2.2]` le cas
+2-équiv : V = {0.070, 0.071, 0.072}, R = {0.080, 0.081, 0.083} doit rendre
+EXACTEMENT le prononcé double (≠ 1 ET borné à λ), jamais 1b ni 2 seule.
+Chaque branche de lecture prouvée falsifiable sur manifestes synthétiques,
+comme au chantier 7.
 
 **POINT D'ARRÊT : v2.1 ENDOSSÉE, gravure §A42 FAITE (2026-07-29). Prochain
 pas : ordre de mission chantier 8 (décision explicite), puis la session, un
