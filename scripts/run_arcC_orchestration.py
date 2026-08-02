@@ -58,6 +58,7 @@ import json
 import math
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
@@ -68,11 +69,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from scripts.run_arcA_measure import _load_history
-from src.arcC_abx import (BUDGET_CATCH, PAIRES_SOURCES, REGIME_LAXISTE, REGIME_SEVERE,
-                          STATUT_CONTINUE, STATUT_STOP_2_INVALIDES, BanqueBancs,
-                          EssaiPropose, ParametresEscalier, Regime, Reponse,
-                          ecrit_log_jsonl, evalue_validite_session, run_escalier,
+from src.arcC_abx import (BASE_SEED_P3PRIME, BUDGET_CATCH, GRAINES_BRULEES,
+                          PAIRES_SOURCES, PLAGE_HORAIRE_SESSION, REGIME_LAXISTE,
+                          REGIME_SEVERE, STATUT_CONTINUE, STATUT_STOP_2_INVALIDES,
+                          BanqueBancs, EssaiPropose, ParametresEscalier, Regime, Reponse,
+                          _tire_reponse_correcte, _tire_source, ecrit_log_jsonl,
+                          evalue_validite_session, run_escalier, selectionne_stimulus,
                           verifie_arret_2_invalides, verifie_observation_conditions)
+from src.arcC_scelle import scelle_seuils
 from src.arcC_calibration import (C_DEG_CIBLE_DEFAUT, PORTEUSE_CYC_PAR_DOMAINE_DEFAUT,
                                   SEUIL_ACUITE_ARCMIN_DEFAUT, observation_cellule_pic_csf,
                                   plafond_texture, taille_domaine_px)
@@ -100,6 +104,70 @@ GEOMETRIES: tuple[str, ...] = ("pic-csf", "plafond")  # D-4
 POSITION_TEMOIN_VIRIDIS: int = 2
 REGIMES_CANONIQUES: tuple[Regime, ...] = (REGIME_SEVERE, REGIME_LAXISTE)
 CHOIX_REGIME: tuple[str, ...] = (REGIME_SEVERE.nom, REGIME_LAXISTE.nom, "tous")
+
+# --- Protocole P3′ (mission chantier 8 ; prereg P3′ v2.2 ENDOSSÉ §A42) ------
+
+PROTOCOLES: tuple[str, ...] = ("historique", "p3prime")
+# Plan d'entrelacement D-P3′-1, TRANCHÉ §A42 : V,R,R,V,V,R (miroir refusé).
+# Positions viridis {1,4,5} (1-based), sommes 10/11 — la dérive linéaire
+# intra-session se répartit presque également. UN exemplaire : la lecture
+# (run_p3_lecture) l'IMPORTE d'ici, jamais recopié.
+PLAN_P3PRIME: tuple[str, ...] = ("viridis", "r1", "r1", "viridis", "viridis", "r1")
+N_STAIRCASES_P3PRIME: int = len(PLAN_P3PRIME)  # 6 — deux bras de 3
+# Bloc d'échauffement — prereg v2 (§A42) : N = 15 essais ABX NON SCORÉS avant
+# la staircase 1, niveau fixe supra-seuil. L'indice de graine est RÉSERVÉ hors
+# 0..5 (choix nommé : les staircases gardent leurs indices canoniques),
+# surfacé au manifeste.
+N_ECHAUFFEMENT: int = 15
+INDICE_ECHAUFFEMENT: int = 99
+
+# D-8-1 GRAVÉ (prereg P3′ [v2.3], §A42-COMPLÉMENT-2, 2026-08-02) :
+# l'échauffement traverse les DEUX chemins, ENTRELACÉS V,R,V,…,V — 8 V / 7 R
+# sur 15 essais, COMMENCE et FINIT par viridis. Motif gravé : l'échauffement
+# règle une MESURE de ratio, pas une garde — l'objectif est « quasi-neutre,
+# résidu adverse », pas « le plus adverse possible » ; dose quasi symétrique
+# entre bras, résidu d'un essai penchant T vers 1 (adverse), et l'alternance
+# de la session est échauffée avec elle. REFUSÉS au prereg : viridis-seul
+# (biais adverse mais GROS, échelle T déformée pour son consommateur) et
+# R1-seul (biais favorable). UN exemplaire, à côté de `PLAN_P3PRIME` : la v1
+# de ce chantier dérivait le chemin de `chemins[numero_staircase]` avec
+# l'indice réservé 99 — IndexError GARANTI au premier essai humain (constat
+# B1 de la revue de remise).
+CHEMINS_ECHAUFFEMENT: tuple[str, ...] = ("viridis", "r1") * 7 + ("viridis",)
+assert len(CHEMINS_ECHAUFFEMENT) == N_ECHAUFFEMENT
+assert CHEMINS_ECHAUFFEMENT[0] == CHEMINS_ECHAUFFEMENT[-1] == "viridis"
+
+# D-8-2 GRAVÉ (prereg P3′ [v2.3], §A42-COMPLÉMENT-2, 2026-08-02) : niveau
+# d'échauffement ANCRÉ SUR LE PIN GRAVÉ — 2 × jnd_sev(viridis).
+# CONVENTION : « >= 2 x », la convention de l'Arc C réutilisée dans SON sens
+# (« clairement au-dessus du seuil ») ; le niveau n'est pas un seuil mesuré,
+# il est un multiple gravé de celui du pin.
+# SOURCE de la valeur : outputs/arcC/pins_spatial.json, regimes.severe.jnd =
+# 0.07334065957385666 (pleine précision ; le même nombre que PIN_JND_SEV de
+# run_p3_lecture) — l'ÉGALITÉ à 2 × le jnd de l'ARTEFACT RÉEL est VERROUILLÉE
+# PAR TEST, jamais par import (le sens d'import lecture -> orchestration
+# interdit l'inverse).
+# La v1 utilisait delta_chi_initial = 0.05 : SUB-seuil pour le bras viridis —
+# le bras que l'échauffement doit précisément protéger (constat M1), sous une
+# étiquette « départ gravé §C3 » INEXACTE (§C3 grave l'escalier, pas le
+# départ) ; l'étiquette est retirée.
+NIVEAU_ECHAUFFEMENT: float = 2.0 * 0.07334065957385666
+
+
+def chemin_pour_staircase(chemins: tuple[str, ...] | None, numero_staircase: int,
+                          indice_essai: int | None = None) -> str | None:
+    """Chemin d'affichage d'UN essai — fonction PURE (testable sans écran).
+
+    Une staircase k traverse `chemins[k]` ; l'ÉCHAUFFEMENT (indice réservé
+    `INDICE_ECHAUFFEMENT`) traverse `CHEMINS_ECHAUFFEMENT[indice_essai]`
+    (D-8-1) — c'est CE dispatch qui remplace le `chemins[99]` de la v1
+    (IndexError garanti, constat B1)."""
+    if numero_staircase == INDICE_ECHAUFFEMENT:
+        if indice_essai is None:
+            raise ValueError("chemin_pour_staircase : l'échauffement exige indice_essai "
+                             "(le chemin change À CHAQUE essai, D-8-1).")
+        return CHEMINS_ECHAUFFEMENT[indice_essai]
+    return None if chemins is None else chemins[numero_staircase]
 
 
 def chemins_staircases(rendu: str, n_staircases: int, temoin_viridis: bool) -> tuple[str, ...]:
@@ -133,6 +201,25 @@ def chemins_staircases(rendu: str, n_staircases: int, temoin_viridis: bool) -> t
     if temoin_viridis:
         chemins[POSITION_TEMOIN_VIRIDIS] = "viridis"
     return tuple(chemins)
+
+
+def chemins_staircases_p3prime(rendu: str, n_staircases: int) -> tuple[str, ...]:
+    """Le plan D-P3′-1 GRAVÉ (§A42), rendu par le même contrat pur que
+    `chemins_staircases` : V,R,R,V,V,R, six staircases, bras R1 en `rendu`.
+
+    Fail-loud sur toute demande qui n'est pas EXACTEMENT le plan : le prereg
+    P3′ ne connaît ni un autre `rendu` que r1, ni un autre nombre que 6 — un
+    plan approché rendu en silence ne serait plus le protocole."""
+    if rendu != "r1":
+        raise ValueError(
+            f"chemins_staircases_p3prime : le bras de mesure du prereg P3′ est r1 "
+            f"(reçu {rendu!r}) -- le plan D-P3′-1 est GRAVÉ, il ne se paramètre pas.")
+    if n_staircases != N_STAIRCASES_P3PRIME:
+        raise ValueError(
+            f"chemins_staircases_p3prime : le plan D-P3′-1 gravé porte "
+            f"{N_STAIRCASES_P3PRIME} staircases (reçu {n_staircases}).\n"
+            f"    CORRECTION : relance avec --n-staircases {N_STAIRCASES_P3PRIME}")
+    return PLAN_P3PRIME
 
 STATUT_STOP_TROP_EXCLUES: str = "STOP_TROP_DE_SOURCES_EXCLUES"
 
@@ -333,14 +420,35 @@ def _fabrique_repondre_humain(taille_px: int, out_dir: Path, rendu: str,
 
     def fabrique(numero_staircase: int, regime_nom: str, seed_sujet: int
                 ) -> tuple[Callable[[EssaiPropose], Reponse], Callable[[], None]]:
-        chemin = rendu if chemins is None else chemins[numero_staircase]
-        affiche = affiches[chemin]
         regime = REGIME_SEVERE if regime_nom == REGIME_SEVERE.nom else REGIME_LAXISTE
         fig, axes = _cree_figure(regime, taille_px)
         fig.suptitle("a : X ressemble à A     b : X ressemble à B     —     Échap / fermer : arrêter",
                      fontsize=9)
         fig.show()  # affiche la fenêtre de CETTE staircase (mode interactif)
         rng_masque = np.random.default_rng(seed_sujet)
+
+        if numero_staircase == INDICE_ECHAUFFEMENT:
+            # ÉCHAUFFEMENT (D-8-1, correctif B1 de la revue de remise) : le
+            # chemin change À CHAQUE essai (entrelacé V/R, 8V/7R) — un
+            # `repondre` par chemin, dispatch par `indice_essai` via la
+            # fonction PURE `chemin_pour_staircase` (la v1 faisait
+            # `chemins[99]` : IndexError garanti au premier essai humain).
+            # Pas de sidecar timing : le log NON-ANALYSÉ porte déjà les
+            # horodatages, et un timing scorable inviterait à l'être.
+            repondre_par_chemin = {
+                chemin: _construit_repondre_humain(fig, axes, regime, rng_masque,
+                                                   affiches[chemin])[0]
+                for chemin in sorted(set(CHEMINS_ECHAUFFEMENT))}
+
+            def repondre_echauffement(essai: EssaiPropose) -> Reponse:
+                chemin = chemin_pour_staircase(chemins, INDICE_ECHAUFFEMENT,
+                                               essai.indice_essai)
+                return repondre_par_chemin[chemin](essai)
+
+            return repondre_echauffement, (lambda: plt.close(fig))
+
+        chemin = rendu if chemins is None else chemins[numero_staircase]
+        affiche = affiches[chemin]
         repondre, journal_timing = _construit_repondre_humain(fig, axes, regime, rng_masque,
                                                               affiche)
 
@@ -353,6 +461,127 @@ def _fabrique_repondre_humain(taille_px: int, out_dir: Path, rendu: str,
 
         return repondre, cleanup
     return fabrique
+
+
+def bloc_echauffement(*, regime: Regime, regime_idx: int, base_seed: int,
+                      sources_incluses: tuple[tuple[int, int], ...], budget: int,
+                      params: ParametresEscalier, banques: BanqueBancs,
+                      fabrique_repondre: FabriqueRepondre, out_dir: Path,
+                      chemins_echauffement: tuple[str, ...] = CHEMINS_ECHAUFFEMENT) -> dict:
+    """Bloc d'échauffement P3′ (mission 8a.2/8a.7 ; prereg v2 §A42) :
+    `N_ECHAUFFEMENT` = 15 essais ABX NON SCORÉS avant la staircase 1 — niveau
+    FIXE supra-seuil `NIVEAU_ECHAUFFEMENT` = 2 × jnd_sev du pin gravé (D-8-2,
+    prereg [v2.3] : l'ancien 0.05 était SUB-seuil pour le bras viridis),
+    mêmes sources, aucun seuil produit, AUCUNE écriture dans les logs de
+    staircase.
+
+    La SÉQUENCE DE CHEMINS est REÇUE EXPLICITEMENT (`chemins_echauffement`,
+    défaut = l'unique exemplaire gravé `CHEMINS_ECHAUFFEMENT`, D-8-1) : elle
+    n'est JAMAIS dérivée du plan des staircases — `chemins[INDICE_ECHAUFFEMENT]`
+    était un IndexError garanti sur un plan à six (constat B1).
+
+    Construit chaque essai avec les MÊMES primitives que `run_escalier`
+    (`_tire_source`/`_tire_reponse_correcte`/`selectionne_stimulus`,
+    IMPORTÉES — le flux d'essais de `run_escalier` reste intouché), à graine
+    dérivée du schéma existant avec l'indice RÉSERVÉ `INDICE_ECHAUFFEMENT`
+    (hors 0..5 : les staircases gardent leurs indices canoniques).
+
+    LOG SÉPARÉ, marqué NON-ANALYSÉ dans son NOM : il PROUVE que l'échauffement
+    a eu lieu tel que gravé (15 essais, niveau, chemin par essai,
+    horodatages) sans inviter personne à le scorer — ni réponse ni correction
+    n'y figurent, et aucun outil de lecture ne l'ouvre."""
+    if tuple(chemins_echauffement) != CHEMINS_ECHAUFFEMENT:
+        raise ValueError(
+            f"bloc_echauffement : séquence d'échauffement NON CONFORME au plan gravé "
+            f"D-8-1 (reçu {len(chemins_echauffement)} essais, attendu "
+            f"{N_ECHAUFFEMENT} : V,R,V,…,V, 8 V / 7 R). Le bloc d'échauffement est "
+            "GRAVÉ au prereg [v2.3], il ne se paramètre pas.\n"
+            "    MOTIF DE LA GARDE : la fabrique HUMAINE dispatche l'affichage sur "
+            "l'exemplaire gravé (`chemin_pour_staircase`) ; une séquence différente "
+            "ferait diverger EN SILENCE ce que le log consigne et ce que le sujet voit.")
+    seeds = derive_seeds(base_seed, regime_idx, INDICE_ECHAUFFEMENT)
+    rng = np.random.default_rng(seeds["seed_roving"])
+    niveau = NIVEAU_ECHAUFFEMENT
+    repondre, cleanup = fabrique_repondre(INDICE_ECHAUFFEMENT, regime.nom,
+                                          seeds["seed_sujet"])
+    lignes: list[dict] = []
+    debut = datetime.now()
+    try:
+        for indice in range(N_ECHAUFFEMENT):
+            seed_src, L_src = _tire_source(rng, sources_incluses)
+            reponse_correcte = _tire_reponse_correcte(rng)
+            banc = banques.banc(seed_src, L_src, budget)
+            i_stim = selectionne_stimulus(banc.ts, banc.delta_chi, niveau)
+            essai = EssaiPropose(
+                numero_staircase=INDICE_ECHAUFFEMENT, indice_essai=indice,
+                seed_source=seed_src, L_source=L_src, budget=budget,
+                t=float(banc.ts[i_stim]), delta_chi=float(banc.delta_chi[i_stim]),
+                type_essai="echauffement", reponse_correcte=reponse_correcte)
+            t0 = time.perf_counter()
+            reponse = repondre(essai)
+            latence = time.perf_counter() - t0
+            if reponse not in ("A", "B"):
+                raise ValueError(
+                    f"bloc_echauffement : réponse invalide {reponse!r} (attendu 'A'/'B').")
+            # NON SCORÉ, et le log ne porte NI la réponse NI sa correction —
+            # un fichier qu'on ne peut pas scorer n'invite pas à l'être.
+            lignes.append(dict(indice_essai=indice, seed_source=int(seed_src),
+                               L_source=int(L_src), budget=int(budget),
+                               t=float(banc.ts[i_stim]),
+                               delta_chi=float(banc.delta_chi[i_stim]),
+                               chemin=chemins_echauffement[indice],
+                               type_essai="echauffement", latence_s=float(latence),
+                               horodatage=datetime.now().isoformat()))
+    finally:
+        cleanup()
+    fin = datetime.now()
+    duree_s = (fin - debut).total_seconds()
+    log_path = out_dir / f"session_{regime.nom}_echauffement.NON-ANALYSE.jsonl"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("w", encoding="utf-8") as f:
+        for ligne in lignes:
+            f.write(json.dumps(ligne, ensure_ascii=False) + "\n")
+    return dict(n_essais=N_ECHAUFFEMENT, niveau_delta_chi=float(niveau),
+                source_du_niveau="2 x jnd_sev du pin gravé (outputs/arcC/pins_spatial.json"
+                                 ", regimes.severe.jnd, pleine précision) -- D-8-2 GRAVÉ"
+                                 " prereg [v2.3] §A42-COMPLÉMENT-2, convention >= 2x"
+                                 " ; égalité 2 x PIN_JND_SEV verrouillée par test",
+                chemins_echauffement=list(chemins_echauffement),
+                source_des_chemins="D-8-1 GRAVÉ prereg [v2.3] §A42-COMPLÉMENT-2 :"
+                                   " ENTRELACÉ V,R,V,…,V — commence et finit par viridis",
+                dose_par_bras=dict(viridis=chemins_echauffement.count("viridis"),
+                                   r1=chemins_echauffement.count("r1")),
+                indice_seed_reserve=INDICE_ECHAUFFEMENT,
+                seed_roving=seeds["seed_roving"], seed_sujet=seeds["seed_sujet"],
+                horodatage_debut=debut.isoformat(), horodatage_fin=fin.isoformat(),
+                duree_s=float(duree_s), log_path=str(log_path),
+                marque="NON-ANALYSE (mission 8a.7) : aucune réponse loggée, aucun outil "
+                       "de lecture ne l'ouvre")
+
+
+def pauses_inter_staircases(sessions: list[dict]) -> list[dict]:
+    """Les PAUSES LIBRES entre staircases (mission 8a.6) — fonction PURE,
+    testable sans écran : la durée qui sépare la FIN de la staircase k du
+    DÉBUT de la k+1.
+
+    Elles sont CONSIGNÉES et SURFACÉES, jamais jugées : le prereg grave des
+    pauses LIBRES, aucune borne n'existe et aucune garde n'en dépend. Ce que
+    la mesure gagne ici, c'est de savoir dans quelle fenêtre elle a couru --
+    une dérive intra-session se lit autrement selon que six staircases ont
+    tenu une heure ou une après-midi.
+
+    Rendu vide si les horodatages manquent (manifestes HISTORIQUES d'avant ce
+    chantier : rien à déduire, on ne fabrique pas une durée)."""
+    pauses: list[dict] = []
+    for precedente, suivante in zip(sessions, sessions[1:]):
+        fin, debut = precedente.get("horodatage_fin"), suivante.get("horodatage_debut")
+        if fin is None or debut is None:
+            continue
+        pauses.append(dict(
+            entre=[precedente["numero_staircase"], suivante["numero_staircase"]],
+            duree_s=float((datetime.fromisoformat(debut)
+                           - datetime.fromisoformat(fin)).total_seconds())))
+    return pauses
 
 
 def orchestre_regime(*, regime: Regime, regime_idx: int, n_staircases: int, base_seed: int,
@@ -383,6 +612,12 @@ def orchestre_regime(*, regime: Regime, regime_idx: int, n_staircases: int, base
     for k in range(n_staircases):
         seeds = derive_seeds(base_seed, regime_idx, k)
         repondre, cleanup = fabrique_repondre(k, regime.nom, seeds["seed_sujet"])
+        # Mission 8a.6 : les horodatages début/fin de CHAQUE staircase sont
+        # consignés ; ce sont eux qui rendent les PAUSES LIBRES entre
+        # staircases mesurables (durées surfacées à la lecture, JAMAIS jugées
+        # -- une pause n'est pas une faute, un protocole qui ne sait pas
+        # combien de temps il a duré est une mesure sans sa fenêtre).
+        debut_staircase = datetime.now()
         try:
             resultat = run_escalier(
                 numero_staircase=k, regime_nom=regime.nom, repondre=repondre,
@@ -391,6 +626,7 @@ def orchestre_regime(*, regime: Regime, regime_idx: int, n_staircases: int, base
                 sources=sources_incluses, sources_catch=sources_catch)
         finally:
             cleanup()
+        fin_staircase = datetime.now()
 
         validite = evalue_validite_session(resultat.essais)
         log_path = out_dir / f"session_{regime.nom}_{k}.jsonl"
@@ -403,7 +639,10 @@ def orchestre_regime(*, regime: Regime, regime_idx: int, n_staircases: int, base
             log_path=str(log_path), chemin_rendu=chemin_rendu,
             n_essais=len(resultat.essais),
             n_reversals=len(resultat.reversals), complet=bool(resultat.complet),
-            seuil=resultat.seuil, validite=validite)
+            seuil=resultat.seuil, validite=validite,
+            horodatage_debut=debut_staircase.isoformat(),
+            horodatage_fin=fin_staircase.isoformat(),
+            duree_s=float((fin_staircase - debut_staircase).total_seconds()))
 
         if provenances is not None and chemin_rendu is not None:
             from scripts.run_arcC_session import sha256_fichier
@@ -420,7 +659,10 @@ def orchestre_regime(*, regime: Regime, regime_idx: int, n_staircases: int, base
             break
 
     return dict(sessions=sessions, statut_orchestration=statut,
-               n_staircases_lancees=len(sessions))
+               n_staircases_lancees=len(sessions),
+               pauses_inter_staircases=pauses_inter_staircases(sessions),
+               note_pauses="SURFACÉES, jamais jugées (mission 8a.6) : pauses LIBRES "
+                           "au prereg, aucune borne, aucune garde n'en dépend.")
 
 
 def orchestre_campagne(
@@ -436,7 +678,7 @@ def orchestre_campagne(
         long_ref_px: float | None = None, long_ref_mm: float | None = None,
         distance_mm: float | None = None, provenance_rendu: dict | None = None,
         regimes: tuple[str, ...] | None = None, chemins: tuple[str, ...] | None = None,
-        provenances: dict | None = None) -> dict:
+        provenances: dict | None = None, protocole: str = "historique") -> dict:
     """Orchestrateur de campagne complet (§C8) : applique D-2 (exclusion
     nommée -- STOP si >= `n_exclusions_stop`), D-3 (catch réserve forte,
     optionnellement restreint aux sources fortes), D-1 (ancre = `budget`,
@@ -478,7 +720,16 @@ def orchestre_campagne(
     doit RIEN changer aux seeds d'un régime conservé, sinon `--regime severe`
     ne rejouerait pas la même campagne que `--regime tous`. `chemins` et
     `provenances` matérialisent le bras témoin (cf. `orchestre_regime`) ;
-    l'ordre effectif est consigné sous `config_affichage`."""
+    l'ordre effectif est consigné sous `config_affichage`.
+
+    P3′ (mission chantier 8) : `protocole="p3prime"` ajoute, AVANT les
+    staircases du régime sévère, le bloc d'échauffement (8a.2/8a.7), et APRÈS
+    la campagne, le SCELLEMENT des seuils (8a.5, M4) : les `seuil` des
+    sessions sont retirés du manifeste, écrits dans le fichier scellé, son
+    sha256 consigné. Le comportement HISTORIQUE est intact par défaut."""
+    if protocole not in PROTOCOLES:
+        raise ValueError(
+            f"orchestre_campagne : protocole inconnu {protocole!r} (attendu {PROTOCOLES!r}).")
     if geometrie not in GEOMETRIES:
         raise ValueError(
             f"orchestre_campagne : geometrie inconnue {geometrie!r} (attendu {GEOMETRIES!r}).")
@@ -510,7 +761,8 @@ def orchestre_campagne(
             calibration=dict(ppd=ppd, long_ref_px=long_ref_px, long_ref_mm=long_ref_mm,
                              distance_mm=distance_mm)),
         exclusions=manifeste_exclusions,
-        base_seed=base_seed)
+        base_seed=base_seed,
+        protocole=protocole)
 
     if manifeste_exclusions["statut"] == STATUT_STOP_TROP_EXCLUES:
         manifeste["statut_global"] = STATUT_STOP_TROP_EXCLUES
@@ -532,6 +784,14 @@ def orchestre_campagne(
         # re-seeder ceux qu'on garde.
         if regimes is not None and regime.nom not in regimes:
             continue
+        if protocole == "p3prime":
+            # Échauffement AVANT la staircase 1 (mission 8a.2) — P3′ ne lance
+            # que le sévère, mais la garde est structurelle : chaque régime
+            # lancé sous p3prime commence échauffé (bloc consigné PAR régime).
+            manifeste.setdefault("echauffement", {})[regime.nom] = bloc_echauffement(
+                regime=regime, regime_idx=regime_idx, base_seed=base_seed,
+                sources_incluses=sources_incluses, budget=budget, params=params,
+                banques=banques, fabrique_repondre=fabrique_repondre, out_dir=out_dir)
         resultats[regime.nom] = orchestre_regime(
             regime=regime, regime_idx=regime_idx, n_staircases=n_staircases,
             base_seed=base_seed, sources_incluses=sources_incluses,
@@ -541,6 +801,26 @@ def orchestre_campagne(
 
     manifeste["statut_global"] = STATUT_CONTINUE
     manifeste["regimes"] = resultats
+
+    if protocole == "p3prime":
+        # SCELLEMENT des seuils (mission 8a.5, M4 — mode P3′ seulement, le
+        # schéma du manifeste P3 historique ne bouge pas) : les seuils des
+        # bras quittent le manifeste pour le fichier scellé ; seul son sha256
+        # reste. La lecture mécanique, gardes toutes vertes, descellera.
+        seuils_par_regime: dict[str, dict[str, float | None]] = {}
+        for regime_nom, regime_data in resultats.items():
+            seuils_par_regime[regime_nom] = {}
+            for session in regime_data["sessions"]:
+                seuils_par_regime[regime_nom][str(session["numero_staircase"])] = (
+                    session.pop("seuil"))
+        chemin_scelle = out_dir / "seuils_scelles_p3prime.json"
+        sha = scelle_seuils(chemin_scelle, seuils_par_regime)
+        manifeste["scellement_seuils"] = dict(
+            chemin=str(chemin_scelle), sha256=sha,
+            nature="PROCEDURAL, pas cryptographique (mission 8a.5) : protege du regard "
+                   "ACCIDENTEL, rend l'ALTERATION detectable ; la consultation ne laisse "
+                   "aucune trace -- si le fichier est ouvert avant le prononce, la "
+                   "non-cecite se CONSIGNE au verdict.")
     return manifeste
 
 
@@ -562,7 +842,9 @@ def lit_manifeste_json(path: str | Path) -> dict:
 
 def valide_conditions_requises_si_humain(
         sujet: str, luminosite: str | None, conditions: str | None,
-        erreur: Callable[[str], None]) -> None:
+        erreur: Callable[[str], None], *,
+        plage_horaire: tuple[int, int] | None = None,
+        instant: datetime | None = None) -> None:
     """§C9 (pièces 2 & 3) : luminosité + conditions d'environnement REQUISES
     *par écrit* dès que `sujet == "humain"` (« pas par habitude ») -- appelle
     `erreur(message)` (typiquement `parser.error`, qui lève `SystemExit`) si
@@ -575,7 +857,13 @@ def valide_conditions_requises_si_humain(
     VÉRIFIÉE À L'ENTRÉE contre l'horloge machine (`verifie_observation_
     conditions`, IMPORTÉE de src/arcC_abx.py — même exemplaire que la
     lecture) : mieux vaut refuser AVANT de faire courir une session humaine
-    qu'à la lecture, quatre staircases trop tard."""
+    qu'à la lecture, quatre staircases trop tard.
+
+    Mission 8a.4 : `plage_horaire` active la clause (d) — le mode P3′ passe
+    `PLAGE_HORAIRE_SESSION` (défaut gravé), l'entrée HISTORIQUE reste (a)-(c)
+    (portée nommée : la clause est gravée pour P3′). `instant` (défaut :
+    l'horloge) n'existe que pour la testabilité — un test ne dépend pas de
+    l'heure à laquelle il court."""
     if sujet != "humain":
         return
     if luminosite is None or conditions is None:
@@ -583,10 +871,41 @@ def valide_conditions_requises_si_humain(
             "--sujet humain requiert --luminosite ET --conditions (§C9 : consignées par "
             "écrit, pas par habitude, AVANT toute donnée humaine).")
         return
-    motifs = verifie_observation_conditions(conditions, luminosite, datetime.now())
+    motifs = verifie_observation_conditions(conditions, luminosite,
+                                            instant if instant is not None else datetime.now(),
+                                            plage_horaire=plage_horaire)
     if motifs:
         erreur("--conditions REFUSÉES (garde ancrée §A41, observation datée exigée) : "
                + " ; ".join(motifs))
+
+
+def valide_graine_entree_p3prime(
+        base_seed: int, sujet: str, erreur: Callable[[str], None],
+        graines_brulees: frozenset[int] = GRAINES_BRULEES) -> None:
+    """Garde de GRAINE à l'entrée, mode P3′, DOUBLE (mission 8a.3, §A42 +
+    §A42-COMPLÉMENT) : sous sujet HUMAIN, `base_seed` doit ÉGALER le
+    `BASE_SEED_P3PRIME` gravé ET être ABSENT de la liste des graines brûlées.
+
+    La LISTE ne mord qu'ICI, à l'entrée — c'est elle qui empêchera un P3″ de
+    reconduire 20260729 après son brûlage (la lecture, elle, vérifie l'égalité
+    seule : une archive reste re-jouable après brûlage). `graines_brulees` est
+    un PARAMÈTRE (défaut : la liste gravée, UN exemplaire dans arcC_abx) pour
+    que le test prouve que la garde lit la LISTE, pas une constante.
+
+    Portée nommée : sessions HUMAINES nouvelles seulement — replay et
+    synthétique consomment légitimement les graines historiques
+    (re-dérivabilité du pin préservée)."""
+    if sujet != "humain":
+        return
+    if base_seed in graines_brulees:
+        erreur(f"--base-seed {base_seed} est une graine BRÛLÉE (§A42 [v2.1] : une graine "
+               "présentée à un sujet humain ne sert qu'UNE fois — elle encode la feuille "
+               "de réponses, B1a). Liste des brûlées : " + str(sorted(graines_brulees)))
+        return
+    if base_seed != BASE_SEED_P3PRIME:
+        erreur(f"--base-seed {base_seed} != {BASE_SEED_P3PRIME}, la graine GRAVÉE du "
+               "prereg P3′ v2.2 (§A42) -- une session P3′ court sur SA graine, aucune "
+               "autre.")
 
 
 def main() -> None:
@@ -616,6 +935,11 @@ def main() -> None:
                         help="Insère UNE staircase témoin en chemin viridis, en 3e position "
                              "(position GRAVÉE au prereg P3). Valide UNIQUEMENT avec "
                              "--sujet humain --rendu r1.")
+    parser.add_argument("--protocole", choices=list(PROTOCOLES), default="historique",
+                        help="'historique' (défaut, comportement intact) ou 'p3prime' "
+                             "(prereg P3′ v2.2 ENDOSSÉ §A42) : plan D-P3′-1 V,R,R,V,V,R, "
+                             "échauffement 15 essais non scorés, garde graine double, "
+                             "clause (d) plage [09:00, 19:00], seuils SCELLÉS.")
     parser.add_argument("--theta-sim", type=float, default=None,
                         help="Requis si --sujet synthetique.")
     parser.add_argument("--sigma-sim", type=float, default=None,
@@ -637,8 +961,29 @@ def main() -> None:
     parser.add_argument("--manifeste", type=Path, default=OUT_DIR / "manifeste_campagne.json")
     args = parser.parse_args()
 
-    valide_conditions_requises_si_humain(args.sujet, args.luminosite, args.conditions,
-                                         parser.error)
+    # Mission 8a.4 : la clause (d) mord en mode P3′ (plage gravée) ; l'entrée
+    # historique reste (a)-(c) — portée nommée au prereg v2.1.
+    valide_conditions_requises_si_humain(
+        args.sujet, args.luminosite, args.conditions, parser.error,
+        plage_horaire=(PLAGE_HORAIRE_SESSION if args.protocole == "p3prime" else None))
+
+    if args.protocole == "p3prime":
+        # Mission 8a.3 : garde de graine DOUBLE à l'entrée (égalité au gravé
+        # ET absence de la liste des brûlées), sessions humaines seulement.
+        valide_graine_entree_p3prime(args.base_seed, args.sujet, parser.error)
+        # Le protocole P3′ est GRAVÉ : sévère seul (c'est jnd_sev que T2
+        # consomme), six staircases, témoin-P3 sans objet (le plan D-P3′-1
+        # porte les deux bras).
+        if args.regime != REGIME_SEVERE.nom:
+            parser.error(f"--protocole p3prime exige --regime {REGIME_SEVERE.nom} (prereg "
+                         "P3′ : le laxiste n'est pas re-mesuré).")
+        if args.temoin_viridis:
+            parser.error("--temoin-viridis est le dispositif du prereg P3 (trans-sessions) "
+                         "-- sans objet sous --protocole p3prime, dont le plan D-P3′-1 "
+                         "porte le bras viridis ENTIER.")
+        if args.n_staircases != N_STAIRCASES_P3PRIME:
+            parser.error(f"--protocole p3prime exige --n-staircases {N_STAIRCASES_P3PRIME} "
+                         "(plan D-P3′-1 gravé : V,R,R,V,V,R).")
 
     from src.arcC_calibration import pixels_par_degre
     ppd = pixels_par_degre(args.long_ref_px, args.long_ref_mm, args.distance_mm)
@@ -677,12 +1022,17 @@ def main() -> None:
         print(f"[provenance §A37] rendu={provenance['chemin_rendu']}  "
               f"sha256(arcC_rendu.py)={provenance['sha256_arcC_rendu']}  "
               f"etages={provenance['ordre_etages']}")
-        chemins = chemins_staircases(args.rendu, args.n_staircases, args.temoin_viridis)
+        if args.protocole == "p3prime":
+            chemins = chemins_staircases_p3prime(args.rendu, args.n_staircases)
+            print(f"[chemins §P3′] plan D-P3′-1 gravé (§A42) : {list(chemins)}")
+        else:
+            chemins = chemins_staircases(args.rendu, args.n_staircases, args.temoin_viridis)
+            print(f"[chemins §P3] ordre effectif des staircases : {list(chemins)}"
+                  + ("  (témoin viridis en 3e position, GRAVÉE)" if args.temoin_viridis
+                     else ""))
         provenances = {chemin: provenance_rendu(chemin, ppd=ppd, taille_px=taille_px,
                                                 obs=observation_cellule_pic_csf(ppd))
                        for chemin in set(chemins)}
-        print(f"[chemins §P3] ordre effectif des staircases : {list(chemins)}"
-              + ("  (témoin viridis en 3e position, GRAVÉE)" if args.temoin_viridis else ""))
         fabrique_repondre = _fabrique_repondre_humain(taille_px, args.out_dir, args.rendu,
                                                       chemins)
     else:
@@ -699,7 +1049,8 @@ def main() -> None:
             luminosite=args.luminosite, conditions=args.conditions,
             long_ref_px=args.long_ref_px, long_ref_mm=args.long_ref_mm,
             distance_mm=args.distance_mm, provenance_rendu=provenance,
-            regimes=regimes, chemins=chemins, provenances=provenances)
+            regimes=regimes, chemins=chemins, provenances=provenances,
+            protocole=args.protocole)
     except SessionInterrompue as exc:
         print(f"[CAMPAGNE INTERROMPUE] {exc} -- AUCUN manifeste écrit (campagne inachevée = "
               "fait de session, pas de référent, §C10). Reprends au pré-vol si c'était "

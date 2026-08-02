@@ -401,6 +401,27 @@ def statut_condition(validites_sessions: list[bool], dispersion: dict) -> str:
     return STATUT_RESOLU
 
 
+# --- Constantes P3′ gravées (§A42, §A42-COMPLÉMENT — recopiées, jamais inventées) --
+
+# Graine de la session P3′ — prereg P3′ v2.2 (ENDOSSÉ §A42) : « base_seed =
+# 20260729, NEUF, gravé ici (recopié au manifeste, vérifié par une garde) ».
+BASE_SEED_P3PRIME: int = 20260729
+
+# Graines brûlées — §A42 [v2.1] : « une graine présentée à un sujet humain ne
+# sert qu'UNE fois ». Aujourd'hui {20260705} ; après la session P3′, 20260729
+# y ENTRE — par un acte de GRAVURE (entrée journal + commit dédié), jamais un
+# réflexe de session. PORTÉE (§A42-COMPLÉMENT) : la liste ne mord qu'à
+# L'ENTRÉE d'une session HUMAINE nouvelle — la lecture vérifie l'ÉGALITÉ au
+# gravé, sinon l'acte de brûlage rendrait l'archive P3′ illisible.
+GRAINES_BRULEES: frozenset[int] = frozenset({20260705})
+
+# Clause (d) — §A42 [v2.1] : plage horaire de session [09:00, 19:00] locale,
+# bornes incluses, évaluée sur le DÉBUT de session. Version OUTILLÉE de
+# « lumière du jour » ; proxy SAISONNIER nommé (exact en été, imparfait en
+# hiver — l'observation (a)-(c) continue de porter la description de lumière).
+PLAGE_HORAIRE_SESSION: tuple[int, int] = (9 * 60, 19 * 60)  # minutes locales
+
+
 # --- Observation de conditions ancrée sur l'horodatage machine (§A41) -------
 
 # Marqueurs de gabarit — liste FERMÉE ; chacun trahit un modèle non rempli ou
@@ -431,7 +452,9 @@ def heures_declarees_minutes(texte: str) -> list[int]:
 
 
 def verifie_observation_conditions(conditions: str | None, luminosite: str | None,
-                                   instant: datetime) -> list[str]:
+                                   instant: datetime,
+                                   plage_horaire: tuple[int, int] | None =
+                                   PLAGE_HORAIRE_SESSION) -> list[str]:
     """Une observation de conditions est DATÉE et se vérifie contre `instant`
     — l'horodatage machine (`date_session` à la lecture, l'horloge au
     lancement), que personne ne tape (§A41 : « la machine lit, la session ne
@@ -442,11 +465,19 @@ def verifie_observation_conditions(conditions: str | None, luminosite: str | Non
       (b) elle contient au moins une HEURE explicite à <= 2 h (écart
           circulaire) de `instant` — le copié-collé d'une observation d'hier
           soir meurt ici, la session de nuit sous « lumière du jour » aussi ;
-      (c) ni `conditions` ni `luminosite` ne portent un marqueur de gabarit.
+      (c) ni `conditions` ni `luminosite` ne portent un marqueur de gabarit ;
+      (d) `instant` tombe dans `plage_horaire` (minutes locales, bornes
+          incluses, défaut GRAVÉ `PLAGE_HORAIRE_SESSION` §A42 [v2.1]) — la
+          version OUTILLÉE de « lumière du jour » : (a)-(b) vérifient que
+          l'heure déclarée est HONNÊTE, pas qu'il fait jour ; une session
+          nocturne VÉRIDIQUE (« 00h30, plafonnier ») passait (a)-(c). Portée :
+          `None` désactive la clause — les chemins HISTORIQUES (mode P3,
+          entrée hors P3′) la passent explicitement, la mission 8a.4 grave la
+          clause pour P3′.
 
     La garde ne juge pas la QUALITÉ de l'observation (elle ne le peut pas) ;
     elle vérifie que l'observation est datée, du bon jour, à la bonne heure,
-    et qu'aucun modèle n'a été rendu tel quel."""
+    dans la plage, et qu'aucun modèle n'a été rendu tel quel."""
     texte = "" if conditions is None else str(conditions)
     motifs: list[str] = []
     if conditions is None:
@@ -474,6 +505,14 @@ def verifie_observation_conditions(conditions: str | None, luminosite: str | Non
             motifs.append(f"aucune heure declaree a moins de 2 h de l'horodatage machine "
                           f"({instant.strftime('%Hh%M')}) -- la chaine ne decrit pas CETTE "
                           "session")
+    if plage_horaire is not None:
+        minute_ref = 60 * instant.hour + instant.minute
+        if not (plage_horaire[0] <= minute_ref <= plage_horaire[1]):
+            motifs.append(
+                f"clause (d) : date_session {instant.strftime('%Hh%M')} HORS de la plage "
+                f"horaire gravee [{plage_horaire[0] // 60:02d}:{plage_horaire[0] % 60:02d}, "
+                f"{plage_horaire[1] // 60:02d}:{plage_horaire[1] % 60:02d}] (§A42 [v2.1]) "
+                "-- hors plage, la machine refuse, personne ne declare")
     return motifs
 
 

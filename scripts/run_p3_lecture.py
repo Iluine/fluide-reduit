@@ -62,8 +62,10 @@ sys.path.insert(0, str(ROOT))
 
 import numpy as np
 
-from src.arcC_abx import (evalue_dispersion, heures_declarees_minutes,
+from src.arcC_abx import (BASE_SEED_P3PRIME, evalue_dispersion, heures_declarees_minutes,
                           verifie_observation_conditions)
+from src.arcC_scelle import descelle_seuils
+from scripts.run_arcC_orchestration import PLAN_P3PRIME, pauses_inter_staircases
 from scripts.run_arcC_pins import calcule_ic, calcule_ic_combine
 
 # --- Constantes RECOPIÉES (unités = FRACTION : 0.04 = 4 %) -------------------
@@ -153,7 +155,11 @@ def garde_conditions(manifeste: dict) -> dict:
     except (TypeError, ValueError):
         motifs.append("date_session ILLISIBLE au manifeste -- rien pour ancrer la garde")
     if date_session is not None:
-        motifs.extend(verifie_observation_conditions(conditions, luminosite, date_session))
+        # Portée (mission 8a.4) : la clause (d) — plage horaire — est GRAVÉE
+        # pour P3′ ; le mode P3 HISTORIQUE relit son manifeste archivé avec
+        # les clauses (a)-(c) de son époque, plage désactivée EXPLICITEMENT.
+        motifs.extend(verifie_observation_conditions(conditions, luminosite, date_session,
+                                                     plage_horaire=None))
     return dict(nom="conditions_ancrees_date_session", ok=(not motifs),
                 conditions=texte, luminosite=luminosite,
                 heures_declarees_minutes=heures_declarees_minutes(texte),
@@ -382,17 +388,331 @@ def prononce(manifeste: dict, racine: Path) -> dict:
     return rapport
 
 
+# --- Mode P3′ (mission chantier 8b ; prereg P3′ v2.2 ENDOSSÉ §A42) -----------
+
+# Marge d'équivalence D-P3′-2, TRANCHÉE §A42 : λ = 1.5 — « établie à un
+# facteur <= 1.5 près ». [1/1.5, 1.5] est une fenêtre de largeur 2.25 face à
+# un IC_T attendu de largeur ~2.5-3 : la branche 1b n'est atteignable que par
+# une session à faible dispersion centrée sur 1 (prereg v2.1).
+LAMBDA_EQUIV: float = 1.5
+
+VERDICT_NON_DISTINGUE: str = "TRANSPORT_NON_DISTINGUE_DE_1"
+VERDICT_EQUIVALENT: str = "TRANSPORT_EQUIVALENT_A_1_MARGE_LAMBDA"
+VERDICT_DIFFERENT_ET_BORNE: str = "TRANSPORT_DIFFERENT_DE_1_ET_EQUIVALENT_A_LAMBDA"
+
+
+def garde_protocole_p3prime(manifeste: dict) -> dict:
+    """Le manifeste doit se DÉCLARER p3prime ET porter son bloc de scellement
+    — un manifeste P3 historique (ou pré-P3′) lu en mode P3′ meurt ici, à
+    voix haute, jamais par un KeyError trois gardes plus loin."""
+    protocole = manifeste.get("protocole")
+    scellement = manifeste.get("scellement_seuils") or {}
+    ok = (protocole == "p3prime" and bool(scellement.get("chemin"))
+          and bool(scellement.get("sha256")))
+    return dict(nom="protocole_p3prime", ok=ok, protocole=protocole,
+                motif=(None if ok else
+                       f"manifeste protocole={protocole!r} et scellement="
+                       f"{'present' if scellement else 'ABSENT'} -- pas une session P3′ "
+                       "(prereg v2.2 : seuils SCELLÉS, protocole déclaré)"))
+
+
+def garde_conditions_p3prime(manifeste: dict) -> dict:
+    """Garde 1 (a)-(d) du prereg P3′ : la version ancrée §A41 PLUS la clause
+    (d) — plage horaire gravée [09:00, 19:00] (§A42 [v2.1]), portée par le
+    DÉFAUT de `verifie_observation_conditions` (un exemplaire, jamais
+    recopié). L'instant vient de `date_session`, l'horodatage machine."""
+    validite = manifeste.get("conditions_validite") or {}
+    conditions = validite.get("conditions")
+    luminosite = validite.get("luminosite")
+    texte = "" if conditions is None else str(conditions)
+    date_session = None
+    motifs: list[str] = []
+    try:
+        date_session = datetime.fromisoformat(str(manifeste.get("date_session")))
+    except (TypeError, ValueError):
+        motifs.append("date_session ILLISIBLE au manifeste -- rien pour ancrer la garde")
+    if date_session is not None:
+        motifs.extend(verifie_observation_conditions(conditions, luminosite, date_session))
+    return dict(nom="conditions_ancrees_a_d", ok=(not motifs),
+                conditions=texte, luminosite=luminosite,
+                date_session=(date_session.isoformat() if date_session else None),
+                motif=(None if not motifs else " ; ".join(motifs)))
+
+
+def garde_graine_p3prime(manifeste: dict) -> dict:
+    """Garde de graine à la LECTURE : ÉGALITÉ SEULE au `base_seed` gravé
+    (§A42-COMPLÉMENT) — elle pinne tout : une graine quelconque (12345) ET
+    20260705 tombent par l'égalité. La liste des brûlées ne mord PAS ici :
+    sinon l'acte de brûlage rendrait l'archive P3′ illisible — la
+    re-dérivabilité promise exige qu'une archive à 20260729 reste re-jouable
+    après brûlage. (La liste mord à L'ENTRÉE : `valide_graine_entree_p3prime`.)"""
+    base_seed = manifeste.get("base_seed")
+    ok = (base_seed == BASE_SEED_P3PRIME)
+    return dict(nom="graine_egalite_gravee", ok=ok, base_seed=base_seed,
+                base_seed_grave=BASE_SEED_P3PRIME,
+                motif=(None if ok else
+                       f"base_seed {base_seed!r} != {BASE_SEED_P3PRIME} (graine GRAVÉE du "
+                       "prereg P3′ v2.2, §A42) -- une session P3′ ne se lit que sur SA "
+                       "graine"))
+
+
+def garde_chemins_p3prime(manifeste: dict) -> dict:
+    """L'ordre des chemins == le plan D-P3′-1 GRAVÉ (V,R,R,V,V,R, §A42),
+    IMPORTÉ de l'orchestration — un plan déplacé en silence n'est plus le
+    protocole (l'acquis de P3)."""
+    chemins = (manifeste.get("config_affichage") or {}).get("chemins_staircases")
+    obtenu = tuple(chemins) if chemins else None
+    ok = (obtenu == PLAN_P3PRIME)
+    return dict(nom="plan_d_p3prime_1", ok=ok, attendu=list(PLAN_P3PRIME),
+                obtenu=(list(obtenu) if obtenu else None),
+                motif=(None if ok else
+                       f"plan {obtenu} != plan D-P3′-1 gravé {PLAN_P3PRIME} (§A42)"))
+
+
+def garde_bras_complets(sessions: list[dict]) -> dict:
+    """Clause du bras complet, étendue aux DEUX bras (prereg P3′) : trois
+    staircases COMPLÈTES par bras, comptées sur le drapeau `complet` — les
+    seuils, eux, restent SCELLÉS à ce stade."""
+    complets = {"viridis": 0, "r1": 0}
+    for s in sessions:
+        if s.get("complet") and s.get("chemin_rendu") in complets:
+            complets[s["chemin_rendu"]] += 1
+    ok = (complets["viridis"] == 3 and complets["r1"] == 3)
+    return dict(nom="bras_complets_3_3", ok=ok, complets=complets,
+                motif=(None if ok else
+                       f"bras amputé : viridis {complets['viridis']}/3, r1 "
+                       f"{complets['r1']}/3 COMPLÈTES -- un bras amputé ne se lit pas "
+                       "(verdict INDÉTERMINÉE, prereg P3′)"))
+
+
+def _seuils_par_bras(sessions: list[dict], seuils_descelles: dict) -> dict[str, list[float]]:
+    """Apparie les seuils DESCELLÉS aux bras via `numero_staircase` et
+    `chemin_rendu` du manifeste — staircases complètes seulement, dans
+    l'ordre des positions (le même filtre que le pin)."""
+    bras: dict[str, list[float]] = {"viridis": [], "r1": []}
+    for s in sorted(sessions, key=lambda x: x["numero_staircase"]):
+        seuil = seuils_descelles.get(str(s["numero_staircase"]))
+        if s.get("complet") and seuil is not None and s.get("chemin_rendu") in bras:
+            bras[s["chemin_rendu"]].append(float(seuil))
+    return bras
+
+
+def prononce_p3prime(manifeste: dict, racine: Path) -> dict:
+    """Le prononcé P3′ entier, dans l'ordre du contrat (mission 8b).
+
+    TOUTES les gardes sont ÉVALUÉES et rapportées, aucune ne court-circuite
+    les autres (§A38-CORRECTION-4, choix endossé : une mesure humaine ne se
+    relance pas une garde à la fois) ; l'ordre ne gouverne que le PRONONCÉ du
+    motif principal — et les seuils ne se DESCELLENT que TOUT VERT. La garde
+    de dispersion (CV <= 30 % PAR BRAS, les deux bras) vient APRÈS le
+    descellement par nécessité (elle lit les seuils) ; si elle tombe, les
+    seuils ne sont NI imprimés NI écrits — seul le CV, un ratio, est surfacé.
+
+    Branches (§A42 + §A42-COMPLÉMENT, partition CLOSE sur la grille
+    inclusion x recouvrement, bornes INCLUSES) :
+      1a  recouvrement sans inclusion  -> NON DISTINGUÉ de 1 (rien ne s'établit)
+      1b  recouvrement ET inclusion    -> ÉQUIVALENT à 1 à λ près (D14 établie)
+      2   disjoints sans inclusion     -> ≠ 1, direction et facteur
+      2-équiv  disjoints ET inclusion  -> PRONONCÉ DOUBLE (résolution β)
+      3   toute garde rouge            -> INDÉTERMINÉE"""
+    sessions = ((manifeste.get("regimes") or {}).get(REGIME_P3) or {}).get("sessions") or []
+    rapport = dict(
+        prereg="claude/prereg-p3prime-transport-intra-session.md (ENDOSSÉ v2.2, §A42 + "
+               "§A42-COMPLÉMENT)",
+        protocole="p3prime", date=datetime.now().isoformat(), machine=platform.node(),
+        regime=REGIME_P3, n_staircases=len(sessions),
+        lambda_equiv=LAMBDA_EQUIV,
+        gardes=None)
+
+    gardes = [garde_protocole_p3prime(manifeste),
+              garde_conditions_p3prime(manifeste),
+              garde_graine_p3prime(manifeste),
+              garde_chemins_p3prime(manifeste),
+              garde_validite_c5(sessions),
+              garde_bras_complets(sessions),
+              garde_sidecars(sessions, racine)]
+    echouees = [g["nom"] for g in gardes if not g["ok"]]
+    rapport["gardes"] = dict(toutes_ok=(not echouees), echouees=echouees, gardes=gardes)
+
+    if echouees:
+        rapport.update(verdict=VERDICT_INDETERMINEE, branche="3", motif=(
+            "GARDES DE VALIDITE ECHOUEES : " + ", ".join(echouees) +
+            ". Les seuils restent SCELLÉS -- ni lus, ni imprimés, ni écrits."))
+        return rapport
+
+    scellement = manifeste["scellement_seuils"]
+    chemin_scelle = resout_chemin(scellement["chemin"], racine)
+    if chemin_scelle is None:
+        rapport.update(verdict=VERDICT_INDETERMINEE, branche="3", motif=(
+            f"fichier scellé INTROUVABLE ({scellement['chemin']}) -- rien à desceller."))
+        return rapport
+    seuils_regime = descelle_seuils(chemin_scelle, scellement["sha256"]).get(REGIME_P3, {})
+    bras = _seuils_par_bras(sessions, seuils_regime)
+
+    # Garde de dispersion, PAR BRAS, les deux bras (§C5 / prereg v2 garde 4).
+    dispersions = {}
+    for nom_bras, seuils in bras.items():
+        d = evalue_dispersion(seuils)
+        cv = d["dispersion_relative"]
+        dispersions[nom_bras] = dict(
+            n=d["n"], cv=(None if not np.isfinite(cv) else float(cv)),
+            cv_pct=(None if not np.isfinite(cv) else 100.0 * float(cv)),
+            seuil_cv=d["seuil_dispersion_relative"], coherent=bool(d["coherent"]))
+    rapport["dispersion_par_bras"] = dispersions
+    incoherents = [nom for nom, d in dispersions.items() if not d["coherent"]]
+    if incoherents:
+        rapport.update(verdict=VERDICT_INDETERMINEE, branche="3", motif=(
+            "DISPERSION hors clous (CV > 30 %, §C5) sur bras : " + ", ".join(incoherents) +
+            ". Les seuils ne sont NI imprimés NI écrits -- seul le CV est surfacé."))
+        return rapport
+
+    # Gardes toutes vertes, dispersion comprise : lecture des branches.
+    ic_v, ic_r = calcule_ic(bras["viridis"]), calcule_ic(bras["r1"])
+    jnd_v, jnd_r = float(np.mean(bras["viridis"])), float(np.mean(bras["r1"]))
+    transport_t = jnd_r / jnd_v
+    ic_t = [ic_r[0] / ic_v[1], ic_r[1] / ic_v[0]]
+    recouvre = not (ic_r[1] < ic_v[0] or ic_r[0] > ic_v[1])
+    # CONVENTION DE BORNE gravée (mission 8b) : ⊂ à bornes INCLUSES — la
+    # symétrie avec la convention du pin (« un témoin pile à la borne n'est
+    # pas une dérive ») ; sur des seuils mesurés, l'égalité exacte est de
+    # mesure nulle, la convention pèse sur le déterminisme du prononcé.
+    inclus = (ic_t[0] >= 1.0 / LAMBDA_EQUIV) and (ic_t[1] <= LAMBDA_EQUIV)
+
+    rapport["bras"] = {
+        nom: dict(seuils=[float(s) for s in seuils], jnd=float(np.mean(seuils)),
+                  ic_minmax_decideur=calcule_ic(seuils),
+                  ic_mean2sem_surface=calcule_ic_combine(seuils))
+        for nom, seuils in bras.items()}
+    rapport["transport"] = dict(
+        T=transport_t, ic_T=ic_t, recouvrement=recouvre, inclusion_lambda=inclus,
+        lambda_equiv=LAMBDA_EQUIV, fenetre=[1.0 / LAMBDA_EQUIV, LAMBDA_EQUIV],
+        bornes="INCLUSES (convention gravée, mission 8b)")
+    # Diagnostics SURFACÉS, jamais jugés.
+    rapport["diagnostics"] = dict(
+        derive_viridis_vs_pin=dict(
+            jnd_viridis_du_jour=jnd_v, pin_grave=PIN_JND_SEV, ic_pin=list(PIN_IC),
+            note="SURFACÉ (prereg P3′) : documente le chemin du sujet depuis Arc C -- "
+                 "jamais un critère, le référent du transport est INTRA-session."),
+        seuils_par_position=[
+            dict(position=s["numero_staircase"], chemin=s.get("chemin_rendu"),
+                 seuil=seuils_regime.get(str(s["numero_staircase"])))
+            for s in sorted(sessions, key=lambda x: x["numero_staircase"])],
+        # Mission 8a.6 / M2 : la FENÊTRE de la session — durée de chaque
+        # staircase et pauses libres entre elles. SURFACÉES, JAMAIS JUGÉES :
+        # aucune borne n'est gravée, aucune garde n'en dépend, aucun verdict
+        # ne s'y adosse. Elles disent dans quel temps la mesure a couru, ce
+        # qui est ce qu'il faut pour LIRE la dérive intra-session déjà
+        # surfacée par `seuils_par_position` — pas pour la juger.
+        temps_de_session=dict(
+            duree_par_staircase=[
+                dict(position=s["numero_staircase"], duree_s=s.get("duree_s"),
+                     debut=s.get("horodatage_debut"), fin=s.get("horodatage_fin"))
+                for s in sorted(sessions, key=lambda x: x["numero_staircase"])],
+            pauses_inter_staircases=pauses_inter_staircases(
+                sorted(sessions, key=lambda x: x["numero_staircase"])),
+            note="SURFACÉ (mission 8a.6) : pauses LIBRES au prereg -- aucune borne, "
+                 "aucune garde n'en dépend, jamais jugées. Vide sur un manifeste "
+                 "d'avant ce chantier (aucun horodatage à lire, rien n'est fabriqué)."),
+        mean2sem="surfacé par bras ci-dessus, jamais décideur")
+
+    direction = ("seuil PLUS HAUT a travers R1 (moins sensible)" if transport_t > 1.0
+                 else "seuil PLUS BAS a travers R1 (plus sensible)")
+    if recouvre and not inclus:
+        rapport.update(verdict=VERDICT_NON_DISTINGUE, branche="1a", texte=(
+            "IC_R recoupe IC_V sans inclusion de IC_T dans [1/λ, λ] ⇒ TRANSPORT NON "
+            "DISTINGUÉ DE 1 (α ≈ 0.10, puissance chiffrée au prereg). C'est un NON-REJET, "
+            "pas une équivalence : la condition « transport ≈ 1 » du caveat D14 N'EST PAS "
+            "ÉTABLIE -- elle reste ouverte, consignée telle quelle. Le gate (iii′) ne "
+            "reçoit rien ; l'anti-surclame voyage inchangé."))
+    elif recouvre and inclus:
+        rapport.update(verdict=VERDICT_EQUIVALENT, branche="1b", texte=(
+            f"IC_T ⊂ [1/λ, λ] (λ = {LAMBDA_EQUIV}, D-P3′-2 §A42, bornes incluses) ET "
+            "recouvrement ⇒ TRANSPORT ÉQUIVALENT À 1 à la marge gravée. C'est la SEULE "
+            "branche qui ÉTABLIT la condition du caveat D14 -- version intra-session, "
+            "bornée par λ en toutes lettres (« établie à un facteur <= 1.5 près »). "
+            "L'anti-surclame VOYAGE : la pondération d'excentricité n'est PAS mesurée, "
+            "la scission D14 ne se referme pas ici ; le gate (iii′) mesure avec le pin "
+            "d'instrument via R1."))
+    elif not recouvre and inclus:
+        rapport.update(verdict=VERDICT_DIFFERENT_ET_BORNE, branche="2-equiv",
+                       transport_T=transport_t, transport_T_ic=ic_t, direction=direction,
+                       texte=(
+            f"IC disjoints ET IC_T ⊆ [1/λ, λ] ⇒ PRONONCÉ DOUBLE (§A42-COMPLÉMENT, "
+            f"résolution β) : TRANSPORT ≠ 1, T = {transport_t:.4f} ({direction}), ET "
+            "équivalence à λ établie AU SENS BORNÉ -- la condition D14 est établie à "
+            f"λ = {LAMBDA_EQUIV} près, ET le gate (iii′) reçoit son échelle relative ; "
+            "r_fovea reçoit son consommateur ; le prononcé double voyage ENTIER, aucune "
+            "moitié ne se cite seule. AUCUN seuil d'état ne bouge."))
+    else:
+        rapport.update(verdict=VERDICT_DIFFERENT, branche="2",
+                       transport_T=transport_t, transport_T_ic=ic_t, direction=direction,
+                       texte=(
+            f"IC disjoints sans inclusion ⇒ TRANSPORT ≠ 1, T = {transport_t:.4f} "
+            f"({direction}), IC_T = [{ic_t[0]:.4f}, {ic_t[1]:.4f}]. Le gate (iii′) reçoit "
+            "SON échelle relative ; r_fovea reçoit son consommateur ; AUCUN seuil d'état "
+            "ne bouge -- le pin gravé reste le pin du harnais, jnd du jour et T sont des "
+            "grandeurs NOUVELLES."))
+    rapport["motif"] = rapport["texte"]
+    return rapport
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--manifeste", type=Path,
-                        default=ROOT / "outputs" / "arcC" / "manifeste_p3.json")
-    parser.add_argument("--out", type=Path,
-                        default=ROOT / "outputs" / "arcC" / "p3_transport_pin.lecture.json")
+    parser.add_argument("--protocole", choices=["historique", "p3prime"],
+                        default="historique",
+                        help="'historique' = lecture P3 (prereg §A38) ; 'p3prime' = "
+                             "lecture P3′ (prereg v2.2 §A42 : gardes (a)-(d), graine par "
+                             "égalité, plan D-P3′-1, CV par bras, branches 1a/1b/2/"
+                             "2-équiv/3, seuils descellés tout-vert seulement).")
+    parser.add_argument("--manifeste", type=Path, default=None)
+    parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args()
 
+    if args.manifeste is None:
+        args.manifeste = ROOT / "outputs" / "arcC" / (
+            "manifeste_p3prime.json" if args.protocole == "p3prime" else "manifeste_p3.json")
+    if args.out is None:
+        args.out = ROOT / "outputs" / "arcC" / (
+            "p3prime_transport.lecture.json" if args.protocole == "p3prime"
+            else "p3_transport_pin.lecture.json")
+
     manifeste = json.loads(args.manifeste.read_text(encoding="utf-8"))
-    rapport = prononce(manifeste, args.manifeste.resolve().parent)
+    racine = args.manifeste.resolve().parent
+
+    if args.protocole == "p3prime":
+        rapport = prononce_p3prime(manifeste, racine)
+        print("=" * 78)
+        print("P3′ -- LECTURE MECANIQUE DU TRANSPORT INTRA-SESSION (prereg v2.2, §A42)")
+        print("=" * 78)
+        print(f"manifeste = {args.manifeste}")
+        print("\n[gardes -- TOUTES evaluees, jamais court-circuitees]")
+        for garde in rapport["gardes"]["gardes"]:
+            etat = "OK  " if garde["ok"] else "ECHEC"
+            print(f"  {etat} {garde['nom']}"
+                  + (f"  -- {garde['motif']}" if garde.get("motif") else ""))
+        if "dispersion_par_bras" in rapport:
+            print("\n[dispersion par bras (§C5, CV <= 30 %)]")
+            for nom, d in rapport["dispersion_par_bras"].items():
+                cv = "?" if d["cv_pct"] is None else f"{d['cv_pct']:.1f} %"
+                print(f"  {nom:8s} n={d['n']}  CV={cv}  -> "
+                      f"{'coherent' if d['coherent'] else 'HORS CLOUS'}")
+        if "transport" in rapport:
+            tr = rapport["transport"]
+            print(f"\n[transport]  T = {tr['T']:.4f}  IC_T = [{tr['ic_T'][0]:.4f}, "
+                  f"{tr['ic_T'][1]:.4f}]  fenetre λ = {tr['fenetre']}  "
+                  f"recouvrement={tr['recouvrement']}  inclusion={tr['inclusion_lambda']}")
+        print(f"\nVERDICT : {rapport['verdict']}  (branche {rapport.get('branche')})")
+        print(f"  {rapport.get('motif')}")
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(rapport, indent=2, ensure_ascii=False),
+                            encoding="utf-8")
+        print(f"\n[REPORT] -> {args.out}")
+        print("POINT D'ARRET : la lecture versionnee (claude/lectures/) se recopie APRES "
+              "verdict, jamais par la machine. Le verdict remonte a Romain.")
+        return
+
+    rapport = prononce(manifeste, racine)
 
     print("=" * 78)
     print("P3 -- LECTURE MECANIQUE DU TRANSPORT DU PIN")

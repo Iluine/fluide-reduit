@@ -690,3 +690,385 @@ def test_temoin_viridis_refuse_hors_session_humaine_en_r1(monkeypatch, sujet, re
     monkeypatch.setattr(sys, "argv", argv)
     with pytest.raises(SystemExit):
         main()
+
+
+# =============================================================================
+# Famille P3′ (mission chantier 8a/8c) : plan D-P3′-1, graine double à
+# l'entrée, clause (d), échauffement, scellement — prereg v2.2 ENDOSSÉ §A42
+# =============================================================================
+
+from src.arcC_abx import (BASE_SEED_P3PRIME, GRAINES_BRULEES,  # noqa: E402
+                          PLAGE_HORAIRE_SESSION)
+from src.arcC_scelle import descelle_seuils  # noqa: E402
+from scripts.run_arcC_orchestration import (CHEMINS_ECHAUFFEMENT,  # noqa: E402
+                                            INDICE_ECHAUFFEMENT, N_ECHAUFFEMENT,
+                                            N_STAIRCASES_P3PRIME, NIVEAU_ECHAUFFEMENT,
+                                            PLAN_P3PRIME, chemin_pour_staircase,
+                                            chemins_staircases_p3prime,
+                                            pauses_inter_staircases,
+                                            valide_conditions_requises_si_humain,
+                                            valide_graine_entree_p3prime)
+
+
+def _collecteur():
+    appels: list[str] = []
+    return appels, appels.append
+
+
+def test_plan_p3prime_est_le_plan_grave_et_rien_dautre():
+    """D-P3′-1 TRANCHÉ §A42 : V,R,R,V,V,R — six staircases, bras r1, aucun
+    paramétrage. Tout autre demande lève à voix haute."""
+    assert chemins_staircases_p3prime("r1", 6) == (
+        "viridis", "r1", "r1", "viridis", "viridis", "r1")
+    assert chemins_staircases_p3prime("r1", 6) is PLAN_P3PRIME
+    with pytest.raises(ValueError, match="D-P3′-1"):
+        chemins_staircases_p3prime("viridis", 6)
+    with pytest.raises(ValueError, match="6"):
+        chemins_staircases_p3prime("r1", 4)
+
+
+def test_graine_entree_refuse_une_brulee_et_lit_la_liste():
+    """La garde lit la LISTE, pas une constante : le test l'étend avec une
+    valeur de test et la garde mord dessus (champ d'essai 8c)."""
+    appels, erreur = _collecteur()
+    valide_graine_entree_p3prime(20260705, "humain", erreur)
+    assert appels and "BRÛLÉE" in appels[0]
+    appels, erreur = _collecteur()
+    valide_graine_entree_p3prime(999, "humain", erreur,
+                                 graines_brulees=frozenset({20260705, 999}))
+    assert appels and "BRÛLÉE" in appels[0]
+
+
+def test_graine_entree_refuse_une_graine_quelconque_par_egalite():
+    """L'autre moitié de la garde double : ni brûlée ni gravée ⇒ REFUSÉ par
+    l'égalité au 20260729 gravé."""
+    appels, erreur = _collecteur()
+    valide_graine_entree_p3prime(12345, "humain", erreur)
+    assert appels and str(BASE_SEED_P3PRIME) in appels[0]
+
+
+def test_graine_entree_accepte_la_gravee_et_refuse_apres_brulage():
+    """LE TEST DU BRÛLAGE, côté entrée : 20260729 passe aujourd'hui ; ajouté
+    à la liste (l'acte de gravure post-session), il est REFUSÉ à l'entrée —
+    c'est ce qui empêchera un P3″ de le reconduire (faille B1a)."""
+    appels, erreur = _collecteur()
+    valide_graine_entree_p3prime(BASE_SEED_P3PRIME, "humain", erreur)
+    assert not appels
+    appels, erreur = _collecteur()
+    valide_graine_entree_p3prime(
+        BASE_SEED_P3PRIME, "humain", erreur,
+        graines_brulees=frozenset(GRAINES_BRULEES | {BASE_SEED_P3PRIME}))
+    assert appels and "BRÛLÉE" in appels[0]
+
+
+def test_graine_entree_ne_mord_pas_le_synthetique():
+    """Portée nommée : replay et synthétique consomment légitimement les
+    graines historiques (re-dérivabilité du pin préservée)."""
+    appels, erreur = _collecteur()
+    valide_graine_entree_p3prime(20260705, "synthetique", erreur)
+    assert not appels
+
+
+def test_clause_d_a_lentree_plage_gravee():
+    """Clause (d) à l'entrée, mode P3′ : une observation VÉRIDIQUE de nuit
+    est refusée par la plage ; la même à 14h30 passe ; l'entrée HISTORIQUE
+    (plage None) accepte la nuit véridique — portée nommée (mission 8a.4)."""
+    nuit = datetime.now().replace(hour=0, minute=30)
+    jour = datetime.now().replace(hour=14, minute=30)
+    obs_nuit = f"repère à 750 mm, plafonnier, le {nuit:%d/%m/%Y} vers 0h30"
+    obs_jour = f"repère à 750 mm, lumière du jour stable, le {jour:%d/%m/%Y} vers 14h30"
+
+    appels, erreur = _collecteur()
+    valide_conditions_requises_si_humain("humain", "OSD 80%", obs_nuit, erreur,
+                                         plage_horaire=PLAGE_HORAIRE_SESSION,
+                                         instant=nuit)
+    assert appels and "plage" in appels[0]
+
+    appels, erreur = _collecteur()
+    valide_conditions_requises_si_humain("humain", "OSD 80%", obs_jour, erreur,
+                                         plage_horaire=PLAGE_HORAIRE_SESSION,
+                                         instant=jour)
+    assert not appels
+
+    appels, erreur = _collecteur()
+    valide_conditions_requises_si_humain("humain", "OSD 80%", obs_nuit, erreur,
+                                         plage_horaire=None, instant=nuit)
+    assert not appels
+
+
+def test_orchestre_campagne_p3prime_echauffe_et_scelle(tmp_path):
+    """Bout en bout synthétique (mission 8a.2/8a.5/8a.7) : sous p3prime, la
+    campagne (1) court l'échauffement AVANT les staircases — 15 essais, log
+    SÉPARÉ marqué NON-ANALYSÉ, sans réponse ni correction ; (2) SCELLE les
+    seuils — aucune clé `seuil` au manifeste, aucune valeur descellée ne
+    fuit dans son JSON, sha256 vérifiable."""
+    import json
+    from pathlib import Path
+
+    fabrique = lambda k, regime_nom, seed_sujet: (  # noqa: E731
+        fabrique_sujet_synthetique(0.05, 0.015, seed=seed_sujet), lambda: None)
+    manifeste = orchestre_campagne(
+        base_seed=BASE_SEED_P3PRIME, n_staircases=N_STAIRCASES_P3PRIME, ppd=40.0,
+        fabrique_repondre=fabrique, out_dir=tmp_path / "logs",
+        regimes=(REGIME_SEVERE.nom,), chemins=PLAN_P3PRIME, protocole="p3prime")
+
+    assert manifeste["protocole"] == "p3prime"
+    # (1) Échauffement : consigné, loggé à part, non scorable.
+    bloc = manifeste["echauffement"][REGIME_SEVERE.nom]
+    assert bloc["n_essais"] == N_ECHAUFFEMENT
+    assert bloc["indice_seed_reserve"] == INDICE_ECHAUFFEMENT
+    assert "NON-ANALYSE" in bloc["log_path"]
+    lignes = [json.loads(ligne) for ligne in
+              Path(bloc["log_path"]).read_text(encoding="utf-8").splitlines()]
+    assert len(lignes) == N_ECHAUFFEMENT
+    for ligne in lignes:
+        assert ligne["type_essai"] == "echauffement"
+        assert "reponse" not in ligne and "correct" not in ligne, (
+            "un log qu'on peut scorer invite à l'être (mission 8a.7)")
+    # (2) Scellement : le manifeste ne porte AUCUN seuil, le fichier scellé
+    # les porte tous, et son sha les verrouille.
+    sessions = manifeste["regimes"][REGIME_SEVERE.nom]["sessions"]
+    assert len(sessions) == N_STAIRCASES_P3PRIME
+    assert all("seuil" not in s for s in sessions)
+    scellement = manifeste["scellement_seuils"]
+    seuils = descelle_seuils(scellement["chemin"], scellement["sha256"])[REGIME_SEVERE.nom]
+    assert set(seuils.keys()) == {str(k) for k in range(N_STAIRCASES_P3PRIME)}
+    dump = json.dumps(manifeste)
+    for valeur in seuils.values():
+        if valeur is not None:
+            assert json.dumps(valeur) not in dump, "un seuil a fuité au manifeste"
+    assert "PROCEDURAL" in scellement["nature"]
+
+
+def test_orchestre_campagne_historique_inchangee_par_le_protocole(tmp_path):
+    """Non-régression (mission 8c) : le protocole HISTORIQUE ne scelle rien,
+    n'échauffe rien — les sessions portent leur `seuil` comme avant."""
+    fabrique = lambda k, regime_nom, seed_sujet: (  # noqa: E731
+        fabrique_sujet_synthetique(0.05, 0.015, seed=seed_sujet), lambda: None)
+    manifeste = orchestre_campagne(
+        base_seed=1000, n_staircases=1, ppd=40.0, fabrique_repondre=fabrique,
+        out_dir=tmp_path / "logs")
+    assert manifeste["protocole"] == "historique"
+    assert "echauffement" not in manifeste
+    assert "scellement_seuils" not in manifeste
+    for regime_data in manifeste["regimes"].values():
+        assert all("seuil" in s for s in regime_data["sessions"])
+
+
+# --- Correctifs de la revue de remise (§A42-COMPLÉMENT-2, prereg [v2.3]) ----
+
+
+def test_chemins_echauffement_est_le_plan_grave_d_8_1():
+    """D-8-1 GRAVÉ (prereg [v2.3]) : ENTRELACÉ V,R,V,…,V — 15 essais, 8 V /
+    7 R, COMMENCE et FINIT par viridis, jamais deux essais de suite sur le
+    même chemin. Les alternatives sont nommées REFUSÉES au prereg (viridis
+    seul : biais adverse mais GROS ; R1 seul : biais favorable)."""
+    assert len(CHEMINS_ECHAUFFEMENT) == N_ECHAUFFEMENT == 15
+    assert CHEMINS_ECHAUFFEMENT[0] == CHEMINS_ECHAUFFEMENT[-1] == "viridis"
+    assert CHEMINS_ECHAUFFEMENT.count("viridis") == 8
+    assert CHEMINS_ECHAUFFEMENT.count("r1") == 7
+    assert all(a != b for a, b in zip(CHEMINS_ECHAUFFEMENT, CHEMINS_ECHAUFFEMENT[1:])), (
+        "D-8-1 grave un ENTRELACEMENT : deux essais consécutifs sur le même chemin "
+        "ne sont plus l'alternance que l'échauffement doit échauffer.")
+
+
+def test_niveau_echauffement_egale_deux_fois_le_jnd_du_pin_reel():
+    """D-8-2 GRAVÉ (prereg [v2.3]), test d'IDENTITÉ imposé : la constante vaut
+    2 x le `jnd` sévère LU DANS L'ARTEFACT RÉEL — pas dans une recopie, pas
+    dans un commentaire. Convention >= 2x de l'Arc C (« clairement au-dessus »).
+
+    Ce que ce test verrouille : la constante ne peut plus dériver du pin en
+    silence. Le sens d'import (lecture -> orchestration) interdit d'importer
+    PIN_JND_SEV ici ; c'est donc l'ARTEFACT qui arbitre, comme le veut la
+    règle « la machine lit, la session ne recopie pas » (§A41)."""
+    import json
+    from pathlib import Path
+
+    pins = json.loads(
+        (Path(ROOT) / "outputs" / "arcC" / "pins_spatial.json").read_text(encoding="utf-8"))
+    jnd_sev = pins["regimes"]["severe"]["jnd"]
+    assert NIVEAU_ECHAUFFEMENT == 2.0 * jnd_sev
+    assert NIVEAU_ECHAUFFEMENT == 0.14668131914771332
+    # Et le motif de D-8-2 : SUPRA-seuil pour le bras viridis, celui que
+    # l'échauffement protège — l'ancien 0.05 était SOUS l'IC bas du pin.
+    assert NIVEAU_ECHAUFFEMENT > pins["regimes"]["severe"]["ic"][1]
+
+
+def test_echauffement_traverse_une_fabrique_sensible_au_chemin(tmp_path):
+    """RÉGRESSION B1 (constat BLOQUANT de la revue de remise) : le bloc
+    d'échauffement traverse SANS LEVER une fabrique SENSIBLE AU CHEMIN — une
+    fabrique qui LÈVE sur tout indice hors 0..5 servant à indexer le plan des
+    staircases, et sur tout chemin d'affichage hors {viridis, r1}.
+
+    C'est LE test qui aurait attrapé B1 : la v1 dérivait le chemin de
+    l'échauffement de `chemins[INDICE_ECHAUFFEMENT]` — `chemins[99]` sur un
+    plan à SIX, IndexError GARANTI au premier essai humain. La fabrique
+    synthétique des autres tests IGNORE l'indice : elle ne pouvait pas le
+    voir. Ici la fabrique se comporte comme la fabrique HUMAINE : chaque
+    essai DOIT se voir attribuer un chemin d'affichage connu.
+
+    Le test vérifie AUSSI que la séquence effectivement traversée est le plan
+    gravé D-8-1 lui-même — un échauffement qui ne lève plus mais affiche
+    autre chose ne serait pas davantage le protocole."""
+    chemins_vus: list[tuple[int, str]] = []
+
+    def fabrique(numero_staircase, regime_nom, seed_sujet):
+        if (numero_staircase != INDICE_ECHAUFFEMENT
+                and not 0 <= numero_staircase < len(PLAN_P3PRIME)):
+            raise AssertionError(
+                f"fabrique sensible au chemin : indice de staircase {numero_staircase} "
+                f"hors 0..{len(PLAN_P3PRIME) - 1} — le plan D-P3′-1 n'a aucun chemin "
+                "d'affichage pour lui (c'est exactement le crash B1).")
+        repondant = fabrique_sujet_synthetique(0.05, 0.015, seed=seed_sujet)
+
+        def repondre(essai):
+            chemin = chemin_pour_staircase(PLAN_P3PRIME, numero_staircase,
+                                           essai.indice_essai)
+            if chemin not in ("viridis", "r1"):
+                raise AssertionError(
+                    f"fabrique sensible au chemin : chemin d'affichage INCONNU "
+                    f"{chemin!r} — rien à afficher.")
+            chemins_vus.append((numero_staircase, chemin))
+            return repondant(essai)
+
+        return repondre, lambda: None
+
+    manifeste = orchestre_campagne(
+        base_seed=BASE_SEED_P3PRIME, n_staircases=N_STAIRCASES_P3PRIME, ppd=40.0,
+        fabrique_repondre=fabrique, out_dir=tmp_path / "logs",
+        regimes=(REGIME_SEVERE.nom,), chemins=PLAN_P3PRIME, protocole="p3prime")
+
+    traverses = [chemin for k, chemin in chemins_vus if k == INDICE_ECHAUFFEMENT]
+    assert traverses == list(CHEMINS_ECHAUFFEMENT), (
+        "l'échauffement n'a pas traversé le plan gravé D-8-1")
+    bloc = manifeste["echauffement"][REGIME_SEVERE.nom]
+    assert bloc["chemins_echauffement"] == list(CHEMINS_ECHAUFFEMENT)
+    assert bloc["dose_par_bras"] == {"viridis": 8, "r1": 7}
+    assert bloc["niveau_delta_chi"] == NIVEAU_ECHAUFFEMENT
+
+
+def test_chemin_pour_staircase_ne_derive_jamais_lechauffement_du_plan():
+    """L'unité derrière B1 : l'échauffement se dispatche par `indice_essai`
+    sur la séquence gravée, JAMAIS par indexation du plan des staircases —
+    et il exige cet indice à voix haute plutôt que d'en inventer un."""
+    assert chemin_pour_staircase(PLAN_P3PRIME, 0) == "viridis"
+    for indice, attendu in enumerate(CHEMINS_ECHAUFFEMENT):
+        assert chemin_pour_staircase(PLAN_P3PRIME, INDICE_ECHAUFFEMENT, indice) == attendu
+    with pytest.raises(ValueError, match="indice_essai"):
+        chemin_pour_staircase(PLAN_P3PRIME, INDICE_ECHAUFFEMENT)
+    # Le geste de la v1, conservé ici comme pièce à conviction : indexer le
+    # plan avec l'indice réservé LÈVE — c'est ce qui serait arrivé au sujet.
+    with pytest.raises(IndexError):
+        PLAN_P3PRIME[INDICE_ECHAUFFEMENT]
+
+
+def test_bloc_echauffement_recoit_sa_sequence_et_refuse_une_longueur_autre(tmp_path):
+    """La séquence est REÇUE explicitement (jamais dérivée du plan) et sa
+    longueur est GRAVÉE : une séquence d'une autre taille lève à voix haute
+    plutôt que d'échauffer un nombre d'essais qui n'est pas celui du prereg."""
+    from scripts.run_arcC_orchestration import bloc_echauffement
+
+    with pytest.raises(ValueError, match="D-8-1"):
+        bloc_echauffement(
+            regime=REGIME_SEVERE, regime_idx=0, base_seed=BASE_SEED_P3PRIME,
+            sources_incluses=((0, 10),), budget=ANCRE_BUDGET,
+            params=ParametresEscalier(), banques=BanqueBancs(),
+            fabrique_repondre=lambda k, n, s: (lambda essai: "A", lambda: None),
+            out_dir=tmp_path, chemins_echauffement=("viridis", "r1"))
+
+
+def test_pauses_inter_staircases_est_pure_et_ne_fabrique_rien():
+    """M2 (mission 8a.6) : la durée qui sépare la FIN de la staircase k du
+    DÉBUT de la k+1 — fonction PURE, testable sans écran. Sur un manifeste
+    d'AVANT ce chantier (aucun horodatage), elle rend une liste VIDE : on ne
+    fabrique pas une durée qu'on n'a pas mesurée."""
+    assert pauses_inter_staircases([]) == []
+    assert pauses_inter_staircases(
+        [dict(numero_staircase=0), dict(numero_staircase=1)]) == []
+    sessions = [
+        dict(numero_staircase=0, horodatage_debut="2026-08-02T10:00:00",
+             horodatage_fin="2026-08-02T10:20:00"),
+        dict(numero_staircase=1, horodatage_debut="2026-08-02T10:25:30",
+             horodatage_fin="2026-08-02T10:45:00"),
+        dict(numero_staircase=2, horodatage_debut="2026-08-02T10:47:00",
+             horodatage_fin="2026-08-02T11:05:00")]
+    assert pauses_inter_staircases(sessions) == [
+        dict(entre=[0, 1], duree_s=330.0), dict(entre=[1, 2], duree_s=120.0)]
+
+
+def test_horodatages_et_pauses_au_manifeste(tmp_path):
+    """M2 : chaque staircase porte ses horodatages début/fin et sa durée ; les
+    pauses inter-staircases sont consignées au manifeste. SURFACÉES, JAMAIS
+    JUGÉES : aucune borne, aucune garde, aucun verdict ne s'y adosse — le
+    statut d'orchestration ne dépend que de §C5, comme avant."""
+    fabrique = lambda k, regime_nom, seed_sujet: (  # noqa: E731
+        fabrique_sujet_synthetique(0.05, 0.015, seed=seed_sujet), lambda: None)
+    manifeste = orchestre_campagne(
+        base_seed=BASE_SEED_P3PRIME, n_staircases=N_STAIRCASES_P3PRIME, ppd=40.0,
+        fabrique_repondre=fabrique, out_dir=tmp_path / "logs",
+        regimes=(REGIME_SEVERE.nom,), chemins=PLAN_P3PRIME, protocole="p3prime")
+
+    bloc_regime = manifeste["regimes"][REGIME_SEVERE.nom]
+    sessions = bloc_regime["sessions"]
+    for session in sessions:
+        assert datetime.fromisoformat(session["horodatage_fin"]) >= datetime.fromisoformat(
+            session["horodatage_debut"])
+        assert session["duree_s"] >= 0.0
+    pauses = bloc_regime["pauses_inter_staircases"]
+    assert len(pauses) == len(sessions) - 1
+    assert [p["entre"] for p in pauses] == [[k, k + 1] for k in range(len(sessions) - 1)]
+    assert all(p["duree_s"] >= 0.0 for p in pauses)
+    # L'échauffement date lui aussi sa fenêtre (il PRÉCÈDE la staircase 1).
+    bloc = manifeste["echauffement"][REGIME_SEVERE.nom]
+    assert datetime.fromisoformat(bloc["horodatage_fin"]) >= datetime.fromisoformat(
+        bloc["horodatage_debut"])
+
+
+def _argv_p3prime(**surcharges) -> list[str]:
+    """Une ligne de commande P3′ VALIDE quant au reste, dont on ne fausse
+    qu'UN paramètre à la fois — c'est ce qui rend le motif du refus
+    attribuable. AUCUNE commande pré-remplie n'en sort : elle vit ici, dans
+    un test, et n'est pas exécutable telle quelle (`main()` est appelée en
+    mémoire, aucune session n'est lancée — chaque cas s'arrête sur
+    `parser.error`)."""
+    base = {"--base-seed": str(BASE_SEED_P3PRIME), "--sujet": "humain",
+            "--rendu": "r1", "--regime": REGIME_SEVERE.nom,
+            "--n-staircases": str(N_STAIRCASES_P3PRIME), "--protocole": "p3prime",
+            "--long-ref-px": "1920", "--long-ref-mm": "597", "--distance-mm": "750",
+            "--luminosite": "OSD 80%", "--conditions": "repère à 750 mm, lumière du jour"}
+    base.update(surcharges)
+    argv = ["run_arcC_orchestration.py"]
+    for cle, valeur in base.items():
+        argv.extend([cle] if valeur is None else [cle, valeur])
+    return argv
+
+
+@pytest.mark.parametrize("surcharges, motif", [
+    ({"--base-seed": "12345"}, "GRAVÉE"),
+    ({"--base-seed": "20260705"}, "BRÛLÉE"),
+    ({"--temoin-viridis": None}, "temoin-viridis"),
+    ({"--regime": REGIME_LAXISTE.nom}, "regime"),
+    ({"--n-staircases": "4"}, "n-staircases"),
+])
+def test_main_cable_les_gardes_p3prime_au_niveau_parser(monkeypatch, capsys,
+                                                       surcharges, motif):
+    """(m3) Le CÂBLAGE CLI de `main()` testé AU NIVEAU PARSER : sous
+    `--protocole p3prime`, une graine hors gravé ET une graine brûlée sont
+    refusées, `--temoin-viridis` est refusé (dispositif du prereg P3, sans
+    objet ici), et `--regime severe` + `--n-staircases 6` sont EXIGÉS.
+
+    Chaque cas s'arrête sur `parser.error` (SystemExit) AVANT tout import
+    matplotlib et AVANT toute campagne : aucune session n'est lancée par ce
+    test. La clause (d) est neutralisée ici — elle a ses propres tests, et
+    l'horloge du runner ne doit pas décider du motif qu'on vérifie (un test
+    passé à 22 h tomberait sur (d) et prouverait autre chose)."""
+    import sys
+
+    from scripts import run_arcC_orchestration as orch
+
+    monkeypatch.setattr(orch, "valide_conditions_requises_si_humain",
+                        lambda *args, **kwargs: None)
+    monkeypatch.setattr(sys, "argv", _argv_p3prime(**surcharges))
+    with pytest.raises(SystemExit):
+        orch.main()
+    assert motif in capsys.readouterr().err
