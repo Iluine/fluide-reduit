@@ -166,3 +166,46 @@ seuils-par-position.
 **POINT D'ARRÊT DE LA MISSION : à la remise, revue critique puis retour à
 Romain. La session humaine P3′ vient APRÈS, un jour neuf, `date_session` dans
 la plage, sur sa décision explicite — jamais dans la foulée du build.**
+
+---
+
+## MISSION DE CORRECTION (v4, 2026-08-02 — revue de remise NON CONFORME, §A42-COMPLÉMENT-2)
+
+> **Pour : session Claude Code. La remise du chantier 8 est refusée en l'état
+> (B1/M1/M2 + mineurs) ; le working tree reste NON COMMITÉ jusqu'à la
+> re-remise revue. Cap : 0.5 séance. Les deux décisions manquantes sont
+> désormais GRAVÉES au prereg `[v2.3]` — tu les implémentes, tu ne les
+> interprètes pas.**
+
+1. **B1 (bloquant) — l'échauffement crashe le chemin humain P3′**
+   (`chemins[99]` sur un plan à six). `bloc_echauffement` reçoit désormais sa
+   SÉQUENCE DE CHEMINS explicitement : le plan gravé D-8-1 —
+   **V,R,V,R,V,R,V,R,V,R,V,R,V,R,V (8V/7R, commence et finit par V)** — en UN
+   exemplaire nommé à côté de `PLAN_P3PRIME`, jamais dérivé de
+   `chemins[indice]`. La fabrique humaine doit accepter un essai
+   d'échauffement sur un chemin donné sans indexer le plan des staircases.
+   **Test de régression imposé** : une fabrique sensible au chemin (qui LÈVE
+   sur tout indice hors 0..5 et sur tout chemin hors {viridis, r1}) traverse
+   le bloc d'échauffement complet sans lever — c'est le test qui aurait
+   attrapé B1 ; la fabrique synthétique qui ignore l'indice ne suffit plus.
+2. **M1 (majeur) — niveau d'échauffement** : constante
+   `NIVEAU_ECHAUFFEMENT = 2 × jnd_sev du pin = 0.14668131914771332`
+   (recopiée de `pins_spatial.json` avec sa source ET la convention ≥2× en
+   commentaire ; l'étiquette fausse « §C3 gravé » retirée). **Test d'identité
+   imposé** : la constante égale 2 × le `jnd` lu dans l'artefact réel.
+3. **M2 (majeur) — pauses (8a.6)** : horodatages début/fin par staircase,
+   durées inter-staircases au manifeste, surfacées par la lecture P3′ en
+   diagnostic — jamais jugées.
+4. **Mineurs, même passe** : (m1) rapport de remise corrigé — décompte exact
+   des tests, ET la clé `protocole` ajoutée au manifeste historique DÉCLARÉE
+   (m4) ; (m2) verrou d'import — un test prouve que `run_p3_lecture` ne lie
+   PAS `GRAINES_BRULEES` (inspection du module/de la source, pas un
+   monkeypatch d'attribut) ; (m3) le câblage CLI p3prime de `main()` testé
+   au niveau parser (graine hors gravé/brûlée ⇒ `parser.error`,
+   `--temoin-viridis` refusé, `--regime severe` + `--n-staircases 6` exigés).
+5. **Inchangé et intouchable** : tout le reste de la remise (gardes,
+   partition, scellement, champs d'essai — vérifiés conformes en revue) ;
+   les garde-fous de la mission v3 s'appliquent tels quels ; suite complète
+   re-courue à la re-remise, rapport en N passés / M sautés listés.
+
+**POINT D'ARRÊT INCHANGÉ : re-remise → revue critique → commit par Romain.**

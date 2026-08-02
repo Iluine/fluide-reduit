@@ -3,7 +3,10 @@
 > **Statut : ENDOSSÉ (Romain, 2026-07-29) — version faisant foi : §A42,
 > complété §A42-COMPLÉMENT (`[v2.2]` : partition 1b/2/2-équiv sur la grille
 > inclusion × recouvrement — résolution β, α refusée ; portée de la liste des
-> graines : entrée seule, lecture par égalité, archive re-jouable).**
+> graines : entrée seule, lecture par égalité, archive re-jouable) et
+> §A42-COMPLÉMENT-2 (`[v2.3]`, 2026-08-02 : niveau et chemin de
+> l'échauffement gravés — D-8-1 entrelacé V-première, D-8-2 = 2 × jnd du
+> pin — après revue de remise NON CONFORME du chantier 8).**
 > La revue critique de la v2 (2026-07-29, soir) a rendu : ENDOSSABLE avec deux
 > corrections nommées, gravées ici en `[v2.1]` À L'ENDOSSEMENT, avant toute
 > construction : (1) plage horaire de session — la version OUTILLÉE de
@@ -93,7 +96,21 @@ session.
   par l'échauffement et D-P3′-1 la place dans le bras V (référent) — sans ce
   bloc, T serait biaisé vers le bas, vers la branche « transport ≠ 1 ». Les
   **seuils-par-position sont SURFACÉS** en diagnostic (jamais jugés) pour
-  documenter la dérive intra-session résiduelle.
+  documenter la dérive intra-session résiduelle. `[v2.3]` **NIVEAU ET CHEMIN
+  GRAVÉS (D-8-2, D-8-1 — §A42-COMPLÉMENT-2, 2026-08-02)** : niveau =
+  **2 × jnd_sev du pin gravé = 0.1466** (source : `pins_spatial.json`,
+  jnd 0.0733 ; la convention ≥2× de l'Arc C réutilisée dans son sens —
+  « clairement au-dessus » ; le 0.05 du harnais était SUB-seuil face à l'IC
+  bas du pin viridis 0.0603, constat M1 de la revue de remise, et son
+  étiquette « §C3 gravé » était inexacte — §C3 grave l'escalier, pas le
+  départ). Chemin d'affichage : **ENTRELACÉ V,R,V,…,V — 8V/7R, commence et
+  FINIT par V** juste avant la staircase 1 (D-8-1) : l'échauffement règle une
+  MESURE de ratio, pas une garde — l'objectif est « quasi-neutre, résidu
+  adverse », pas « le plus adverse possible » ; dose quasi symétrique entre
+  bras, résidu d'un essai penchant T vers 1 (adverse), et l'alternance de la
+  session est échauffée avec elle. Viridis-seul (biais adverse mais GROS,
+  échelle T déformée pour son consommateur) et R1-seul (biais favorable) :
+  REFUSÉS.
 - **Conditions de session** : lumière du jour stable, OSD 80 %, sujet frais,
   **JOUR NEUF** (gravé §A40 : rien ne se re-mesure le 26). `[v2]` Ces
   conditions ne sont plus DÉCLARÉES mais VÉRIFIÉES : garde ancrée sur
