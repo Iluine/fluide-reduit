@@ -1,0 +1,315 @@
+{
+ "protocole": {
+  "prereg": "claude/prereg-multiplicateur-c-3d-2026-08-04.md",
+  "commit_prereg": "c298a8b",
+  "question": "coût marginal d'un scalaire advecté et d'un champ statique lu, en 3D ; d'où C, coût d'une fenêtre 64³ à vocabulaire réel de §A51",
+  "decision_qui_en_depend": "l'ordre des gestes de §A54-5 : fermer la fourchette du cap AVANT d'arbitrer la cadence",
+  "chrono": "B6 cuda-Events, warmup 30 EXCLU, série 300, médiane ET p99",
+  "git_head": "e73852a",
+  "portee": "F JOUET. Ne prononce RIEN sur le schéma eau 3D, le rendu, le non-F 3D, ni f16. Statiques lus dans le HALO (fidèle pour b0, MAJORANT pour id-matériau) et mesurés en f32 alors que §A51 range e_th et ρ_s en f16 : majorant de coût, donc minorant du cap."
+ },
+ "machine": {
+  "gpu": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+  "vram_totale_mo": 3780.75,
+  "vram_libre_avant_mo": 3435.625,
+  "cupy": "14.1.1",
+  "python": "3.12.3"
+ },
+ "gardes": {
+  "kernel_a53": {
+   "empreinte_a53": "4431b707852394074ece9ec3ced47237e6e3198d8ae0d5fa93b285cb04798911",
+   "git_diff_a53": "vide",
+   "empreintes_param": {
+    "1_0": "f2ffb7c8a4029de20d75501b565958dbb76c4377e909e9f429b8f4e4a184c0f6",
+    "2_0": "b806e06d7d7a3dcefc4f67e13c93085d54dd84e9b907726e55aa099cca490b06",
+    "3_0": "b8c56e19fb959d7b804ddc091ab450404449c988af12827561f59afe04ea4fa4",
+    "4_0": "29b97f3d8d3dc6e78e5e0fa095784719e9b6910d532d2a14a8dbb3f1b0819516",
+    "3_2": "e2b42e335fffb01a1cb40640b64338c82052fac79da811c42ce9dff45a68f877",
+    "1_2": "eaefb34298a5b695e672608145976125414edb966f48c765de3bcada3e4186d6"
+   }
+  },
+  "identite_bit_pour_bit": {
+   "ecarts": {
+    "S1": 0.0,
+    "S2": 0.0
+   },
+   "verdict": "identique bit pour bit"
+  },
+  "equivalence": {
+   "ecarts_max": {
+    "m_c1": 1.1920928955078125e-07,
+    "m_c2": 1.1920928955078125e-07,
+    "m_c3": 1.1920928955078125e-07,
+    "m_c4": 1.1920928955078125e-07,
+    "m_c5": 1.1920928955078125e-07,
+    "m_c6": 1.1920928955078125e-07
+   },
+   "rtol": 0.0001,
+   "atol": 1e-05,
+   "etat": "sévère"
+  },
+  "statiques_lus": {
+   "ecart_poids_0_vs_1": 1.5443134307861328,
+   "repli_neutre_bit_pour_bit": true
+  }
+ },
+ "ancres_lues": {
+  "bloc_a53_ms": 1.7138346831003826,
+  "non_f_ms": 1.8350321960449225,
+  "seuil_ms": 16.7,
+  "rho_a53": 2.027458127267872,
+  "n_slots_v4": 11,
+  "c_max_60hz": 1.3513607094504616,
+  "c_max_30hz": 2.8634819215716742,
+  "budget_30hz_ms": 33.333333333333336
+ },
+ "mesures": {
+  "m_c1": {
+   "n_scalaires": 1,
+   "n_statiques": 0,
+   "n_champs": 5,
+   "cote": 64,
+   "n_fenetres": 3,
+   "n": 300,
+   "mediane_ms": 4.983824014663696,
+   "p99_ms": 5.52580961704253,
+   "min_ms": 4.061183929443359,
+   "max_ms": 6.802271842956543,
+   "ms_par_bloc": 1.6612746715545654,
+   "comptes_statiques": {
+    "n_scalaires": 1,
+    "n_statiques": 0,
+    "n_champs": 5,
+    "minmods": 45,
+    "solveurs_hll": 6,
+    "upwinds_tangentiels": 18,
+    "lectures_voisins": 36,
+    "octets_lus": 720
+   },
+   "attributs": {
+    "registres_par_thread": 72,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 896,
+    "taille_bloc": 256
+   }
+  },
+  "m_c2": {
+   "n_scalaires": 2,
+   "n_statiques": 0,
+   "n_champs": 6,
+   "cote": 64,
+   "n_fenetres": 3,
+   "n": 300,
+   "mediane_ms": 5.485055923461914,
+   "p99_ms": 6.227988696098327,
+   "min_ms": 4.662240028381348,
+   "max_ms": 6.251520156860352,
+   "ms_par_bloc": 1.8283519744873047,
+   "comptes_statiques": {
+    "n_scalaires": 2,
+    "n_statiques": 0,
+    "n_champs": 6,
+    "minmods": 54,
+    "solveurs_hll": 6,
+    "upwinds_tangentiels": 24,
+    "lectures_voisins": 36,
+    "octets_lus": 864
+   },
+   "attributs": {
+    "registres_par_thread": 80,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 768,
+    "taille_bloc": 256
+   }
+  },
+  "m_c3": {
+   "n_scalaires": 3,
+   "n_statiques": 0,
+   "n_champs": 7,
+   "cote": 64,
+   "n_fenetres": 3,
+   "n": 300,
+   "mediane_ms": 6.666848182678223,
+   "p99_ms": 7.768703227043152,
+   "min_ms": 5.646336078643799,
+   "max_ms": 7.837696075439453,
+   "ms_par_bloc": 2.2222827275594077,
+   "comptes_statiques": {
+    "n_scalaires": 3,
+    "n_statiques": 0,
+    "n_champs": 7,
+    "minmods": 63,
+    "solveurs_hll": 6,
+    "upwinds_tangentiels": 30,
+    "lectures_voisins": 36,
+    "octets_lus": 1008
+   },
+   "attributs": {
+    "registres_par_thread": 94,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "m_c4": {
+   "n_scalaires": 4,
+   "n_statiques": 0,
+   "n_champs": 8,
+   "cote": 64,
+   "n_fenetres": 3,
+   "n": 300,
+   "mediane_ms": 7.468544006347656,
+   "p99_ms": 8.321909809112547,
+   "min_ms": 6.237184047698975,
+   "max_ms": 8.491935729980469,
+   "ms_par_bloc": 2.4895146687825522,
+   "comptes_statiques": {
+    "n_scalaires": 4,
+    "n_statiques": 0,
+    "n_champs": 8,
+    "minmods": 72,
+    "solveurs_hll": 6,
+    "upwinds_tangentiels": 36,
+    "lectures_voisins": 36,
+    "octets_lus": 1152
+   },
+   "attributs": {
+    "registres_par_thread": 96,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "m_c5": {
+   "n_scalaires": 3,
+   "n_statiques": 2,
+   "n_champs": 9,
+   "cote": 64,
+   "n_fenetres": 3,
+   "n": 300,
+   "mediane_ms": 7.287792205810547,
+   "p99_ms": 8.470433235168457,
+   "min_ms": 6.105088233947754,
+   "max_ms": 8.607744216918945,
+   "ms_par_bloc": 2.4292640686035156,
+   "comptes_statiques": {
+    "n_scalaires": 3,
+    "n_statiques": 2,
+    "n_champs": 9,
+    "minmods": 63,
+    "solveurs_hll": 6,
+    "upwinds_tangentiels": 30,
+    "lectures_voisins": 36,
+    "octets_lus": 1296
+   },
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "m_c6": {
+   "n_scalaires": 1,
+   "n_statiques": 2,
+   "n_champs": 7,
+   "cote": 64,
+   "n_fenetres": 3,
+   "n": 300,
+   "mediane_ms": 5.3303680419921875,
+   "p99_ms": 6.0620901489257815,
+   "min_ms": 4.478975772857666,
+   "max_ms": 6.078464031219482,
+   "ms_par_bloc": 1.7767893473307292,
+   "comptes_statiques": {
+    "n_scalaires": 1,
+    "n_statiques": 2,
+    "n_champs": 7,
+    "minmods": 45,
+    "solveurs_hll": 6,
+    "upwinds_tangentiels": 18,
+    "lectures_voisins": 36,
+    "octets_lus": 1008
+   },
+   "attributs": {
+    "registres_par_thread": 72,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 896,
+    "taille_bloc": 256
+   }
+  }
+ },
+ "lecture": {
+  "C_vocabulaire_reel_ms": 2.4292640686035156,
+  "rho_c": 1.46228923500669,
+  "branche": "C-A",
+  "verdict": "la porte 33,3 tient V4 (11 slots) à 30 Hz",
+  "delta_scalaire_ms": 0.2878650744756065,
+  "delta_statique_ms": 0.057757337888081905,
+  "ordonnee_ms": 1.3306933244069408,
+  "residu_max_ms": 0.07807149887084908,
+  "seuils": {
+   "borne_haute_rho_c": 1.5,
+   "c_max_60hz": 1.3513607094504616,
+   "c_max_30hz": 2.8634819215716742
+  },
+  "cap_ferme": {
+   "n_slots_60hz": 6.119123892735275,
+   "n_slots_60hz_entiers": 6,
+   "n_slots_30hz": 12.966190684817356,
+   "n_slots_30hz_entiers": 12,
+   "v4_demande": 11,
+   "cap_a53_a_1_scalaire_60hz": 8.67351323353071,
+   "note": "le non-F est RETENU CONSTANT (halos ~2 % -> ~20 %) : le cap reste un MAJORANT. Cette mesure le resserre, elle ne le transforme pas en plancher."
+  },
+  "i_c1_reproduction": {
+   "m_c1_ms": 1.6612746715545654,
+   "bloc_a53_ms": 1.7138346831003826,
+   "ecart_relatif": 0.030668075552499827,
+   "bande": 0.1,
+   "reproduit": true
+  },
+  "i_c3_elimination": {
+   "seuil_relatif": 0.02,
+   "seuil_absolu_ms": 0.03322549343109131,
+   "delta_scalaire_sous_seuil": false,
+   "delta_statique_sous_seuil": false,
+   "note": "un δ nul et une élimination par le compilateur sont indistinguables au chronomètre ; ce critère ne se déclenche QUE du côté favorable, et c'est sa raison d'être. Le volet STATIQUE est un ajout de la session au protocole — une garde ajoutée ne relâche rien."
+  },
+  "i_c4_affinite": {
+   "residu_max_ms": 0.07807149887084908,
+   "bande_ms": 0.08306373357772828,
+   "affine": true,
+   "points": {
+    "1": 1.6612746715545654,
+    "2": 1.8283519744873047,
+    "3": 2.2222827275594077,
+    "4": 2.4895146687825522
+   }
+  },
+  "i_c5_coherence": {
+   "C_mesure_ms": 2.4292640686035156,
+   "C_attendu_ms": 2.3377974033355713,
+   "ecart_relatif": 0.03765200599230234,
+   "bande": 0.05,
+   "coherent": true
+  },
+  "i_c6_registres": {
+   "debordements": {},
+   "registres": {
+    "m_c1": 72,
+    "m_c2": 80,
+    "m_c3": 94,
+    "m_c4": 96,
+    "m_c5": 92,
+    "m_c6": 72
+   }
+  }
+ }
+}
