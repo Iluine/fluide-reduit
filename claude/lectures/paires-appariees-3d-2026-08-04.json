@@ -1,0 +1,567 @@
+{
+ "protocole": {
+  "prereg": "claude/prereg-paires-appariees-3d-2026-08-04.md",
+  "commit_prereg": "2acf0c5",
+  "question": "Q1 l'alignement de warps coûte-t-il quelque chose à TAILLE ÉGALE ? Q2 le coût par cellule est-il stable en taille, série correctement dimensionnée ?",
+  "grandeur_de_verdict": "Δ(s) = c(s) − [c(s−2) + c(s+2)] / 2",
+  "triplets": [
+   [
+    30,
+    32,
+    34
+   ],
+   [
+    62,
+    64,
+    66
+   ],
+   [
+    94,
+    96,
+    98
+   ],
+   [
+    126,
+    128,
+    130
+   ]
+  ],
+  "chrono": "B6 cuda-Events, warmup ≥ 30, série ≥ 300 ET ≥ 3000 ms, médiane ET p99",
+  "git_head": "6a18126",
+  "portee": "Ne prononce RIEN sur la cadence, rien sur une constante de design (la gravure reste s_max(budget)), rien sur le rendu (dû de :4142), rien sur la monnaie du slot (porte 3). Sépare le DISCRET du LISSE ; n'attribue pas le lisse."
+ },
+ "machine": {
+  "gpu": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+  "vram_totale_mo": 3780.75,
+  "vram_libre_avant_mo": 3683.625,
+  "cupy": "14.1.1",
+  "python": "3.12.3"
+ },
+ "gardes": {
+  "empreinte_a53": "4431b707852394074ece9ec3ced47237e6e3198d8ae0d5fa93b285cb04798911",
+  "empreinte_param_3_2": "e2b42e335fffb01a1cb40640b64338c82052fac79da811c42ce9dff45a68f877",
+  "git_diff": "vide"
+ },
+ "ancres_lues": {
+  "temoin_64_ns_par_cellule": 9.266906999982893,
+  "non_f_ms": 1.8350321960449225
+ },
+ "mesures": {
+  "30": {
+   "cote": 30,
+   "groupe": "chevauchant",
+   "cellules_par_fenetre": 27000,
+   "fraction_cellules_de_bord": 0.1869629629629629,
+   "duree_estimee_ms": 1.3388960361480713,
+   "serie": 2241,
+   "warmup": 224,
+   "n": 2241,
+   "mediane_ms": 0.6686080098152161,
+   "p99_ms": 0.7505919933319092,
+   "min_ms": 0.6522560119628906,
+   "max_ms": 0.861024022102356,
+   "mediane_demi_1_ms": 0.66457599401474,
+   "mediane_demi_2_ms": 0.6717439889907837,
+   "ecart_demi_series": 0.010720773414043795,
+   "serie_stable": true,
+   "ratio_mediane_sur_min": 1.0250699074480218,
+   "ns_par_cellule": 8.254419874261927,
+   "bruit_ns_par_cellule": 0.088493765136342,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "32": {
+   "cote": 32,
+   "groupe": "aligne",
+   "cellules_par_fenetre": 32768,
+   "fraction_cellules_de_bord": 0.176025390625,
+   "duree_estimee_ms": 1.0265600085258484,
+   "serie": 2923,
+   "warmup": 292,
+   "n": 2923,
+   "mediane_ms": 0.7761920094490051,
+   "p99_ms": 0.8468480110168457,
+   "min_ms": 0.7045120000839233,
+   "max_ms": 1.0741759538650513,
+   "mediane_demi_1_ms": 0.7761920094490051,
+   "mediane_demi_2_ms": 0.7759360074996948,
+   "ecart_demi_series": 0.0003298178107914698,
+   "serie_stable": true,
+   "ratio_mediane_sur_min": 1.1017441993273969,
+   "ns_par_cellule": 7.895833429453584,
+   "bruit_ns_par_cellule": 0.0026041864960764847,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "34": {
+   "cote": 34,
+   "groupe": "chevauchant",
+   "cellules_par_fenetre": 39304,
+   "fraction_cellules_de_bord": 0.16629350702218604,
+   "duree_estimee_ms": 1.2246559858322144,
+   "serie": 2450,
+   "warmup": 245,
+   "n": 2450,
+   "mediane_ms": 0.9256960153579712,
+   "p99_ms": 1.0133673834800718,
+   "min_ms": 0.9082880020141602,
+   "max_ms": 1.094655990600586,
+   "mediane_demi_1_ms": 0.9255359768867493,
+   "mediane_demi_2_ms": 0.9267200231552124,
+   "ecart_demi_series": 0.0012790875717502773,
+   "serie_stable": true,
+   "ratio_mediane_sur_min": 1.0191657418189035,
+   "ns_par_cellule": 7.850736272457182,
+   "bruit_ns_par_cellule": 0.010041779195189079,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "62": {
+   "cote": 62,
+   "groupe": "chevauchant",
+   "cellules_par_fenetre": 238328,
+   "fraction_cellules_de_bord": 0.09368601255412701,
+   "duree_estimee_ms": 7.427119970321655,
+   "serie": 404,
+   "warmup": 40,
+   "n": 404,
+   "mediane_ms": 5.8076159954071045,
+   "p99_ms": 7.227763504981992,
+   "min_ms": 5.506048202514648,
+   "max_ms": 7.410655975341797,
+   "mediane_demi_1_ms": 6.462975978851318,
+   "mediane_demi_2_ms": 5.592063903808594,
+   "ecart_demi_series": 0.14996034099559558,
+   "serie_stable": false,
+   "ratio_mediane_sur_min": 1.054770278392174,
+   "ns_par_cellule": 8.12272162091334,
+   "bruit_ns_par_cellule": 1.2180861040844615,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "64": {
+   "cote": 64,
+   "groupe": "aligne",
+   "cellules_par_fenetre": 262144,
+   "fraction_cellules_de_bord": 0.090850830078125,
+   "duree_estimee_ms": 8.338432312011719,
+   "serie": 360,
+   "warmup": 36,
+   "n": 360,
+   "mediane_ms": 6.8285439014434814,
+   "p99_ms": 8.520448017120364,
+   "min_ms": 5.967872142791748,
+   "max_ms": 8.668095588684082,
+   "mediane_demi_1_ms": 7.456655979156494,
+   "mediane_demi_2_ms": 6.11683201789856,
+   "ecart_demi_series": 0.19620932084433257,
+   "serie_stable": false,
+   "ratio_mediane_sur_min": 1.1442175264581178,
+   "ns_par_cellule": 8.68294258301224,
+   "bruit_ns_par_cellule": 1.7036742671431664,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "66": {
+   "cote": 66,
+   "groupe": "chevauchant",
+   "cellules_par_fenetre": 287496,
+   "fraction_cellules_de_bord": 0.08818209644655917,
+   "duree_estimee_ms": 8.841216087341309,
+   "serie": 340,
+   "warmup": 34,
+   "n": 340,
+   "mediane_ms": 7.305728197097778,
+   "p99_ms": 8.902514791488649,
+   "min_ms": 6.6611199378967285,
+   "max_ms": 9.136128425598145,
+   "mediane_demi_1_ms": 7.884720087051392,
+   "mediane_demi_2_ms": 6.774784088134766,
+   "ecart_demi_series": 0.151926812628692,
+   "serie_stable": false,
+   "ratio_mediane_sur_min": 1.0967717538808628,
+   "ns_par_cellule": 8.470527354696852,
+   "bruit_ns_par_cellule": 1.2869002222832386,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "94": {
+   "cote": 94,
+   "groupe": "chevauchant",
+   "cellules_par_fenetre": 830584,
+   "fraction_cellules_de_bord": 0.062481338431754185,
+   "duree_estimee_ms": 25.597936630249023,
+   "serie": 300,
+   "warmup": 30,
+   "n": 300,
+   "mediane_ms": 20.957183837890625,
+   "p99_ms": 24.484025249481203,
+   "min_ms": 19.5020809173584,
+   "max_ms": 24.646656036376953,
+   "mediane_demi_1_ms": 22.631936073303223,
+   "mediane_demi_2_ms": 19.856783866882324,
+   "ecart_demi_series": 0.1324200917397794,
+   "serie_stable": false,
+   "ratio_mediane_sur_min": 1.0746127003932728,
+   "ns_par_cellule": 8.41062185879278,
+   "bruit_ns_par_cellule": 1.1137353181299336,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "96": {
+   "cote": 96,
+   "groupe": "aligne",
+   "cellules_par_fenetre": 884736,
+   "fraction_cellules_de_bord": 0.06120695891203709,
+   "duree_estimee_ms": 28.041104316711426,
+   "serie": 300,
+   "warmup": 30,
+   "n": 300,
+   "mediane_ms": 23.021568298339844,
+   "p99_ms": 27.22410484313965,
+   "min_ms": 20.84556770324707,
+   "max_ms": 27.469823837280273,
+   "mediane_demi_1_ms": 25.56160068511963,
+   "mediane_demi_2_ms": 21.380096435546875,
+   "ecart_demi_series": 0.181634204732885,
+   "serie_stable": false,
+   "ratio_mediane_sur_min": 1.104386727484223,
+   "ns_par_cellule": 8.673611223513698,
+   "bruit_ns_par_cellule": 1.575424476745136,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "98": {
+   "cote": 98,
+   "groupe": "chevauchant",
+   "cellules_par_fenetre": 941192,
+   "fraction_cellules_de_bord": 0.0599835102720806,
+   "duree_estimee_ms": 29.444095611572266,
+   "serie": 300,
+   "warmup": 30,
+   "n": 300,
+   "mediane_ms": 23.994912147521973,
+   "p99_ms": 27.14435558319092,
+   "min_ms": 22.557695388793945,
+   "max_ms": 27.490304946899414,
+   "mediane_demi_1_ms": 25.812992095947266,
+   "mediane_demi_2_ms": 23.05692768096924,
+   "ecart_demi_series": 0.1148603669825336,
+   "serie_stable": false,
+   "ratio_mediane_sur_min": 1.0637129251883592,
+   "ns_par_cellule": 8.4980578342931,
+   "bruit_ns_par_cellule": 0.9760900414857002,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "126": {
+   "cote": 126,
+   "groupe": "chevauchant",
+   "cellules_par_fenetre": 2000376,
+   "fraction_cellules_de_bord": 0.04686718896847408,
+   "duree_estimee_ms": 67.06324768066406,
+   "serie": 300,
+   "warmup": 30,
+   "n": 300,
+   "mediane_ms": 55.35335922241211,
+   "p99_ms": 63.181630821228026,
+   "min_ms": 51.8287353515625,
+   "max_ms": 63.638526916503906,
+   "mediane_demi_1_ms": 59.72684860229492,
+   "mediane_demi_2_ms": 52.733903884887695,
+   "ecart_demi_series": 0.12633279742443965,
+   "serie_stable": false,
+   "ratio_mediane_sur_min": 1.0680052068980947,
+   "ns_par_cellule": 9.223825791153281,
+   "bruit_ns_par_cellule": 1.1652717151520893,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "128": {
+   "cote": 128,
+   "groupe": "aligne",
+   "cellules_par_fenetre": 2097152,
+   "fraction_cellules_de_bord": 0.046146392822265625,
+   "duree_estimee_ms": 71.9800033569336,
+   "serie": 300,
+   "warmup": 30,
+   "n": 300,
+   "mediane_ms": 59.260929107666016,
+   "p99_ms": 67.29527565002441,
+   "min_ms": 53.05753707885742,
+   "max_ms": 67.6147232055664,
+   "mediane_demi_1_ms": 64.52787399291992,
+   "mediane_demi_2_ms": 54.46297645568848,
+   "ecart_demi_series": 0.16984036006160838,
+   "serie_stable": false,
+   "ratio_mediane_sur_min": 1.1169182055998703,
+   "ns_par_cellule": 9.419271009392105,
+   "bruit_ns_par_cellule": 1.5997723797530246,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  "130": {
+   "cote": 130,
+   "groupe": "chevauchant",
+   "cellules_par_fenetre": 2197000,
+   "fraction_cellules_de_bord": 0.045447428311333526,
+   "duree_estimee_ms": 73.74072265625,
+   "serie": 300,
+   "warmup": 30,
+   "n": 300,
+   "mediane_ms": 60.65049743652344,
+   "p99_ms": 68.40068153381347,
+   "min_ms": 56.40089416503906,
+   "max_ms": 69.53263854980469,
+   "mediane_demi_1_ms": 65.58464050292969,
+   "mediane_demi_2_ms": 57.69977569580078,
+   "ecart_demi_series": 0.1300049486878681,
+   "serie_stable": false,
+   "ratio_mediane_sur_min": 1.0753463811947606,
+   "ns_par_cellule": 9.202017514265428,
+   "bruit_ns_par_cellule": 1.1963078147669406,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  }
+ },
+ "lecture": {
+  "branche": "I-p2",
+  "verdict": "INDÉTERMINÉ — 3 triplet(s) écarté(s) pour série instable",
+  "triplets": {
+   "T32": {
+    "retenu": true,
+    "centre_aligne": 32,
+    "ns_par_cellule": {
+     "30": 8.254419874261927,
+     "32": 7.895833429453584,
+     "34": 7.850736272457182
+    },
+    "delta_ns": -0.15674464390597098,
+    "bruit_propage_ns": 0.04460692476128673,
+    "delta_relatif": -0.019851564158036978,
+    "significatif": true,
+    "signe": -1,
+    "effet_detectable_relatif": 0.005649425758513457,
+    "puissance_suffisante": true
+   },
+   "T64": {
+    "retenu": false,
+    "cotes_ecartes": [
+     62,
+     64,
+     66
+    ],
+    "motif": "I-p2 : demi-séries en désaccord — un triplet amputé ne rend pas de Δ"
+   },
+   "T96": {
+    "retenu": false,
+    "cotes_ecartes": [
+     94,
+     96,
+     98
+    ],
+    "motif": "I-p2 : demi-séries en désaccord — un triplet amputé ne rend pas de Δ"
+   },
+   "T128": {
+    "retenu": false,
+    "cotes_ecartes": [
+     126,
+     128,
+     130
+    ],
+    "motif": "I-p2 : demi-séries en désaccord — un triplet amputé ne rend pas de Δ"
+   }
+  },
+  "q2_stabilite_taille": {
+   "etendue_relative": 0.0514198398462311,
+   "bande": 0.1,
+   "branche": "S-A",
+   "lecture": "le coût par cellule est STABLE — l'inversion s_max(budget) redevient valide",
+   "ns_par_cellule": {
+    "30": 8.254419874261927,
+    "32": 7.895833429453584,
+    "34": 7.850736272457182,
+    "62": 8.12272162091334,
+    "64": 8.68294258301224,
+    "66": 8.470527354696852,
+    "94": 8.41062185879278,
+    "96": 8.673611223513698,
+    "98": 8.4980578342931,
+    "126": 9.223825791153281,
+    "128": 9.419271009392105,
+    "130": 9.202017514265428
+   }
+  },
+  "i_p1_temoin": {
+   "mesure_ns": 8.68294258301224,
+   "a55_ns": 9.266906999982893,
+   "ecart_relatif": 0.06301610850003475,
+   "reproduit": true
+  },
+  "i_p2_demi_series": {
+   "30": {
+    "ecart": 0.010720773414043795,
+    "serie": 2241,
+    "stable": true
+   },
+   "32": {
+    "ecart": 0.0003298178107914698,
+    "serie": 2923,
+    "stable": true
+   },
+   "34": {
+    "ecart": 0.0012790875717502773,
+    "serie": 2450,
+    "stable": true
+   },
+   "62": {
+    "ecart": 0.14996034099559558,
+    "serie": 404,
+    "stable": false
+   },
+   "64": {
+    "ecart": 0.19620932084433257,
+    "serie": 360,
+    "stable": false
+   },
+   "66": {
+    "ecart": 0.151926812628692,
+    "serie": 340,
+    "stable": false
+   },
+   "94": {
+    "ecart": 0.1324200917397794,
+    "serie": 300,
+    "stable": false
+   },
+   "96": {
+    "ecart": 0.181634204732885,
+    "serie": 300,
+    "stable": false
+   },
+   "98": {
+    "ecart": 0.1148603669825336,
+    "serie": 300,
+    "stable": false
+   },
+   "126": {
+    "ecart": 0.12633279742443965,
+    "serie": 300,
+    "stable": false
+   },
+   "128": {
+    "ecart": 0.16984036006160838,
+    "serie": 300,
+    "stable": false
+   },
+   "130": {
+    "ecart": 0.1300049486878681,
+    "serie": 300,
+    "stable": false
+   }
+  },
+  "i_p3_puissance": {
+   "effet_minimal_pertinent": 0.1,
+   "effet_detectable_par_triplet": {
+    "T32": 0.005649425758513457
+   },
+   "puissance_suffisante_partout": true,
+   "note": "l'effet minimal est DÉRIVÉ : s_max ∝ c^(−1/3), donc un surcoût de x % déplace s_max de x/3 % ; passer de 52 à 48 demande x ≈ 20 %, d'où 10 % comme moitié de marge. Sans puissance, « aucun effet » et « aucun pouvoir de détection » sont le même nombre."
+  },
+  "i_p4_coherence_de_signe": {
+   "signes_significatifs": [
+    -1
+   ],
+   "coherent": true
+  },
+  "i_p5_registres": {
+   "30": 92,
+   "32": 92,
+   "34": 92,
+   "62": 92,
+   "64": 92,
+   "66": 92,
+   "94": 92,
+   "96": 92,
+   "98": 92,
+   "126": 92,
+   "128": 92,
+   "130": 92
+  },
+  "diagnostic_mediane_sur_min": {
+   "30": 1.0250699074480218,
+   "32": 1.1017441993273969,
+   "34": 1.0191657418189035,
+   "62": 1.054770278392174,
+   "64": 1.1442175264581178,
+   "66": 1.0967717538808628,
+   "94": 1.0746127003932728,
+   "96": 1.104386727484223,
+   "98": 1.0637129251883592,
+   "126": 1.0680052068980947,
+   "128": 1.1169182055998703,
+   "130": 1.0753463811947606
+  },
+  "note_instrument": "La lecture est sur la MÉDIANE. Le rapport médiane/minimum est reporté en DIAGNOSTIC : §A59 a montré que le minimum donne une image plus flatteuse, et basculer d'instrument après avoir vu un résultat est la faute que ce journal surveille."
+ }
+}
