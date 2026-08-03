@@ -1,0 +1,327 @@
+{
+ "protocole": {
+  "prereg": "claude/prereg-balayage-tailles-3d-2026-08-04.md",
+  "commit_prereg": "089b3f8",
+  "question": "le coût PAR CELLULE dépend-il du côté de la fenêtre, au vocabulaire réel ?",
+  "decision_qui_en_depend": "s_max(budget) = 52,6 est une inversion faite avec c(64). Si c dépend du côté, l'inversion est invalide et s_max devient un POINT FIXE.",
+  "chrono": "B6 cuda-Events, warmup 30 EXCLU, série 300, médiane ET p99",
+  "git_head": "b3b544b",
+  "portee": "Ne prononce RIEN sur la cadence, rien sur une constante de design (la gravure reste s_max(budget), une inversion — §A58-4), rien sur le rendu (dû de :4142, aucun cap ne l'inclut), rien sur la re-dérivation de la monnaie du slot (porte 3)."
+ },
+ "machine": {
+  "gpu": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+  "vram_totale_mo": 3780.75,
+  "vram_libre_avant_mo": 3683.625,
+  "cupy": "14.1.1",
+  "python": "3.12.3"
+ },
+ "gardes": {
+  "empreinte_a53": "4431b707852394074ece9ec3ced47237e6e3198d8ae0d5fa93b285cb04798911",
+  "empreinte_param_3_2": "e2b42e335fffb01a1cb40640b64338c82052fac79da811c42ce9dff45a68f877",
+  "git_diff": "vide"
+ },
+ "ancres_lues": {
+  "temoin_64_ms_par_fenetre": 2.4292640686035156,
+  "temoin_64_ns_par_cellule": 9.266906999982893,
+  "non_f_ms": 1.8350321960449225,
+  "seuil_ms": 16.7,
+  "n_slots_v4": 11,
+  "s_max_naif": 52.6
+ },
+ "mesures": [
+  {
+   "cote": 32,
+   "cellules_par_fenetre": 32768,
+   "groupe": "aligne",
+   "modulo_32": 0,
+   "fraction_cellules_de_bord": 0.176025390625,
+   "n": 300,
+   "mediane_ms": 1.0234880447387695,
+   "p99_ms": 1.3332582592964173,
+   "min_ms": 0.7580479979515076,
+   "max_ms": 1.3486080169677734,
+   "ms_par_fenetre": 0.34116268157958984,
+   "ns_par_cellule": 10.411458788439631,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  {
+   "cote": 40,
+   "cellules_par_fenetre": 64000,
+   "groupe": "chevauchant",
+   "modulo_32": 8,
+   "fraction_cellules_de_bord": 0.1426250000000001,
+   "n": 300,
+   "mediane_ms": 1.4694240093231201,
+   "p99_ms": 1.8729983568191528,
+   "min_ms": 1.4090240001678467,
+   "max_ms": 1.9005440473556519,
+   "ms_par_fenetre": 0.4898080031077067,
+   "ns_par_cellule": 7.653250048557918,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  {
+   "cote": 48,
+   "cellules_par_fenetre": 110592,
+   "groupe": "chevauchant",
+   "modulo_32": 16,
+   "fraction_cellules_de_bord": 0.11986400462962954,
+   "n": 300,
+   "mediane_ms": 2.580448031425476,
+   "p99_ms": 3.4161350631713865,
+   "min_ms": 2.455552101135254,
+   "max_ms": 3.4303998947143555,
+   "ms_par_fenetre": 0.8601493438084921,
+   "ns_par_cellule": 7.777681421879449,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  {
+   "cote": 52,
+   "cellules_par_fenetre": 140608,
+   "groupe": "chevauchant",
+   "modulo_32": 20,
+   "fraction_cellules_de_bord": 0.11100364132908502,
+   "n": 300,
+   "mediane_ms": 3.6981760263442993,
+   "p99_ms": 4.16559832572937,
+   "min_ms": 3.2829439640045166,
+   "max_ms": 4.191103935241699,
+   "ms_par_fenetre": 1.2327253421147664,
+   "ns_par_cellule": 8.76710672305108,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  {
+   "cote": 56,
+   "cellules_par_fenetre": 175616,
+   "groupe": "chevauchant",
+   "modulo_32": 24,
+   "fraction_cellules_de_bord": 0.10336188046647221,
+   "n": 300,
+   "mediane_ms": 4.365311861038208,
+   "p99_ms": 5.223464918136597,
+   "min_ms": 3.989504098892212,
+   "max_ms": 5.249983787536621,
+   "ms_par_fenetre": 1.4551039536794026,
+   "ns_par_cellule": 8.285714021953595,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  {
+   "cote": 64,
+   "cellules_par_fenetre": 262144,
+   "groupe": "aligne",
+   "modulo_32": 0,
+   "fraction_cellules_de_bord": 0.090850830078125,
+   "n": 300,
+   "mediane_ms": 7.2397119998931885,
+   "p99_ms": 8.315330924987792,
+   "min_ms": 6.102015972137451,
+   "max_ms": 8.452095985412598,
+   "ms_par_fenetre": 2.4132373332977295,
+   "ns_par_cellule": 9.205769856635015,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  {
+   "cote": 96,
+   "cellules_par_fenetre": 884736,
+   "groupe": "aligne",
+   "modulo_32": 0,
+   "fraction_cellules_de_bord": 0.06120695891203709,
+   "n": 300,
+   "mediane_ms": 23.803872108459473,
+   "p99_ms": 27.463567333221427,
+   "min_ms": 20.538368225097656,
+   "max_ms": 29.39801597595215,
+   "ms_par_fenetre": 7.934624036153157,
+   "ns_par_cellule": 8.96835218206692,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  },
+  {
+   "cote": 128,
+   "cellules_par_fenetre": 2097152,
+   "groupe": "aligne",
+   "modulo_32": 0,
+   "fraction_cellules_de_bord": 0.046146392822265625,
+   "n": 300,
+   "mediane_ms": 59.22559928894043,
+   "p99_ms": 64.39433822631835,
+   "min_ms": 51.80713653564453,
+   "max_ms": 65.47763061523438,
+   "ms_par_fenetre": 19.74186642964681,
+   "ns_par_cellule": 9.413655485938458,
+   "attributs": {
+    "registres_par_thread": 92,
+    "memoire_locale_octets": 0,
+    "memoire_partagee_octets": 0,
+    "max_threads_par_bloc": 640,
+    "taille_bloc": 256
+   }
+  }
+ ],
+ "lecture": {
+  "branche": "I-t3",
+  "verdict": "INDÉTERMINÉ — un côté chevauchant est moins cher que tous les alignés ; la cause doit être nommée",
+  "ns_par_cellule": {
+   "32": 10.411458788439631,
+   "40": 7.653250048557918,
+   "48": 7.777681421879449,
+   "52": 8.76710672305108,
+   "56": 8.285714021953595,
+   "64": 9.205769856635015,
+   "96": 8.96835218206692,
+   "128": 9.413655485938458
+  },
+  "etendue_relative": 0.36039704993062865,
+  "bande_stabilite": 0.1,
+  "contraste_groupes": {
+   "moyenne_alignes": 9.499809078270006,
+   "moyenne_chevauchants": 8.12093805386051,
+   "contraste": 0.854852764613602,
+   "seuil": 1.1,
+   "ecart_entre_groupes": 1.3788710244094968,
+   "etendue_intra_groupe": 1.4431066063727123,
+   "separation_significative": false,
+   "groupes_fixes_avant_le_run": {
+    "alignes": [
+     32,
+     64,
+     96,
+     128
+    ],
+    "chevauchants": [
+     40,
+     48,
+     52,
+     56
+    ]
+   }
+  },
+  "point_fixe": {
+   "par_interpolation": 54,
+   "par_plus_proche": 52,
+   "stable": false,
+   "s_max_naif": 52.6,
+   "detail": {
+    "32": {
+     "ns_par_cellule": 10.411458788439631,
+     "ms_11_fenetres": 3.7527894973754883,
+     "total_ms": 5.587821693420411,
+     "tient": true
+    },
+    "40": {
+     "ns_par_cellule": 7.653250048557918,
+     "ms_11_fenetres": 5.387888034184774,
+     "total_ms": 7.222920230229697,
+     "tient": true
+    },
+    "48": {
+     "ns_par_cellule": 7.777681421879449,
+     "ms_11_fenetres": 9.461642781893412,
+     "total_ms": 11.296674977938334,
+     "tient": true
+    },
+    "52": {
+     "ns_par_cellule": 8.76710672305108,
+     "ms_11_fenetres": 13.55997876326243,
+     "total_ms": 15.395010959307353,
+     "tient": true
+    },
+    "56": {
+     "ns_par_cellule": 8.285714021953595,
+     "ms_11_fenetres": 16.006143490473427,
+     "total_ms": 17.841175686518348,
+     "tient": false
+    },
+    "64": {
+     "ns_par_cellule": 9.205769856635015,
+     "ms_11_fenetres": 26.545610666275024,
+     "total_ms": 28.380642862319945,
+     "tient": false
+    }
+   },
+   "note": "le plus grand côté PAIR dont 11 fenêtres tiennent dans 16,7 − non-F, avec c(s) MESURÉ. Tant que le perceptuel n'a pas parlé, cela s'écrit s_max(budget), jamais une constante de design (§A58-4)."
+  },
+  "i_t1_temoin": {
+   "mesure_ns": 9.205769856635015,
+   "a55_ns": 9.266906999982893,
+   "ecart_relatif": 0.00659736235056539,
+   "bande": 0.1,
+   "reproduit": true
+  },
+  "i_t2_registres": {
+   "par_cote": {
+    "32": 92,
+    "40": 92,
+    "48": 92,
+    "52": 92,
+    "56": 92,
+    "64": 92,
+    "96": 92,
+    "128": 92
+   },
+   "constants": true
+  },
+  "i_t3_aubaine": {
+   "min_chevauchants": 7.653250048557918,
+   "min_alignes": 8.96835218206692,
+   "declenchee": true,
+   "note": "ce critère ne se déclenche QUE du côté favorable : la seule explication mécanique disponible irait dans l'autre sens."
+  },
+  "i_t4_stabilite_point_fixe": {
+   "stable": false
+  },
+  "deux_effets_declares": {
+   "fraction_de_bord": {
+    "32": 0.176025390625,
+    "40": 0.1426250000000001,
+    "48": 0.11986400462962954,
+    "52": 0.11100364132908502,
+    "56": 0.10336188046647221,
+    "64": 0.090850830078125,
+    "96": 0.06120695891203709,
+    "128": 0.046146392822265625
+   },
+   "note": "les petites fenêtres sont FAVORISÉES par le bord (une cellule de bord saute deux pentes_axe) et PÉNALISÉES par l'alignement. Le balayage mesure leur SOMME ; seul le contraste de groupes discrimine."
+  }
+ }
+}
