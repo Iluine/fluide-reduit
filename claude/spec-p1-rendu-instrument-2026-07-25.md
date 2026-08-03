@@ -68,6 +68,16 @@ compositeur**.
 - **Verdict D17** : entre P1 et P3, **aucune décision nommée ne consomme le
   compositeur.** Il arrive à son heure : après P3, comme incrément séparé, avec le
   pin transporté pour le juger.
+  *(**BORNÉ le 2026-08-03 — §A48**, clause normative amendée à la ligne par
+  §A47-PRÉCISION-2. L'énoncé reste vrai : aucune décision sur la couture n'est
+  consommée, et le compositeur **instrument** reste post-P3 — l'argument ci-dessus, qui
+  le protège de son juge absent, tient intégralement. Mais son ÉNUMÉRATION est datée du
+  25/07 : la correction de but a créé un consommateur qu'elle ne pouvait pas lister —
+  le **coût de rendu**, dont dépend la lecture de l'enveloppe 3D, et que cette même
+  section range plus bas dans la classe composition (`:74-80`). §A48 autorise en
+  conséquence un **chemin-de-coût** : naïf dans l'opérateur, réel dans la structure
+  creuse, jugé au chronomètre SEUL, interdit de substrat à toute mesure perceptuelle
+  par une serrure `RuntimeError`, et superséé par le compositeur instrument post-P3.)*
 
 ### Ce que le choix de B laisse ouvert, dit sans lissage
 
@@ -268,6 +278,10 @@ développer, **le verdict P3 restera iluin-tworings3 natif** `[GRAVÉ]`.
   étalon.
 - **Pas de compositeur** si Option B est retenue (§0) — incrément post-P3, avec la
   décision de couture prise le pin transporté en main.
+  *(**PRÉCISÉ le 2026-08-03 — §A48** : ce refus vise le compositeur **INSTRUMENT**,
+  celui qui tranche la couture et se juge au pin transporté ; il reste entier. Il ne
+  vise pas le **chemin-de-coût** de la tranche-moteur, jugé au coût seul et qui ne passe
+  jamais sous un ABX — quatre gardes en §A48.)*
 - **Pas de re-mesure du pin** : jnd_sev 7.33 % reste le pin gravé ; P3 mesure son
   TRANSPORT, pas sa valeur.
 - **Pas de temps réel** : P1 est un instrument de session ABX ; le 60 fps, le
