@@ -108,6 +108,61 @@ CHOIX_REGIME: tuple[str, ...] = (REGIME_SEVERE.nom, REGIME_LAXISTE.nom, "tous")
 # --- Protocole P3′ (mission chantier 8 ; prereg P3′ v2.2 ENDOSSÉ §A42) ------
 
 PROTOCOLES: tuple[str, ...] = ("historique", "p3prime")
+
+# CHEMINS DE SORTIE PAR PROTOCOLE — correctif de la collision du 2026-08-03
+# (famille B1). La séance P3′ a écrit sous les noms par défaut HISTORIQUES et
+# écrasé sept artefacts VERSIONNÉS de la campagne du pin (05/07) ; la lecture
+# P3′, elle, attendait `manifeste_p3prime.json` — deux bouts d'un même câble
+# qui ne se parlaient pas (« câblage n°2 » de la consignation post-séance).
+# Deux verrous, ici : (1) chaque protocole écrit CHEZ LUI, la collision
+# devient impossible par construction ; (2) `MANIFESTE_P3PRIME` est UN
+# exemplaire — la LECTURE l'IMPORTE d'ici (sens d'import lecture ->
+# orchestration), elle ne le recopie pas : deux constantes jumelles
+# redivergeraient un jour, une seule ne le peut pas.
+MANIFESTE_HISTORIQUE: Path = OUT_DIR / "manifeste_campagne.json"
+MANIFESTE_P3PRIME: Path = OUT_DIR / "manifeste_p3prime.json"
+LOGS_DIR_P3PRIME: Path = LOGS_DIR / "p3prime"
+
+
+def chemins_sortie(protocole: str, out_dir: Path | None,
+                   manifeste: Path | None) -> tuple[Path, Path]:
+    """Les chemins de sortie (dossier de logs, manifeste) d'une campagne —
+    fonction PURE, testable sans rien écrire.
+
+    Le DÉFAUT dépend du protocole : chaque campagne écrit chez elle. Une
+    surcharge explicite reste SOUVERAINE — l'outil ne décide pas à la place
+    de qui sait ce qu'il fait ; il refuse seulement d'écraser en silence
+    (cf. `artefacts_traques_sous`)."""
+    if protocole == "p3prime":
+        defaut_logs, defaut_manifeste = LOGS_DIR_P3PRIME, MANIFESTE_P3PRIME
+    else:
+        defaut_logs, defaut_manifeste = LOGS_DIR, MANIFESTE_HISTORIQUE
+    return (defaut_logs if out_dir is None else out_dir,
+            defaut_manifeste if manifeste is None else manifeste)
+
+
+def artefacts_traques_sous(*chemins: Path, root: Path = ROOT) -> list[str]:
+    """Les fichiers SUIVIS PAR GIT qui vivent sous `chemins` (`git ls-files`).
+
+    Sert la garde anti-écrasement : un artefact VERSIONNÉ fait foi, il ne
+    s'écrase pas en passant. On interroge git plutôt qu'une liste en dur —
+    la liste des artefacts qui font foi change, et une liste recopiée serait
+    fausse le jour où elle compte (§A41 : la machine lit, la session ne
+    recopie pas).
+
+    Hors dépôt git (ou git absent) -> liste VIDE, et l'échec est IMPRIMÉ :
+    la garde ne peut pas mordre, elle le DIT plutôt que de faire croire
+    qu'elle a vérifié."""
+    try:
+        resultat = subprocess.run(
+            ["git", "ls-files", "--", *[str(chemin) for chemin in chemins]],
+            cwd=root, capture_output=True, text=True, check=True)
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
+        print(f"[AVERTISSEMENT] artefacts_traques_sous : git indisponible ({exc}) -- "
+              "la garde anti-écrasement N'A PAS PU vérifier ; aucun artefact n'est "
+              "réputé protégé par elle.")
+        return []
+    return [ligne for ligne in resultat.stdout.splitlines() if ligne.strip()]
 # Plan d'entrelacement D-P3′-1, TRANCHÉ §A42 : V,R,R,V,V,R (miroir refusé).
 # Positions viridis {1,4,5} (1-based), sommes 10/11 — la dérive linéaire
 # intra-session se répartit presque également. UN exemplaire : la lecture
@@ -957,9 +1012,40 @@ def main() -> None:
     parser.add_argument("--conditions", type=str, default=None,
                         help="Conditions d'environnement NOTÉES (§C9 pièce 3) -- repère de "
                              "distance + éclairage ambiant. REQUISES si --sujet humain.")
-    parser.add_argument("--out-dir", type=Path, default=LOGS_DIR)
-    parser.add_argument("--manifeste", type=Path, default=OUT_DIR / "manifeste_campagne.json")
+    # Défauts RÉSOLUS APRÈS parsing : ils dépendent du protocole (chaque
+    # campagne écrit chez elle, cf. `chemins_sortie`). `None` = « laisse le
+    # protocole choisir » ; une valeur explicite reste souveraine.
+    parser.add_argument("--out-dir", type=Path, default=None,
+                        help="Défaut : logs/ en historique, logs/p3prime/ sous "
+                             "--protocole p3prime.")
+    parser.add_argument("--manifeste", type=Path, default=None,
+                        help="Défaut : manifeste_campagne.json en historique, "
+                             "manifeste_p3prime.json sous --protocole p3prime (le nom "
+                             "que la lecture P3′ attend -- UN exemplaire partagé).")
     args = parser.parse_args()
+
+    args.out_dir, args.manifeste = chemins_sortie(args.protocole, args.out_dir,
+                                                  args.manifeste)
+
+    # GARDE ANTI-ÉCRASEMENT (collision du 2026-08-03, famille B1) : une
+    # campagne qui s'apprête à écrire là où vivent des fichiers SUIVIS PAR GIT
+    # refuse de démarrer. Un artefact versionné FAIT FOI -- il ne s'écrase pas
+    # en passant, fût-ce par un défaut de ligne de commande. La séance P3′ du
+    # 03/08 a écrasé sept artefacts du pin faute de cette garde ; ils étaient
+    # récupérables (versionnés), ce qui fut une CHANCE, pas une garantie.
+    en_danger = artefacts_traques_sous(args.out_dir, args.manifeste)
+    if en_danger:
+        parser.error(
+            "REFUS D'ÉCRASER DES ARTEFACTS SUIVIS PAR GIT -- ces fichiers font foi :\n"
+            + "".join(f"      {chemin}\n" for chemin in en_danger[:10])
+            + (f"      ... et {len(en_danger) - 10} autre(s)\n" if len(en_danger) > 10
+               else "")
+            + f"    La campagne écrirait dans : {args.out_dir}\n"
+              f"    et son manifeste dans     : {args.manifeste}\n"
+              "    CORRECTION : relance avec --out-dir vers un dossier NEUF (et "
+              "--manifeste si besoin).\n"
+              "    Si tu veux VRAIMENT réécrire ces artefacts, sors-les d'abord du "
+              "suivi git -- que ce soit un acte, pas un effet de bord.")
 
     # Mission 8a.4 : la clause (d) mord en mode P3′ (plage gravée) ; l'entrée
     # historique reste (a)-(c) — portée nommée au prereg v2.1.

@@ -65,7 +65,8 @@ import numpy as np
 from src.arcC_abx import (BASE_SEED_P3PRIME, evalue_dispersion, heures_declarees_minutes,
                           verifie_observation_conditions)
 from src.arcC_scelle import descelle_seuils
-from scripts.run_arcC_orchestration import PLAN_P3PRIME, pauses_inter_staircases
+from scripts.run_arcC_orchestration import (MANIFESTE_P3PRIME, PLAN_P3PRIME,
+                                            pauses_inter_staircases)
 from scripts.run_arcC_pins import calcule_ic, calcule_ic_combine
 
 # --- Constantes RECOPIÉES (unités = FRACTION : 0.04 = 4 %) -------------------
@@ -670,8 +671,12 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.manifeste is None:
-        args.manifeste = ROOT / "outputs" / "arcC" / (
-            "manifeste_p3prime.json" if args.protocole == "p3prime" else "manifeste_p3.json")
+        # `MANIFESTE_P3PRIME` est IMPORTÉ de l'orchestration — UN exemplaire,
+        # jamais recopié : c'est la divergence entre le nom ÉCRIT par la
+        # campagne et le nom ATTENDU par la lecture qui a obligé à relire la
+        # séance du 03/08 avec --manifeste explicite (câblage n°2).
+        args.manifeste = (MANIFESTE_P3PRIME if args.protocole == "p3prime"
+                          else ROOT / "outputs" / "arcC" / "manifeste_p3.json")
     if args.out is None:
         args.out = ROOT / "outputs" / "arcC" / (
             "p3prime_transport.lecture.json" if args.protocole == "p3prime"

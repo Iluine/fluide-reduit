@@ -700,10 +700,14 @@ def test_temoin_viridis_refuse_hors_session_humaine_en_r1(monkeypatch, sujet, re
 from src.arcC_abx import (BASE_SEED_P3PRIME, GRAINES_BRULEES,  # noqa: E402
                           PLAGE_HORAIRE_SESSION)
 from src.arcC_scelle import descelle_seuils  # noqa: E402
+from pathlib import Path  # noqa: E402
 from scripts.run_arcC_orchestration import (CHEMINS_ECHAUFFEMENT,  # noqa: E402
-                                            INDICE_ECHAUFFEMENT, N_ECHAUFFEMENT,
+                                            INDICE_ECHAUFFEMENT, LOGS_DIR,
+                                            LOGS_DIR_P3PRIME, MANIFESTE_HISTORIQUE,
+                                            MANIFESTE_P3PRIME, N_ECHAUFFEMENT,
                                             N_STAIRCASES_P3PRIME, NIVEAU_ECHAUFFEMENT,
-                                            PLAN_P3PRIME, chemin_pour_staircase,
+                                            PLAN_P3PRIME, artefacts_traques_sous,
+                                            chemin_pour_staircase, chemins_sortie,
                                             chemins_staircases_p3prime,
                                             pauses_inter_staircases,
                                             valide_conditions_requises_si_humain,
@@ -1041,6 +1045,71 @@ def _argv_p3prime(**surcharges) -> list[str]:
     for cle, valeur in base.items():
         argv.extend([cle] if valeur is None else [cle, valeur])
     return argv
+
+
+def test_le_manifeste_p3prime_est_UN_exemplaire_partage_avec_la_lecture():
+    """CÂBLAGE n°2 (constat de séance, 2026-08-03) : l'orchestration p3prime
+    écrivait son manifeste au nom par défaut HISTORIQUE
+    (`manifeste_campagne.json`) tandis que la lecture p3prime en attendait un
+    autre (`manifeste_p3prime.json`) — deux bouts d'un même câble qui ne se
+    parlaient pas, et la séance a dû être relue avec --manifeste explicite.
+
+    La correction n'est pas d'aligner DEUX constantes (elles redivergeraient) :
+    c'est de n'en avoir qu'UNE. La lecture IMPORTE celle de l'orchestration —
+    le test vérifie l'IDENTITÉ des objets, pas une ressemblance de chaîne."""
+    from scripts import run_p3_lecture
+
+    assert run_p3_lecture.MANIFESTE_P3PRIME is MANIFESTE_P3PRIME
+    assert MANIFESTE_P3PRIME.name == "manifeste_p3prime.json"
+    assert MANIFESTE_P3PRIME != MANIFESTE_HISTORIQUE, (
+        "le manifeste p3prime ne doit PAS porter le nom par défaut historique : "
+        "c'est la collision qui a écrasé les artefacts du pin le 2026-08-03.")
+
+
+@pytest.mark.parametrize("protocole, attendus", [
+    ("historique", (LOGS_DIR, MANIFESTE_HISTORIQUE)),
+    ("p3prime", (LOGS_DIR_P3PRIME, MANIFESTE_P3PRIME)),
+])
+def test_chemins_sortie_separent_les_protocoles(protocole, attendus):
+    """Chaque protocole écrit CHEZ LUI : une campagne p3prime ne peut plus
+    atterrir sur les chemins de la campagne du pin. Les surcharges explicites
+    restent souveraines (l'outil ne décide pas à la place de qui sait)."""
+    assert chemins_sortie(protocole, None, None) == attendus
+    force_logs, force_man = Path("/tmp/x/logs"), Path("/tmp/x/m.json")
+    assert chemins_sortie(protocole, force_logs, force_man) == (force_logs, force_man)
+
+
+def test_artefacts_traques_voit_les_fichiers_versionnes(tmp_path):
+    """La garde lit ce que GIT suit, pas une liste en dur : sous un dossier
+    hors dépôt elle ne voit rien, sous les logs du pin elle voit les artefacts
+    versionnés du 05/07."""
+    assert artefacts_traques_sous(tmp_path) == []
+    traques = artefacts_traques_sous(LOGS_DIR)
+    assert any("session_severe_0.jsonl" in chemin for chemin in traques), (
+        "les logs du pin sont versionnés : la garde doit les voir")
+
+
+def test_main_refuse_decrire_par_dessus_des_artefacts_traques(monkeypatch, capsys):
+    """LA GARDE qui aurait empêché la collision du 2026-08-03 : une campagne
+    dont le dossier de sortie contient des fichiers SUIVIS PAR GIT refuse de
+    démarrer. Un artefact versionné fait foi — on ne l'écrase pas en passant,
+    fût-ce par un défaut de ligne de commande.
+
+    Ici on force --out-dir sur les logs du pin : la garde mord AVANT toute
+    campagne, et le motif nomme les fichiers en danger."""
+    import sys
+
+    from scripts import run_arcC_orchestration as orch
+
+    monkeypatch.setattr(orch, "valide_conditions_requises_si_humain",
+                        lambda *args, **kwargs: None)
+    monkeypatch.setattr(sys, "argv",
+                        _argv_p3prime(**{"--out-dir": str(LOGS_DIR)}))
+    with pytest.raises(SystemExit):
+        orch.main()
+    erreur = capsys.readouterr().err
+    assert "SUIVIS PAR GIT" in erreur
+    assert "session_severe_0.jsonl" in erreur
 
 
 @pytest.mark.parametrize("surcharges, motif", [
