@@ -408,12 +408,13 @@ def statut_condition(validites_sessions: list[bool], dispersion: dict) -> str:
 BASE_SEED_P3PRIME: int = 20260729
 
 # Graines brûlées — §A42 [v2.1] : « une graine présentée à un sujet humain ne
-# sert qu'UNE fois ». Aujourd'hui {20260705} ; après la session P3′, 20260729
-# y ENTRE — par un acte de GRAVURE (entrée journal + commit dédié), jamais un
-# réflexe de session. PORTÉE (§A42-COMPLÉMENT) : la liste ne mord qu'à
+# sert qu'UNE fois ». {20260705} depuis l'origine ; 20260729 ENTRÉE le
+# 2026-08-03 par l'acte de gravure §A44-BRÛLAGE (séance P3′ courue le jour
+# même, entrée journal + ce commit dédié). PORTÉE (§A42-COMPLÉMENT) : la
+# liste ne mord qu'à
 # L'ENTRÉE d'une session HUMAINE nouvelle — la lecture vérifie l'ÉGALITÉ au
 # gravé, sinon l'acte de brûlage rendrait l'archive P3′ illisible.
-GRAINES_BRULEES: frozenset[int] = frozenset({20260705})
+GRAINES_BRULEES: frozenset[int] = frozenset({20260705, 20260729})
 
 # Clause (d) — §A42 [v2.1] : plage horaire de session [09:00, 19:00] locale,
 # bornes incluses, évaluée sur le DÉBUT de session. Version OUTILLÉE de

@@ -752,17 +752,23 @@ def test_graine_entree_refuse_une_graine_quelconque_par_egalite():
 
 
 def test_graine_entree_accepte_la_gravee_et_refuse_apres_brulage():
-    """LE TEST DU BRÛLAGE, côté entrée : 20260729 passe aujourd'hui ; ajouté
-    à la liste (l'acte de gravure post-session), il est REFUSÉ à l'entrée —
-    c'est ce qui empêchera un P3″ de le reconduire (faille B1a)."""
-    appels, erreur = _collecteur()
-    valide_graine_entree_p3prime(BASE_SEED_P3PRIME, "humain", erreur)
-    assert not appels
+    """LE TEST DU BRÛLAGE, côté entrée — mis à jour à l'acte de gravure
+    (§A44-BRÛLAGE, 2026-08-03) : 20260729 est BRÛLÉE, la liste RÉELLE la
+    refuse à l'entrée — c'est ce qui empêche un P3″ de la reconduire
+    (faille B1a). La moitié « accepte » court sur la liste d'AVANT le
+    brûlage, passée EXPLICITEMENT : l'égalité au gravé acceptait la graine
+    tant qu'elle n'était pas brûlée — la sémantique de la garde double n'a
+    pas changé, c'est la liste qui a grandi."""
     appels, erreur = _collecteur()
     valide_graine_entree_p3prime(
         BASE_SEED_P3PRIME, "humain", erreur,
-        graines_brulees=frozenset(GRAINES_BRULEES | {BASE_SEED_P3PRIME}))
+        graines_brulees=frozenset({20260705}))
+    assert not appels
+    appels, erreur = _collecteur()
+    valide_graine_entree_p3prime(BASE_SEED_P3PRIME, "humain", erreur)
     assert appels and "BRÛLÉE" in appels[0]
+    assert BASE_SEED_P3PRIME in GRAINES_BRULEES, (
+        "l'acte de gravure §A44-BRÛLAGE doit être visible dans la liste réelle")
 
 
 def test_graine_entree_ne_mord_pas_le_synthetique():
