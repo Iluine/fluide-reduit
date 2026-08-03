@@ -1,0 +1,303 @@
+{
+ "protocole": {
+  "prereg": "claude/prereg-cout-f-3d-2026-08-03.md",
+  "commit_prereg": "661237a",
+  "question": "ρ = coût d'un bloc en 3D / coût d'un bloc en 2D, mesuré INTRA-RUN entre deux kernels fusionnés de la même famille",
+  "decision_qui_en_depend": "V4 survit-il au passage 3D, ou la porte 33,3 devient-elle LA décision ?",
+  "chrono": "B6 cuda-Events, warmup 30 EXCLU, série 300, médiane ET p99",
+  "slot": "262144 cellules — 512² en 2D, 64³ en 3D (§A51, transposition exacte)",
+  "git_head": "c8f6150",
+  "portee": "F JOUET des deux côtés : coût-représentatif, pas physique-jeu. Ne prononce RIEN sur le schéma eau 3D, sur le c 3D, sur le rendu, ni sur la VRAM."
+ },
+ "machine": {
+  "gpu": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+  "vram_totale_mo": 3780.75,
+  "vram_libre_avant_mo": 3141.625,
+  "cupy": "14.1.1",
+  "python": "3.12.3"
+ },
+ "gardes": {
+  "empreinte_source_2d": "e18015f57e14263414239b18c51d25cd335250f58dde2ccb892a6e2c1d6f30b4",
+  "empreinte_source_3d": "4431b707852394074ece9ec3ced47237e6e3198d8ae0d5fa93b285cb04798911",
+  "git_diff_2d": "vide",
+  "equivalence_de_motif": {
+   "ecart_max": 1.1920928955078125e-07,
+   "rtol": 0.0001,
+   "atol": 1e-05,
+   "etat": "sévère (sec + u ~ 1)"
+  }
+ },
+ "ancres_lues": {
+  "ancre_slot_c8_ms": 1.6853066285451253,
+  "ancre_bloc_c4_ms": 0.8426533142725626,
+  "ancre_mediane_brute_ms": 5.055919885635376,
+  "ancre_n_fenetres": 3,
+  "seuil_mort_ms": 16.7,
+  "f_2d_ms": 12.655,
+  "mediane_frame_v4_ms": 14.490032196044922,
+  "non_f_ms": 1.8350321960449225,
+  "n_blocs_v4": 15,
+  "n_slots_v4": 11,
+  "rho_mort_a": 1.3196365073093639,
+  "rho_mort_b": 1.1746319876693068,
+  "marge_2d_ms": 2.2099678039550774
+ },
+ "m1_2d_s1": {
+  "dimension": "2D",
+  "n": 300,
+  "n_systemes": 1,
+  "n_fenetres": 3,
+  "cellules_par_fenetre": 262144,
+  "mediane_ms": 2.512384057044983,
+  "p99_ms": 2.9481369972229006,
+  "min_ms": 2.3930881023406982,
+  "max_ms": 2.9900801181793213,
+  "ms_par_slot": 0.8374613523483276,
+  "ms_par_bloc": 0.8374613523483276,
+  "ns_par_cellule_systeme": 3.19466153086978
+ },
+ "m2_2d_s2": {
+  "dimension": "2D",
+  "n": 300,
+  "n_systemes": 2,
+  "n_fenetres": 3,
+  "cellules_par_fenetre": 262144,
+  "mediane_ms": 5.089792013168335,
+  "p99_ms": 5.5193326997756955,
+  "min_ms": 4.770815849304199,
+  "max_ms": 5.561344146728516,
+  "ms_par_slot": 1.6965973377227783,
+  "ms_par_bloc": 0.8482986688613892,
+  "ns_par_cellule_systeme": 3.2360026125388686
+ },
+ "m3_3d_s1": {
+  "dimension": "3D",
+  "n": 300,
+  "n_systemes": 1,
+  "n_fenetres": 3,
+  "cellules_par_fenetre": 262144,
+  "mediane_ms": 5.1260480880737305,
+  "p99_ms": 5.636116480827331,
+  "min_ms": 4.196352005004883,
+  "max_ms": 5.660672187805176,
+  "ms_par_slot": 1.708682696024577,
+  "ms_par_bloc": 1.708682696024577,
+  "ns_par_cellule_systeme": 6.518107208345707
+ },
+ "m4_3d_s2": {
+  "dimension": "3D",
+  "n": 300,
+  "n_systemes": 2,
+  "n_fenetres": 3,
+  "cellules_par_fenetre": 262144,
+  "mediane_ms": 10.048511981964111,
+  "p99_ms": 11.68538628578186,
+  "min_ms": 8.20736026763916,
+  "max_ms": 12.018688201904297,
+  "ms_par_slot": 3.349503993988037,
+  "ms_par_bloc": 1.6747519969940186,
+  "ns_par_cellule_systeme": 6.388671863533091
+ },
+ "m5_temoin_taille": {
+  "mesures": {
+   "2D": [
+    {
+     "dimension": "2D",
+     "n": 300,
+     "n_systemes": 1,
+     "n_fenetres": 3,
+     "cellules_par_fenetre": 65536,
+     "mediane_ms": 0.6680800020694733,
+     "p99_ms": 0.7137577706575393,
+     "min_ms": 0.6011520028114319,
+     "max_ms": 0.7260159850120544,
+     "ms_par_slot": 0.22269333402315775,
+     "ms_par_bloc": 0.22269333402315775,
+     "ns_par_cellule_systeme": 3.3980306094842185
+    },
+    {
+     "dimension": "2D",
+     "n": 300,
+     "n_systemes": 1,
+     "n_fenetres": 3,
+     "cellules_par_fenetre": 262144,
+     "mediane_ms": 2.624511957168579,
+     "p99_ms": 2.719836127758026,
+     "min_ms": 2.466815948486328,
+     "max_ms": 2.7351040840148926,
+     "ms_par_slot": 0.874837319056193,
+     "ms_par_bloc": 0.874837319056193,
+     "ns_par_cellule_systeme": 3.337239528870365
+    },
+    {
+     "dimension": "2D",
+     "n": 300,
+     "n_systemes": 1,
+     "n_fenetres": 3,
+     "cellules_par_fenetre": 1048576,
+     "mediane_ms": 9.913264274597168,
+     "p99_ms": 13.484062366485592,
+     "min_ms": 9.539584159851074,
+     "max_ms": 14.801919937133789,
+     "ms_par_slot": 3.3044214248657227,
+     "ms_par_bloc": 3.3044214248657227,
+     "ns_par_cellule_systeme": 3.1513418434769846
+    }
+   ],
+   "3D": [
+    {
+     "dimension": "3D",
+     "n": 300,
+     "n_systemes": 1,
+     "n_fenetres": 3,
+     "cellules_par_fenetre": 32768,
+     "mediane_ms": 0.5939199924468994,
+     "p99_ms": 0.8417586922645569,
+     "min_ms": 0.5313599705696106,
+     "max_ms": 0.8785920143127441,
+     "ms_par_slot": 0.19797333081563315,
+     "ms_par_bloc": 0.19797333081563315,
+     "ns_par_cellule_systeme": 6.041666589832555
+    },
+    {
+     "dimension": "3D",
+     "n": 300,
+     "n_systemes": 1,
+     "n_fenetres": 3,
+     "cellules_par_fenetre": 262144,
+     "mediane_ms": 5.0877439975738525,
+     "p99_ms": 5.741618328094482,
+     "min_ms": 4.2782721519470215,
+     "max_ms": 5.769216060638428,
+     "ms_par_slot": 1.695914665857951,
+     "ms_par_bloc": 1.695914665857951,
+     "ns_par_cellule_systeme": 6.469401038581661
+    },
+    {
+     "dimension": "3D",
+     "n": 300,
+     "n_systemes": 1,
+     "n_fenetres": 3,
+     "cellules_par_fenetre": 2097152,
+     "mediane_ms": 38.10092735290527,
+     "p99_ms": 41.982147216796875,
+     "min_ms": 33.68960189819336,
+     "max_ms": 42.7509765625,
+     "ms_par_slot": 12.700309117635092,
+     "ms_par_bloc": 12.700309117635092,
+     "ns_par_cellule_systeme": 6.055979307954355
+    }
+   ]
+  },
+  "lecture": {
+   "2D": {
+    "ns_par_cellule": {
+     "300": 3.1513418434769846
+    },
+    "etendue_relative": 0.07828054786181293,
+    "stable": true
+   },
+   "3D": {
+    "ns_par_cellule": {
+     "300": 6.055979307954355
+    },
+    "etendue_relative": 0.07079742690020918,
+    "stable": true
+   }
+  },
+  "bande": 0.25,
+  "stable_des_deux_cotes": true
+ },
+ "m6_attributs": {
+  "2D": {
+   "registres_par_thread": 64,
+   "memoire_locale_octets": 0,
+   "max_threads_par_bloc": 1024
+  },
+  "3D": {
+   "registres_par_thread": 72,
+   "memoire_locale_octets": 0,
+   "memoire_partagee_octets": 0,
+   "max_threads_par_bloc": 896,
+   "taille_bloc": 256
+  },
+  "comptes_statiques": {
+   "2D": {
+    "minmods": 24,
+    "solveurs_hll": 4,
+    "upwinds_tangentiels": 8,
+    "lectures_voisins": 24,
+    "octets_lus_par_lecture": 16
+   },
+   "3D": {
+    "minmods": 45,
+    "solveurs_hll": 6,
+    "upwinds_tangentiels": 18,
+    "lectures_voisins": 36,
+    "octets_lus_par_lecture": 20
+   }
+  }
+ },
+ "lecture": {
+  "rho": 2.040312297675893,
+  "branche": "R-3",
+  "verdict": "MORT INCONDITIONNELLE de V4 en 3D",
+  "seuils": {
+   "rho_mort_b_conditionnelle": 1.1746319876693068,
+   "rho_mort_a_inconditionnelle": 1.3196365073093639
+  },
+  "i1_reproduction_ancre": {
+   "mesure_slot_c8_ms": 1.6965973377227783,
+   "ancre_slot_c8_ms": 1.6853066285451253,
+   "ecart_relatif": 0.006699498468952205,
+   "bande": 0.25,
+   "reproduit": true
+  },
+  "i3_attribution": {
+   "encadrement_statique": {
+    "rapports": {
+     "minmods": 1.875,
+     "solveurs_hll": 1.5,
+     "upwinds_tangentiels": 2.25,
+     "lectures_voisins": 1.5,
+     "octets_lus": 1.875
+    },
+    "borne_basse": 1.5,
+    "borne_haute": 2.25,
+    "central": 1.875
+   },
+   "rho_dans_encadrement_elargi": true,
+   "note": "ρ hors [0.5·borne_basse, 2·borne_haute] ⇒ l'écart n'est pas l'arithmétique ; registres et occupancy sont à lire, et le résultat se prononce AVEC réserve d'implémentation nommée."
+  },
+  "i4_stabilite_taille": {
+   "2D": {
+    "ns_par_cellule": {
+     "300": 3.1513418434769846
+    },
+    "etendue_relative": 0.07828054786181293,
+    "stable": true
+   },
+   "3D": {
+    "ns_par_cellule": {
+     "300": 6.055979307954355
+    },
+    "etendue_relative": 0.07079742690020918,
+    "stable": true
+   }
+  },
+  "linearite_systemes": {
+   "2D_S2_sur_S1": 2.0258813531697255,
+   "3D_S2_sur_S1": 1.9602843768366105,
+   "note": "l'ancre gravée pose 1.685 / 0.843 ≈ 2.00 en 2D. Le modèle du budget compte des BLOCS : si la linéarité tombe en 3D, le compte en blocs de V4 ne s'y transporte pas tel quel."
+  },
+  "budget_3d_transpose": {
+   "f_3d_ms_par_blocs_mesures": 25.630240440368652,
+   "f_3d_ms_par_rho_sur_ancre": 25.820152127088424,
+   "non_f_2d_retenu_ms": 1.8350321960449225,
+   "frame_3d_estimee_ms": 27.655184323133348,
+   "seuil_ms": 16.7,
+   "marge_ms": -10.955184323133349,
+   "note": "le non-F est RETENU CONSTANT — hypothèse neutre sur le nombre de cellules (identique), mais les halos passent de ~2 % (512²) à ~20 % (64³) des cellules : le non-F 3D est vraisemblablement SUPÉRIEUR, donc cette estimation est GÉNÉREUSE envers V4."
+  }
+ }
+}

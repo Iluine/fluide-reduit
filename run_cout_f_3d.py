@@ -279,8 +279,14 @@ def _lecture_mesure(stats: dict, cellules: int, n_systemes: int, n: int,
     (une fenêtre, un système) est la grandeur du modèle gravé ; le coût
     par cellule sert au témoin de taille."""
     blocs = N_FENETRES * n_systemes
+    # `cote` et NON `n` : `stats_ms` retourne déjà un `n` (le nombre
+    # d'échantillons de la série). Une première version écrivait `"n": n`
+    # avant `**stats` — la clé était donc écrasée par 300, et le témoin de
+    # taille se repliait sur un seul point au lieu de trois. Le premier
+    # artefact du run porte le défaut ; il est archivé sous
+    # `…-AVANT-CORRECTIF-CLE-N.json`, jamais écrasé.
     return {
-        "dimension": dim, "n": n, "n_systemes": n_systemes,
+        "dimension": dim, "cote": n, "n_systemes": n_systemes,
         "n_fenetres": N_FENETRES, "cellules_par_fenetre": cellules // N_FENETRES,
         **stats,
         "ms_par_slot": stats["mediane_ms"] / N_FENETRES,
@@ -309,10 +315,15 @@ def temoin_taille(cp) -> dict:
         couts = [m["ns_par_cellule_systeme"] for m in serie]
         etendue = (max(couts) - min(couts)) / min(couts)
         lecture[dim] = {
-            "ns_par_cellule": dict(zip([m["n"] for m in serie], couts)),
+            "ns_par_cellule": {str(m["cote"]): c for m, c in zip(serie, couts)},
             "etendue_relative": etendue,
             "stable": etendue <= BANDE_STABILITE,
         }
+        if len(lecture[dim]["ns_par_cellule"]) != len(serie):
+            raise MesureImpossible(
+                f"témoin de taille {dim} : {len(serie)} mesures repliées sur "
+                f"{len(lecture[dim]['ns_par_cellule'])} entrées — collision "
+                "de clé, le témoin ne rend pas ce qu'il a mesuré.")
     return {"mesures": mesures, "lecture": lecture,
             "bande": BANDE_STABILITE,
             "stable_des_deux_cotes": all(v["stable"] for v in lecture.values())}
@@ -458,6 +469,13 @@ def main() -> int:
             "portee": ("F JOUET des deux côtés : coût-représentatif, pas "
                        "physique-jeu. Ne prononce RIEN sur le schéma eau "
                        "3D, sur le c 3D, sur le rendu, ni sur la VRAM."),
+            "run_anterieur_conserve": (
+                "claude/lectures/cout-f-3d-2026-08-03-AVANT-CORRECTIF-CLE-N"
+                ".json — même protocole, même code de mesure ; défaut de "
+                "REPORTING seul (clé `n` du témoin de taille écrasée par le "
+                "nombre d'échantillons, trois points repliés sur un). Les "
+                "temps, ρ et la branche y sont valides et lisibles ; il est "
+                "conservé pour que les deux ρ soient confrontables."),
         },
         "machine": _machine(cp),
         "gardes": {**gardes, "equivalence_de_motif": equivalence},
