@@ -677,6 +677,21 @@ def main() -> None:
             "p3prime_transport.lecture.json" if args.protocole == "p3prime"
             else "p3_transport_pin.lecture.json")
 
+    # Un manifeste ABSENT est un cas ATTENDU, pas un accident : sous
+    # --protocole p3prime il est même l'état NORMAL tant que la session
+    # humaine n'a pas eu lieu (jour neuf, décision explicite — le fichier ne
+    # PEUT pas exister avant). Il se dit donc à voix haute, comme le fichier
+    # scellé introuvable plus haut, plutôt qu'en FileNotFoundError nu.
+    if not args.manifeste.exists():
+        parser.error(
+            f"manifeste INTROUVABLE : {args.manifeste}\n"
+            + ("    Sous --protocole p3prime, c'est l'état ATTENDU tant que la session "
+               "P3′ n'a pas eu lieu : ce fichier est ÉCRIT PAR la session, il ne "
+               "préexiste pas à elle. Rien n'est cassé, il n'y a simplement rien à "
+               "lire.\n" if args.protocole == "p3prime" else "")
+            + "    CORRECTION : vérifie le chemin, ou passe --manifeste <chemin> pour "
+              "lire un manifeste archivé ailleurs.")
+
     manifeste = json.loads(args.manifeste.read_text(encoding="utf-8"))
     racine = args.manifeste.resolve().parent
 

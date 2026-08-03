@@ -727,3 +727,26 @@ def test_run_p3_lecture_ne_lie_pas_graines_brulees():
     # Et le pendant positif : l'ENTRÉE, elle, la lie bel et bien.
     import scripts.run_arcC_orchestration as orchestration
     assert "GRAINES_BRULEES" in inspect.getsource(orchestration)
+
+
+@pytest.mark.parametrize("protocole", ["historique", "p3prime"])
+def test_main_refuse_un_manifeste_absent_par_un_motif_nomme(monkeypatch, capsys, tmp_path,
+                                                           protocole):
+    """Un manifeste ABSENT est un cas ATTENDU, pas un accident : en P3′ il est
+    même l'état NORMAL tant que la session humaine n'a pas eu lieu (elle vient
+    un jour neuf, sur décision explicite — le fichier ne PEUT pas exister
+    avant). Il doit donc rendre un motif NOMMÉ, pas un `FileNotFoundError`.
+
+    Le fichier scellé introuvable, lui, était déjà traité ainsi
+    (« fichier scellé INTROUVABLE -- rien à desceller ») : ce test ferme
+    l'asymétrie. Le message ne pré-remplit AUCUNE commande de session."""
+    import sys
+
+    absent = tmp_path / "manifeste_qui_nexiste_pas.json"
+    monkeypatch.setattr(sys, "argv", ["run_p3_lecture.py", "--protocole", protocole,
+                                      "--manifeste", str(absent)])
+    with pytest.raises(SystemExit):
+        run_p3_lecture.main()
+    erreur = capsys.readouterr().err
+    assert "INTROUVABLE" in erreur
+    assert str(absent) in erreur
