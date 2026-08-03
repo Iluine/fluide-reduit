@@ -257,7 +257,8 @@ développer, **le verdict P3 restera iluin-tworings3 natif** `[GRAVÉ]`.
 
 ## 6. Ce que P1 NE fait PAS (portées, refus explicites)
 
-- **Pas de son** — co-égal en thèse, absent de l'arc, nommé (note v2 §8).
+- **Pas de son** — co-égal en thèse, absent de l'arc, nommé (note v2 §8) ; « co-égal »
+  se lit en JUGEMENT, pas en FALSIFIABILITÉ (**§A45**, 2026-08-03).
 - **Pas de solve d'équilibre** ni d'ombres : R1 est l'instrument, pas le rendu de
   production (§2.2.3). O-Voxel/TRELLIS.2 : écarté pour l'instrument (une chaîne
   →mesh n'est ni minimale ni au format du harnais) ; reste la lecture différée à

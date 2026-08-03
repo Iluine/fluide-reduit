@@ -16,7 +16,12 @@
 
 Un moteur de monde voxel pour un jeu sandbox : un seul état-monde `z`, image et son en
 projections déterministes co-égales, **historique persistant non-contradictoire à
-compute borné**. **[ENDOSSÉ]** Le monde doit rester « vrai » au sens de Romain : *tout
+compute borné**. **[ENDOSSÉ]** *(Précision de portée, §A45 du 2026-08-03 : « co-égales »
+se dit en **JUGEMENT** — même type de juge, mêmes invariants, même ABX de substitution —
+et **NON en FALSIFIABILITÉ**. Le corollaire de §A20-1 (« `z` stable ⇒ image stable ⇒
+l'image est falsifiable contre l'état ») est une propriété du SOLVE d'équilibre optique ;
+§A20-2 a gravé que le solve acoustique est mort à l'arrivée, et une synthèse n'est pas un
+solve. Le son n'a jamais eu ce référent-là.)* Le monde doit rester « vrai » au sens de Romain : *tout
 doit rester plausible, et rien de ce qui a été vu ne doit se contredire* (la montagne
 n'apparaît ni ne disparaît) — **mais les lois physiques n'ont pas besoin d'être
 vraies : elles doivent juste sembler l'être**. La roche se brise en morceaux plausibles
@@ -211,8 +216,16 @@ pas en tomographie, elle reste le problème propre du projet (§4).
 L'arc P0–P3 reste l'instrument et le chemin critique [GRAVÉ §A35] — les décisions
 P0-a..d de `seance-fidelite-2026-07-25.md` restent À TRANCHER formellement (cette note
 les nourrit, elle ne les remplace pas ; l'endossement de §1–2 rend P0-b quasi mûre
-mais elle appartient à Romain). La règle D17 s'applique à tout ce qui précède : chaque
+mais elle appartient à Romain). **[PÉRIMÉ LE JOUR MÊME — §A36 FAIT FOI.]** Cette phrase
+a été écrite AVANT la gravure de §A36 (2026-07-25), qui cite cette note et tranche
+P0-a..d : « **LES GATES DE L'ARC : P0 ✓** » ; **P0-b = C-STRAT, VERSION F-UNIQUE**,
+trois clauses. Personne n'a rebouclé, et cette ligne a été lue comme vivante jusqu'au
+2026-08-03. Ne rien conclure d'ici sur le statut de P0 : lire §A36. La règle D17 s'applique à tout ce qui précède : chaque
 falsifieur nommé ici attend une décision qui en dépend avant de courir. Le registre,
 le pin, les morts (§A34), les dettes (chrono T1, σ_ω, p99, le son, 3D, substrat-jeu,
 multi-observateur) : inchangés. Le SON reste co-égal en thèse et absent de l'arc —
-nommé, pas oublié.
+nommé, pas oublié. **[Précision §A45, 2026-08-03]** « Co-égal » se lit en JUGEMENT, pas
+en FALSIFIABILITÉ (cf. §1 ci-dessus). Et §A46 re-scope pour le canal auditif la clause
+« éphémère par définition » de §A20-3, classe impulsive seulement — la classe continue
+(rivière, vent, pluie) reste portée par τ_dec, qui acquiert par là un SECOND
+consommateur, à tolérance temporelle beaucoup plus serrée que le premier.
