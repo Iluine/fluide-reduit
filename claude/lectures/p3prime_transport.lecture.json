@@ -1,0 +1,153 @@
+{
+  "prereg": "claude/prereg-p3prime-transport-intra-session.md (ENDOSSÉ v2.2, §A42 + §A42-COMPLÉMENT)",
+  "protocole": "p3prime",
+  "date": "2026-08-03T10:40:04.074147",
+  "machine": "iluin-TwoRings3",
+  "regime": "severe",
+  "n_staircases": 6,
+  "lambda_equiv": 1.5,
+  "gardes": {
+    "toutes_ok": true,
+    "echouees": [],
+    "gardes": [
+      {
+        "nom": "protocole_p3prime",
+        "ok": true,
+        "protocole": "p3prime",
+        "motif": null
+      },
+      {
+        "nom": "conditions_ancrees_a_d",
+        "ok": true,
+        "conditions": "repère de distance + éclairage ambiant + 2026-08-03 10:06",
+        "luminosite": "80",
+        "date_session": "2026-08-03T10:06:38.558371",
+        "motif": null
+      },
+      {
+        "nom": "graine_egalite_gravee",
+        "ok": true,
+        "base_seed": 20260729,
+        "base_seed_grave": 20260729,
+        "motif": null
+      },
+      {
+        "nom": "plan_d_p3prime_1",
+        "ok": true,
+        "attendu": [
+          "viridis",
+          "r1",
+          "r1",
+          "viridis",
+          "viridis",
+          "r1"
+        ],
+        "obtenu": [
+          "viridis",
+          "r1",
+          "r1",
+          "viridis",
+          "viridis",
+          "r1"
+        ],
+        "motif": null
+      },
+      {
+        "nom": "validite_c5",
+        "ok": true,
+        "n_staircases": 6,
+        "staircases_invalides": [],
+        "motif": null
+      },
+      {
+        "nom": "bras_complets_3_3",
+        "ok": true,
+        "complets": {
+          "viridis": 3,
+          "r1": 3
+        },
+        "motif": null
+      },
+      {
+        "nom": "liaison_sidecar_log",
+        "ok": true,
+        "details": [
+          {
+            "numero_staircase": 0,
+            "log_trouve": true,
+            "sidecar_trouve": true,
+            "sha256_log_sidecar": "7b6a32dbe2edca23314695928daf1fcb989d42258ee788d889136475a21e15aa",
+            "sha256_log_recalcule": "7b6a32dbe2edca23314695928daf1fcb989d42258ee788d889136475a21e15aa",
+            "chemin_sidecar": "viridis",
+            "chemin_manifeste": "viridis"
+          },
+          {
+            "numero_staircase": 1,
+            "log_trouve": true,
+            "sidecar_trouve": true,
+            "sha256_log_sidecar": "021bf55894daab1b473f792b915e3d32eff9dd7126a14a0800dba4e1674dca20",
+            "sha256_log_recalcule": "021bf55894daab1b473f792b915e3d32eff9dd7126a14a0800dba4e1674dca20",
+            "chemin_sidecar": "r1",
+            "chemin_manifeste": "r1"
+          },
+          {
+            "numero_staircase": 2,
+            "log_trouve": true,
+            "sidecar_trouve": true,
+            "sha256_log_sidecar": "7777847d8fe6018f5061863a609a24bf90a724c53dcf3d3ffc407d0365613b88",
+            "sha256_log_recalcule": "7777847d8fe6018f5061863a609a24bf90a724c53dcf3d3ffc407d0365613b88",
+            "chemin_sidecar": "r1",
+            "chemin_manifeste": "r1"
+          },
+          {
+            "numero_staircase": 3,
+            "log_trouve": true,
+            "sidecar_trouve": true,
+            "sha256_log_sidecar": "76c57b7fd3e99490e08180b970b0da61ff603201f32d780da2d01cb9dfb78884",
+            "sha256_log_recalcule": "76c57b7fd3e99490e08180b970b0da61ff603201f32d780da2d01cb9dfb78884",
+            "chemin_sidecar": "viridis",
+            "chemin_manifeste": "viridis"
+          },
+          {
+            "numero_staircase": 4,
+            "log_trouve": true,
+            "sidecar_trouve": true,
+            "sha256_log_sidecar": "5c6381771c5095345d8cb6c2058456f717dfd776a4a6df66ab3e73535c7323e1",
+            "sha256_log_recalcule": "5c6381771c5095345d8cb6c2058456f717dfd776a4a6df66ab3e73535c7323e1",
+            "chemin_sidecar": "viridis",
+            "chemin_manifeste": "viridis"
+          },
+          {
+            "numero_staircase": 5,
+            "log_trouve": true,
+            "sidecar_trouve": true,
+            "sha256_log_sidecar": "2239f4df6ca761535d3d2b0e05ab28eee3878325e829b8b2de5da965f7c402a1",
+            "sha256_log_recalcule": "2239f4df6ca761535d3d2b0e05ab28eee3878325e829b8b2de5da965f7c402a1",
+            "chemin_sidecar": "r1",
+            "chemin_manifeste": "r1"
+          }
+        ],
+        "motif": null
+      }
+    ]
+  },
+  "dispersion_par_bras": {
+    "viridis": {
+      "n": 3,
+      "cv": 0.41091231492050767,
+      "cv_pct": 41.09123149205077,
+      "seuil_cv": 0.3,
+      "coherent": false
+    },
+    "r1": {
+      "n": 3,
+      "cv": 0.11808843308040777,
+      "cv_pct": 11.808843308040776,
+      "seuil_cv": 0.3,
+      "coherent": true
+    }
+  },
+  "verdict": "INDETERMINEE",
+  "branche": "3",
+  "motif": "DISPERSION hors clous (CV > 30 %, §C5) sur bras : viridis. Les seuils ne sont NI imprimés NI écrits -- seul le CV est surfacé."
+}
