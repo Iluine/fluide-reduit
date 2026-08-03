@@ -61,6 +61,19 @@ from src.f1_gpu.substrat_jetable import (
 # divergent). Corrigé avant tout run.
 
 CHAMPS_PAR_SYSTEME_3D: int = 5      # (h, hu, hv, hw, s) — E4a transposé
+CHAMPS_HYPERBOLIQUES: int = 4       # (h, hu, hv, hw) — le noyau, invariant
+
+# GÉNÉRALISATION (prereg `claude/prereg-multiplicateur-c-3d-2026-08-04.md`,
+# commit `c298a8b`) : le nombre de SCALAIRES ADVECTÉS et de CHAMPS
+# STATIQUES est libre. Le défaut — 1 scalaire, 0 statique — redonne
+# EXACTEMENT le motif de §A53, et les verrous existants l'exigent au bit
+# près. Une seconde copie de cette logique aurait été la faute dont la
+# sonde v1 est morte : on généralise l'exemplaire unique.
+#   champs 0..3            : h, hu, hv, hw           (hyperboliques)
+#   champs 4 .. 4+k-1      : scalaires ADVECTÉS      (s, e_th, ρ_s…)
+#   champs 4+k .. +st-1    : champs STATIQUES        (b0, id-matériau)
+# Les statiques sont LUS par le stencil et jamais avancés : ils traversent
+# le pas inchangés.
 AXES_3D: tuple[int, ...] = (-3, -2, -1)     # (z, y, x)
 
 # Indice de champ portant l'impulsion NORMALE à chaque axe, et les deux
@@ -75,22 +88,45 @@ TANGENTIELLES_PAR_AXE: dict[int, tuple[int, int]] = {
     -1: (2, 3), -2: (1, 3), -3: (1, 2)}
 
 
+def decompte_champs(n_champs: int, n_statiques: int) -> tuple[int, int]:
+    """(n_scalaires_advectés, n_statiques) — fail-loud si le compte ne
+    laisse pas au moins un scalaire advecté au noyau hyperbolique."""
+    n_scalaires = n_champs - CHAMPS_HYPERBOLIQUES - n_statiques
+    if n_scalaires < 1:
+        raise ValueError(
+            f"decompte_champs : {n_champs} champs dont {n_statiques} "
+            f"statiques laissent {n_scalaires} scalaire(s) advecté(s) au "
+            f"noyau ({CHAMPS_HYPERBOLIQUES} hyperboliques) — les cinq "
+            "champs (h, hu, hv, hw, s) sont load-bearing (prereg §3, "
+            "minoration à quatre champs INTERDITE d'avance).")
+    return n_scalaires, n_statiques
+
+
 def etat_initial_jetable_3d(n_fenetres: int, n_systemes: int, n: int,
-                            graine: int) -> np.ndarray:
+                            graine: int, n_champs: int | None = None
+                            ) -> np.ndarray:
     """État initial (B, S, 5, n, n, n) float32 CPU : h = 1 + relief lissé
     basse fréquence (seedé), impulsions nulles, s petit champ positif
     lissé. Même intention que l'aîné 2D : lisse ⇒ le jetable reste borné
     sur la série ; le contenu n'est PAS l'objet de la mesure."""
+    if n_champs is None:
+        n_champs = CHAMPS_PAR_SYSTEME_3D
+    n_suppl = n_champs - CHAMPS_HYPERBOLIQUES
     rng = np.random.default_rng(graine)
     m = max(n // 8, 1) + 1
-    grossier = rng.standard_normal((n_fenetres, n_systemes, 2, m, m, m))
+    grossier = rng.standard_normal(
+        (n_fenetres, n_systemes, 1 + n_suppl, m, m, m))
     facteur = -(-n // m)                    # plafond : couvre n
     lisse = np.kron(grossier, np.ones((1, 1, 1, facteur, facteur, facteur)))
     lisse = lisse[..., :n, :n, :n]
-    q = np.zeros((n_fenetres, n_systemes, CHAMPS_PAR_SYSTEME_3D, n, n, n),
+    q = np.zeros((n_fenetres, n_systemes, n_champs, n, n, n),
                  dtype=np.float32)
     q[:, :, 0] = 1.0 + 0.05 * lisse[:, :, 0]
-    q[:, :, 4] = 0.05 * np.abs(lisse[:, :, 1])
+    # Chaque champ supplémentaire reçoit un tirage INDÉPENDANT : deux
+    # champs corrélés masqueraient un transport qui les confond, et
+    # rendraient le coût marginal illisible.
+    for i in range(n_suppl):
+        q[:, :, CHAMPS_HYPERBOLIQUES + i] = 0.05 * np.abs(lisse[:, :, 1 + i])
     return q
 
 
@@ -137,13 +173,14 @@ def _pentes(arr, xp, axe: int):
     return s
 
 
-def _divergence_axe(qp, xp, axe: int):
+def _divergence_axe(qp, xp, axe: int, n_scalaires: int = 1):
     """Contributions de l'axe `axe` à L(q), pour les cellules RÉELLES.
 
-    Retourne `(dh, dn, dt1, dt2, ds)` de shape (B, S, n, n, n) : `dn` est
-    la divergence de l'impulsion NORMALE à l'axe, `dt1`/`dt2` celles des
-    deux TANGENTIELLES dans l'ordre de `TANGENTIELLES_PAR_AXE` — c'est le
-    seul endroit du module où l'ordre compte, et l'appelant le relit là."""
+    Retourne `(dh, dn, dt1, dt2, [ds…])` de shape (B, S, n, n, n) : `dn`
+    est la divergence de l'impulsion NORMALE à l'axe, `dt1`/`dt2` celles
+    des deux TANGENTIELLES dans l'ordre de `TANGENTIELLES_PAR_AXE` — c'est
+    le seul endroit du module où l'ordre compte, et l'appelant le relit
+    là. `ds` est une LISTE : une divergence par scalaire advecté."""
     g = GRAVITE
     normale = NORMALE_PAR_AXE[axe]
     tang1, tang2 = TANGENTIELLES_PAR_AXE[axe]
@@ -154,7 +191,8 @@ def _divergence_axe(qp, xp, axe: int):
     unp = _desing(hp, qp[:, :, normale], xp)
     ut1p = _desing(hp, qp[:, :, tang1], xp)
     ut2p = _desing(hp, qp[:, :, tang2], xp)
-    csp = _desing(hp, qp[:, :, 4], xp)
+    csp = [_desing(hp, qp[:, :, CHAMPS_HYPERBOLIQUES + i], xp)
+           for i in range(n_scalaires)]
 
     # `qp` porte le champ sur l'axe -4 ; une fois les composantes
     # extraites, les axes spatiaux sont les trois derniers — `axe` reste
@@ -163,14 +201,14 @@ def _divergence_axe(qp, xp, axe: int):
     sun = _pentes(unp, xp, axe)
     sut1 = _pentes(ut1p, xp, axe)
     sut2 = _pentes(ut2p, xp, axe)
-    scs = _pentes(csp, xp, axe)
+    scs = [_pentes(c, xp, axe) for c in csp]
     mauvais = (((etap - 0.5 * seta) - bp < 0.0)
                | ((etap + 0.5 * seta) - bp < 0.0))
     seta = xp.where(mauvais, 0.0, seta)
     sun = xp.where(mauvais, 0.0, sun)
     sut1 = xp.where(mauvais, 0.0, sut1)
     sut2 = xp.where(mauvais, 0.0, sut2)
-    scs = xp.where(mauvais, 0.0, scs)
+    scs = [xp.where(mauvais, 0.0, s) for s in scs]
 
     def face_g(champ, pente):
         return (_tranche(champ, axe, None, -1)
@@ -184,7 +222,8 @@ def _divergence_axe(qp, xp, axe: int):
     unL, unR = face_g(unp, sun), face_d(unp, sun)
     ut1L, ut1R = face_g(ut1p, sut1), face_d(ut1p, sut1)
     ut2L, ut2R = face_g(ut2p, sut2), face_d(ut2p, sut2)
-    csL, csR = face_g(csp, scs), face_d(csp, scs)
+    csL = [face_g(c, s) for c, s in zip(csp, scs)]
+    csR = [face_d(c, s) for c, s in zip(csp, scs)]
     bL, bR = _tranche(bp, axe, None, -1), _tranche(bp, axe, 1, None)
 
     hL, hR = etaL - bL, etaR - bR
@@ -194,7 +233,8 @@ def _divergence_axe(qp, xp, axe: int):
     Fh, Fn = _flux_hll(hsL, hsL * unL, hsR, hsR * unR, xp)
     Ft1 = xp.where(Fh >= 0.0, Fh * ut1L, Fh * ut1R)
     Ft2 = xp.where(Fh >= 0.0, Fh * ut2L, Fh * ut2R)
-    Fs = xp.where(Fh >= 0.0, Fh * csL, Fh * csR)
+    Fs = [xp.where(Fh >= 0.0, Fh * gauche, Fh * droite)
+          for gauche, droite in zip(csL, csR)]
     Fn_g = Fn + 0.5 * g * (hL ** 2 - hsL ** 2)   # corrigé côté L
     Fn_d = Fn + 0.5 * g * (hR ** 2 - hsR ** 2)   # corrigé côté R
 
@@ -212,37 +252,42 @@ def _divergence_axe(qp, xp, axe: int):
 
     dn = interieur(_tranche(Fn_g, axe, 1, None)
                    - _tranche(Fn_d, axe, None, -1))
-    return div(Fh), dn, div(Ft1), div(Ft2), div(Fs)
+    return div(Fh), dn, div(Ft1), div(Ft2), [div(f) for f in Fs]
 
 
-def _rhs_jetable_3d(q, xp):
-    """Opérateur spatial L(q) sur (B, S, 5, n, n, n) — trois axes, 5 champs
-    par système, deux tangentielles par axe. Retourne
-    (Lh, Lhu, Lhv, Lhw, Ls) sur (B, S, n, n, n)."""
+def _rhs_jetable_3d(q, xp, n_scalaires: int = 1):
+    """Opérateur spatial L(q) — trois axes, deux tangentielles par axe,
+    `n_scalaires` scalaires advectés. Retourne
+    (Lh, Lhu, Lhv, Lhw, [Ls…]) sur (B, S, n, n, n)."""
     qp = _pad_reflexif_3d(q, xp)
-    contributions = {axe: _divergence_axe(qp, xp, axe) for axe in AXES_3D}
+    contributions = {axe: _divergence_axe(qp, xp, axe, n_scalaires)
+                     for axe in AXES_3D}
 
     somme_h = None
-    somme_s = None
+    somme_s = [None] * n_scalaires
     somme_qdm = {1: None, 2: None, 3: None}
     for axe, (dh, dn, dt1, dt2, ds) in contributions.items():
         somme_h = dh if somme_h is None else somme_h + dh
-        somme_s = ds if somme_s is None else somme_s + ds
+        for i, apport in enumerate(ds):
+            somme_s[i] = (apport if somme_s[i] is None
+                          else somme_s[i] + apport)
         tang1, tang2 = TANGENTIELLES_PAR_AXE[axe]
         for champ, apport in ((NORMALE_PAR_AXE[axe], dn),
                               (tang1, dt1), (tang2, dt2)):
             somme_qdm[champ] = (apport if somme_qdm[champ] is None
                                 else somme_qdm[champ] + apport)
-    return (-somme_h, -somme_qdm[1], -somme_qdm[2], -somme_qdm[3], -somme_s)
+    return (-somme_h, -somme_qdm[1], -somme_qdm[2], -somme_qdm[3],
+            [-s for s in somme_s])
 
 
-def _plancher_sec_3d(h, hu, hv, hw, s, xp):
-    """Plancher sec (motif `_plancher_sec`, étendu à la 3e impulsion)."""
+def _plancher_sec_3d(h, hu, hv, hw, scalaires, xp):
+    """Plancher sec (motif `_plancher_sec`, étendu à la 3e impulsion et à
+    un nombre libre de scalaires advectés)."""
     h = xp.maximum(h, 0.0)
     sec = h <= DRY_EPS
     return (xp.where(sec, 0.0, h), xp.where(sec, 0.0, hu),
             xp.where(sec, 0.0, hv), xp.where(sec, 0.0, hw),
-            xp.where(sec, 0.0, s))
+            [xp.where(sec, 0.0, s) for s in scalaires])
 
 
 def reduction_cfl_3d(q, xp) -> float:
@@ -259,41 +304,51 @@ def reduction_cfl_3d(q, xp) -> float:
     return CFL_JETABLE / max(smax, 1e-12)
 
 
-def pas_f_jetable_3d(q, xp, sortie=None) -> tuple:
-    """Un pas SSP-RK2 complet du F jetable 3D sur (B, S, 5, n, n, n) f32 :
+def pas_f_jetable_3d(q, xp, sortie=None, n_statiques: int = 0) -> tuple:
+    """Un pas SSP-RK2 complet du F jetable 3D sur (B, S, C, n, n, n) f32 :
     réduction CFL (coût, non consommée) + 2 étages `_rhs_jetable_3d` +
-    plancher sec par étage. Signature identique à l'aîné 2D.
+    plancher sec par étage. Signature de l'aîné 2D, plus `n_statiques`.
+
+    Les `n_statiques` derniers champs sont LUS par le stencil de la
+    version fusionnée et **traversent ce pas inchangés** : ils n'ont pas
+    de bilan, seulement un coût de bande passante. Ici ils sont recopiés.
 
     Retourne (q_suivant, dt_cfl_diagnostic)."""
-    if q.ndim != 6 or q.shape[2] != CHAMPS_PAR_SYSTEME_3D:
+    if q.ndim != 6:
         raise ValueError(
-            f"pas_f_jetable_3d : shape {q.shape} != (B, S, "
-            f"{CHAMPS_PAR_SYSTEME_3D}, n, n, n) — les cinq champs "
-            "(h, hu, hv, hw, s) sont load-bearing (prereg §3, minoration "
-            "à quatre champs INTERDITE d'avance).")
+            f"pas_f_jetable_3d : shape {q.shape} — attendu "
+            "(B, S, C, n, n, n).")
+    n_scalaires, _ = decompte_champs(int(q.shape[2]), n_statiques)
     dt = DT_JETABLE
     dt_cfl = reduction_cfl_3d(q, xp)
 
-    h, hu, hv, hw, s = (q[:, :, 0], q[:, :, 1], q[:, :, 2],
-                        q[:, :, 3], q[:, :, 4])
-    L1 = _rhs_jetable_3d(q, xp)
-    e1 = xp.empty_like(q)
-    etage1 = _plancher_sec_3d(h + dt * L1[0], hu + dt * L1[1],
-                              hv + dt * L1[2], hw + dt * L1[3],
-                              s + dt * L1[4], xp)
-    for indice, champ in enumerate(etage1):
+    h, hu, hv, hw = (q[:, :, 0], q[:, :, 1], q[:, :, 2], q[:, :, 3])
+    scal = [q[:, :, CHAMPS_HYPERBOLIQUES + i] for i in range(n_scalaires)]
+    L1 = _rhs_jetable_3d(q, xp, n_scalaires)
+    e1 = xp.array(q, copy=True)          # les statiques traversent
+    etage1 = _plancher_sec_3d(
+        h + dt * L1[0], hu + dt * L1[1], hv + dt * L1[2], hw + dt * L1[3],
+        [s + dt * ls for s, ls in zip(scal, L1[4])], xp)
+    for indice, champ in enumerate(etage1[:4]):
         e1[:, :, indice] = champ
+    for i, champ in enumerate(etage1[4]):
+        e1[:, :, CHAMPS_HYPERBOLIQUES + i] = champ
 
-    L2 = _rhs_jetable_3d(e1, xp)
+    L2 = _rhs_jetable_3d(e1, xp, n_scalaires)
     etage2 = _plancher_sec_3d(
         0.5 * h + 0.5 * (e1[:, :, 0] + dt * L2[0]),
         0.5 * hu + 0.5 * (e1[:, :, 1] + dt * L2[1]),
         0.5 * hv + 0.5 * (e1[:, :, 2] + dt * L2[2]),
         0.5 * hw + 0.5 * (e1[:, :, 3] + dt * L2[3]),
-        0.5 * s + 0.5 * (e1[:, :, 4] + dt * L2[4]), xp)
+        [0.5 * s + 0.5 * (e1[:, :, CHAMPS_HYPERBOLIQUES + i] + dt * ls)
+         for i, (s, ls) in enumerate(zip(scal, L2[4]))], xp)
 
     if sortie is None:
-        sortie = xp.empty_like(q)
-    for indice, champ in enumerate(etage2):
+        sortie = xp.array(q, copy=True)
+    else:
+        sortie[...] = q                  # les statiques traversent
+    for indice, champ in enumerate(etage2[:4]):
         sortie[:, :, indice] = champ
+    for i, champ in enumerate(etage2[4]):
+        sortie[:, :, CHAMPS_HYPERBOLIQUES + i] = champ
     return sortie, dt_cfl

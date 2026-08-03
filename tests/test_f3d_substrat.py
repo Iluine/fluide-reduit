@@ -326,3 +326,145 @@ def test_sortie_en_place_autorisee():
     np.testing.assert_allclose(
         cp.asnumpy(en_place), cp.asnumpy(hors_place),
         rtol=TOL_EQUIVALENCE_RTOL, atol=TOL_EQUIVALENCE_ATOL)
+
+
+# --------------------------------------------------------------------
+# 4. Le kernel PARAMÉTRÉ (prereg `c298a8b`) — celui qui portera ρ_c
+# --------------------------------------------------------------------
+
+CONFIGURATIONS = [(1, 0), (2, 0), (3, 0), (4, 0), (3, 2), (1, 2)]
+
+
+def _etat_severe_champs(n_fenetres: int, n_systemes: int, n: int,
+                        n_champs: int):
+    """L'état sévère du §1, étendu à un nombre libre de champs — chaque
+    champ supplémentaire reçoit un tirage INDÉPENDANT (deux champs
+    corrélés masqueraient un transport qui les confond)."""
+    rng = np.random.default_rng(GRAINE_SEVERE)
+    forme = (n_fenetres, n_systemes, n, n, n)
+    q = np.zeros((n_fenetres, n_systemes, n_champs, n, n, n), dtype=np.float32)
+    h = 0.6 + 1.2 * rng.random(forme)
+    sec = rng.random(forme) < 0.12
+    h = np.where(sec, 0.0, h)
+    q[:, :, 0] = h
+    for champ in (1, 2, 3):
+        q[:, :, champ] = np.where(sec, 0.0, h * (rng.random(forme) - 0.5))
+    for champ in range(4, n_champs):
+        q[:, :, champ] = np.where(sec, 0.0, h * 0.3 * rng.random(forme))
+    return q
+
+
+@sans_gpu
+@pytest.mark.parametrize("n_systemes", [1, 2])
+def test_parametre_identique_bit_pour_bit_a_1_0(n_systemes):
+    """LE VERROU D'ENTRÉE, plus fort qu'une reproduction statistique : à
+    (1 scalaire, 0 statique) le kernel paramétré doit rendre EXACTEMENT
+    la sortie du kernel de §A53. Il est le dénominateur de ρ_c ; si la
+    paramétrisation a déplacé le motif d'un ULP, le rapport ne mesure
+    plus la dimension mais la réécriture."""
+    from src.f1_gpu.substrat_fusionne_3d import pas_f_fusionne_3d
+    from src.f1_gpu.substrat_fusionne_3d_param import pas_f_fusionne_3d_param
+    q0 = _etat_severe(2, n_systemes, 16)
+    attendu, _ = pas_f_fusionne_3d(cp.asarray(q0), cp)
+    obtenu, _ = pas_f_fusionne_3d_param(cp.asarray(q0), cp)
+    assert bool((attendu == obtenu).all()), (
+        "écart bit-pour-bit "
+        f"{float(cp.abs(attendu - obtenu).max()):.3e}")
+
+
+@sans_gpu
+@pytest.mark.parametrize("ns,nst", CONFIGURATIONS)
+def test_equivalence_du_parametre(ns, nst):
+    """I-c2 : le kernel paramétré calcule ce qu'il déclare, à chaque
+    configuration. Un kernel rapide PARCE QU'IL OMET échoue ici."""
+    from src.f1_gpu.substrat_fusionne_3d_param import pas_f_fusionne_3d_param
+    from src.f1_gpu.substrat_fusionne_3d import (
+        TOL_EQUIVALENCE_ATOL, TOL_EQUIVALENCE_RTOL)
+    q0 = _etat_severe_champs(2, 1, 16, CHAMPS_PAR_SYSTEME_3D - 1 + ns + nst)
+    attendu, _ = pas_f_jetable_3d(q0.copy(), np, n_statiques=nst)
+    obtenu, _ = pas_f_fusionne_3d_param(cp.asarray(q0), cp, n_statiques=nst)
+    np.testing.assert_allclose(cp.asnumpy(obtenu), attendu,
+                               rtol=TOL_EQUIVALENCE_RTOL,
+                               atol=TOL_EQUIVALENCE_ATOL)
+
+
+@sans_gpu
+def test_les_statiques_sont_reellement_lus():
+    """LA GARDE I-c3, APPLIQUÉE AUX STATIQUES. Un champ lu dont rien ne
+    dépend est SUPPRIMÉ par nvcc, et le chronomètre mesure alors un champ
+    qui n'existe pas — résultat magnifiquement favorable, et faux. Le
+    repli à poids d'argument le rend inéliminable ; ce test le PROUVE, en
+    montrant qu'à poids non nul la sortie change."""
+    from src.f1_gpu.substrat_fusionne_3d_param import pas_f_fusionne_3d_param
+    q0 = _etat_severe_champs(1, 1, 16, 7)          # 1 scalaire + 2 statiques
+    neutre, _ = pas_f_fusionne_3d_param(cp.asarray(q0), cp, n_statiques=2,
+                                        poids_statique=0.0)
+    charge, _ = pas_f_fusionne_3d_param(cp.asarray(q0), cp, n_statiques=2,
+                                        poids_statique=1.0)
+    ecart = float(cp.abs(neutre - charge).max())
+    assert ecart > 1e-6, (
+        "poids 0 et poids 1 donnent la MÊME sortie : les lectures des "
+        "champs statiques ont été éliminées par le compilateur, et tout "
+        "coût mesuré pour eux serait fabriqué.")
+
+
+@sans_gpu
+def test_le_repli_a_poids_nul_est_exactement_neutre():
+    """L'autre moitié de la garde : le mécanisme qui rend les lectures
+    inéliminables ne doit RIEN changer au résultat. `0*x + y == y`
+    exactement pour x fini — vérifié bit pour bit contre la même
+    configuration sans statiques."""
+    from src.f1_gpu.substrat_fusionne_3d_param import pas_f_fusionne_3d_param
+    q0 = _etat_severe_champs(1, 1, 16, 7)
+    avec, _ = pas_f_fusionne_3d_param(cp.asarray(q0), cp, n_statiques=2)
+    sans, _ = pas_f_fusionne_3d_param(
+        cp.asarray(np.ascontiguousarray(q0[:, :, :5])), cp, n_statiques=0)
+    assert bool((cp.asnumpy(avec)[:, :, :5] == cp.asnumpy(sans)).all())
+
+
+@sans_gpu
+@pytest.mark.parametrize("ns,nst", CONFIGURATIONS)
+def test_aucun_debordement_du_parametre(ns, nst):
+    """Un kernel qui déborde en mémoire locale mesure son débordement,
+    pas le vocabulaire. Si ce test tombe, δ reste lisible mais DOIT être
+    prononcé avec la réserve d'implémentation nommée (I-c6)."""
+    from src.f1_gpu.substrat_fusionne_3d_param import attributs_param
+    attributs = attributs_param(cp, ns, nst)
+    assert attributs["memoire_locale_octets"] == 0, attributs
+
+
+def test_inventaire_du_parametre_croit_comme_prevu():
+    """Le témoin d'attribution : les comptes d'opérations doivent croître
+    avec les champs, et de la BONNE façon. Un scalaire advecté ajoute des
+    minmods et des upwinds, JAMAIS un solveur de Riemann — c'est
+    précisément l'argument qui fonde la borne haute de ×1,50, et il se
+    vérifie ici plutôt qu'il ne se plaide."""
+    from src.f1_gpu.substrat_fusionne_3d_param import comptes_statiques_param
+    base = comptes_statiques_param(1, 0)
+    for ns in (2, 3, 4):
+        c = comptes_statiques_param(ns, 0)
+        assert c["solveurs_hll"] == base["solveurs_hll"], (
+            "un scalaire advecté ne doit ajouter AUCUN solveur de Riemann")
+        # 9 = 3 axes × 3 `pentes_axe` par axe. Le compte posé ici l'a
+        # d'abord été à 3 : le verrou a attrapé l'arithmétique de la
+        # session avant qu'elle n'entre dans un artefact.
+        assert c["minmods"] == base["minmods"] + 9 * (ns - 1)
+        assert c["upwinds_tangentiels"] == (
+            base["upwinds_tangentiels"] + 6 * (ns - 1))
+    # Un champ STATIQUE n'ajoute ni arithmétique de flux ni pente : il
+    # n'ajoute que des OCTETS LUS.
+    statique = comptes_statiques_param(1, 2)
+    for cle in ("minmods", "solveurs_hll", "upwinds_tangentiels",
+                "lectures_voisins"):
+        assert statique[cle] == base[cle], cle
+    assert statique["octets_lus"] > base["octets_lus"]
+
+
+def test_le_kernel_de_a53_reste_intouche():
+    """Le dénominateur de ρ_c. Le paramétré vit dans un fichier neuf ;
+    celui de §A53 ne bouge pas d'un caractère."""
+    import hashlib
+
+    from src.f1_gpu.substrat_fusionne_3d import _SOURCE_3D
+    assert hashlib.sha256(_SOURCE_3D.encode("utf-8")).hexdigest() == (
+        "4431b707852394074ece9ec3ced47237e6e3198d8ae0d5fa93b285cb04798911")
