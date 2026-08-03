@@ -1,0 +1,25 @@
+{
+  "numero_staircase": 1,
+  "regime": "severe",
+  "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_1.jsonl",
+  "provenance_rendu": {
+    "chemin_rendu": "r1",
+    "sha256_arcC_rendu": "c5ac875798d7cdb770702e9d612683ab3448ec8556fa2e81b3d902d426e4fe10",
+    "ordre_etages": "A[0,1] float64 -> reechantillonnage bilineaire (espace LINEAIRE, Y=A, centres de pixels) -> encodage sRGB (float) -> quantification uint8 (unique, np.rint)",
+    "ppd": 44.01891278864095,
+    "taille_domaine_px_realisee": 81,
+    "observation_cellule_pic_csf": {
+      "ppd": 44.01891278864095,
+      "porteuse_cyc_par_domaine": 5.5,
+      "c_deg_cible": 3.0,
+      "n_cellules": 64,
+      "domaine_px_pic_csf": 81,
+      "domaine_deg_pic_csf": 1.8401181416934496,
+      "cellule_arcmin_pic_csf": 1.725110757837609,
+      "seuil_acuite_arcmin": 1.0,
+      "domaine_deg_max_plafond": 1.0666666666666667,
+      "ratio_cellule_sur_seuil": 1.725110757837609
+    }
+  },
+  "sha256_log": "021bf55894daab1b473f792b915e3d32eff9dd7126a14a0800dba4e1674dca20"
+}

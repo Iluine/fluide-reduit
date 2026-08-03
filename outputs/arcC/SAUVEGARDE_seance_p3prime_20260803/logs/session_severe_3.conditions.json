@@ -1,0 +1,25 @@
+{
+  "numero_staircase": 3,
+  "regime": "severe",
+  "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_3.jsonl",
+  "provenance_rendu": {
+    "chemin_rendu": "viridis",
+    "sha256_arcC_rendu": null,
+    "ordre_etages": "imshow(cmap=viridis, vmin=0, vmax=1) -- pseudo-couleur, reechantillonnage PAR DEFAUT d'imshow (non grave), aucun EOTF",
+    "ppd": 44.01891278864095,
+    "taille_domaine_px_realisee": 81,
+    "observation_cellule_pic_csf": {
+      "ppd": 44.01891278864095,
+      "porteuse_cyc_par_domaine": 5.5,
+      "c_deg_cible": 3.0,
+      "n_cellules": 64,
+      "domaine_px_pic_csf": 81,
+      "domaine_deg_pic_csf": 1.8401181416934496,
+      "cellule_arcmin_pic_csf": 1.725110757837609,
+      "seuil_acuite_arcmin": 1.0,
+      "domaine_deg_max_plafond": 1.0666666666666667,
+      "ratio_cellule_sur_seuil": 1.725110757837609
+    }
+  },
+  "sha256_log": "76c57b7fd3e99490e08180b970b0da61ff603201f32d780da2d01cb9dfb78884"
+}

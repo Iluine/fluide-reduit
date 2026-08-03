@@ -1,0 +1,503 @@
+{
+  "sujet": "humain",
+  "commit_harnais": "75b22890e9cc2f3f31124664023a07c13a01ec10",
+  "date_session": "2026-08-03T10:06:38.558371",
+  "parametres_graves": {
+    "ancre_budget": 32,
+    "haut_jnd_plausible": 0.08,
+    "seuil_exclusion": 0.16,
+    "n_staircases": 6,
+    "budget_catch": 32,
+    "geometrie": "pic-csf",
+    "catch_sources_fortes": false,
+    "fraction_sources_fortes": null
+  },
+  "config_affichage": {
+    "geometrie": "pic-csf",
+    "ppd": 44.01891278864095,
+    "taille_domaine_px": 81,
+    "provenance_rendu": {
+      "chemin_rendu": "r1",
+      "sha256_arcC_rendu": "c5ac875798d7cdb770702e9d612683ab3448ec8556fa2e81b3d902d426e4fe10",
+      "ordre_etages": "A[0,1] float64 -> reechantillonnage bilineaire (espace LINEAIRE, Y=A, centres de pixels) -> encodage sRGB (float) -> quantification uint8 (unique, np.rint)",
+      "ppd": 44.01891278864095,
+      "taille_domaine_px_realisee": 81,
+      "observation_cellule_pic_csf": {
+        "ppd": 44.01891278864095,
+        "porteuse_cyc_par_domaine": 5.5,
+        "c_deg_cible": 3.0,
+        "n_cellules": 64,
+        "domaine_px_pic_csf": 81,
+        "domaine_deg_pic_csf": 1.8401181416934496,
+        "cellule_arcmin_pic_csf": 1.725110757837609,
+        "seuil_acuite_arcmin": 1.0,
+        "domaine_deg_max_plafond": 1.0666666666666667,
+        "ratio_cellule_sur_seuil": 1.725110757837609
+      }
+    },
+    "chemins_staircases": [
+      "viridis",
+      "r1",
+      "r1",
+      "viridis",
+      "viridis",
+      "r1"
+    ],
+    "regimes_lances": [
+      "severe"
+    ]
+  },
+  "conditions_validite": {
+    "luminosite": "80",
+    "conditions": "repère de distance + éclairage ambiant + 2026-08-03 10:06",
+    "calibration": {
+      "ppd": 44.01891278864095,
+      "long_ref_px": 1920.0,
+      "long_ref_mm": 590.0,
+      "distance_mm": 775.0
+    }
+  },
+  "exclusions": {
+    "entrees": [
+      {
+        "seed": 101,
+        "L": 10,
+        "delta_chi_ancre": 0.2547455348961507,
+        "exclu": false
+      },
+      {
+        "seed": 101,
+        "L": 20,
+        "delta_chi_ancre": 0.25730568408310384,
+        "exclu": false
+      },
+      {
+        "seed": 101,
+        "L": 40,
+        "delta_chi_ancre": 0.47709321888183487,
+        "exclu": false
+      },
+      {
+        "seed": 101,
+        "L": 80,
+        "delta_chi_ancre": 0.47729260251257255,
+        "exclu": false
+      },
+      {
+        "seed": 102,
+        "L": 10,
+        "delta_chi_ancre": 0.27108608026719017,
+        "exclu": false
+      },
+      {
+        "seed": 102,
+        "L": 20,
+        "delta_chi_ancre": 0.5249245921050449,
+        "exclu": false
+      },
+      {
+        "seed": 102,
+        "L": 40,
+        "delta_chi_ancre": 0.4654030184534653,
+        "exclu": false
+      },
+      {
+        "seed": 102,
+        "L": 80,
+        "delta_chi_ancre": 0.4225200503230029,
+        "exclu": false
+      },
+      {
+        "seed": 103,
+        "L": 10,
+        "delta_chi_ancre": 0.15511273731102393,
+        "exclu": true
+      },
+      {
+        "seed": 103,
+        "L": 20,
+        "delta_chi_ancre": 0.5099406434095479,
+        "exclu": false
+      },
+      {
+        "seed": 103,
+        "L": 40,
+        "delta_chi_ancre": 0.6225437691586689,
+        "exclu": false
+      },
+      {
+        "seed": 103,
+        "L": 80,
+        "delta_chi_ancre": 0.51118665971454,
+        "exclu": false
+      },
+      {
+        "seed": 104,
+        "L": 10,
+        "delta_chi_ancre": 0.30334147401005807,
+        "exclu": false
+      },
+      {
+        "seed": 104,
+        "L": 20,
+        "delta_chi_ancre": 0.28498065144369533,
+        "exclu": false
+      },
+      {
+        "seed": 104,
+        "L": 40,
+        "delta_chi_ancre": 0.6438646710931325,
+        "exclu": false
+      },
+      {
+        "seed": 104,
+        "L": 80,
+        "delta_chi_ancre": 0.2655754886594677,
+        "exclu": false
+      },
+      {
+        "seed": 105,
+        "L": 10,
+        "delta_chi_ancre": 0.2858252415415674,
+        "exclu": false
+      },
+      {
+        "seed": 105,
+        "L": 20,
+        "delta_chi_ancre": 0.4998581934611843,
+        "exclu": false
+      },
+      {
+        "seed": 105,
+        "L": 40,
+        "delta_chi_ancre": 0.5369995240515106,
+        "exclu": false
+      },
+      {
+        "seed": 105,
+        "L": 80,
+        "delta_chi_ancre": 0.6356332278297562,
+        "exclu": false
+      }
+    ],
+    "sources_exclues": [
+      [
+        103,
+        10
+      ]
+    ],
+    "sources_incluses": [
+      [
+        101,
+        10
+      ],
+      [
+        101,
+        20
+      ],
+      [
+        101,
+        40
+      ],
+      [
+        101,
+        80
+      ],
+      [
+        102,
+        10
+      ],
+      [
+        102,
+        20
+      ],
+      [
+        102,
+        40
+      ],
+      [
+        102,
+        80
+      ],
+      [
+        103,
+        20
+      ],
+      [
+        103,
+        40
+      ],
+      [
+        103,
+        80
+      ],
+      [
+        104,
+        10
+      ],
+      [
+        104,
+        20
+      ],
+      [
+        104,
+        40
+      ],
+      [
+        104,
+        80
+      ],
+      [
+        105,
+        10
+      ],
+      [
+        105,
+        20
+      ],
+      [
+        105,
+        40
+      ],
+      [
+        105,
+        80
+      ]
+    ],
+    "n_exclues": 1,
+    "n_sources": 20,
+    "budget": 32,
+    "seuil_exclusion": 0.16,
+    "n_exclusions_stop": 10,
+    "statut": "CONTINUE"
+  },
+  "base_seed": 20260729,
+  "protocole": "p3prime",
+  "echauffement": {
+    "severe": {
+      "n_essais": 15,
+      "niveau_delta_chi": 0.14668131914771332,
+      "source_du_niveau": "2 x jnd_sev du pin gravé (outputs/arcC/pins_spatial.json, regimes.severe.jnd, pleine précision) -- D-8-2 GRAVÉ prereg [v2.3] §A42-COMPLÉMENT-2, convention >= 2x ; égalité 2 x PIN_JND_SEV verrouillée par test",
+      "chemins_echauffement": [
+        "viridis",
+        "r1",
+        "viridis",
+        "r1",
+        "viridis",
+        "r1",
+        "viridis",
+        "r1",
+        "viridis",
+        "r1",
+        "viridis",
+        "r1",
+        "viridis",
+        "r1",
+        "viridis"
+      ],
+      "source_des_chemins": "D-8-1 GRAVÉ prereg [v2.3] §A42-COMPLÉMENT-2 : ENTRELACÉ V,R,V,…,V — commence et finit par viridis",
+      "dose_par_bras": {
+        "viridis": 8,
+        "r1": 7
+      },
+      "indice_seed_reserve": 99,
+      "seed_roving": 21044711,
+      "seed_sujet": 21044713,
+      "horodatage_debut": "2026-08-03T10:06:38.683588",
+      "horodatage_fin": "2026-08-03T10:07:21.970680",
+      "duree_s": 43.287092,
+      "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_echauffement.NON-ANALYSE.jsonl",
+      "marque": "NON-ANALYSE (mission 8a.7) : aucune réponse loggée, aucun outil de lecture ne l'ouvre"
+    }
+  },
+  "statut_global": "CONTINUE",
+  "regimes": {
+    "severe": {
+      "sessions": [
+        {
+          "numero_staircase": 0,
+          "regime": "severe",
+          "seed_roving": 20260730,
+          "seed_catch": 20260731,
+          "seed_sujet": 20260732,
+          "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_0.jsonl",
+          "chemin_rendu": "viridis",
+          "n_essais": 21,
+          "n_reversals": 8,
+          "complet": true,
+          "validite": {
+            "n_catch": 2,
+            "n_catch_ok": 2,
+            "taux_reussite_catch": 1.0,
+            "seuil_reussite_catch": 0.9,
+            "valide": true
+          },
+          "horodatage_debut": "2026-08-03T10:07:21.998630",
+          "horodatage_fin": "2026-08-03T10:09:01.071843",
+          "duree_s": 99.073213,
+          "conditions_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_0.conditions.json"
+        },
+        {
+          "numero_staircase": 1,
+          "regime": "severe",
+          "seed_roving": 20268649,
+          "seed_catch": 20268650,
+          "seed_sujet": 20268651,
+          "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_1.jsonl",
+          "chemin_rendu": "r1",
+          "n_essais": 30,
+          "n_reversals": 8,
+          "complet": true,
+          "validite": {
+            "n_catch": 3,
+            "n_catch_ok": 3,
+            "taux_reussite_catch": 1.0,
+            "seuil_reussite_catch": 0.9,
+            "valide": true
+          },
+          "horodatage_debut": "2026-08-03T10:09:01.100160",
+          "horodatage_fin": "2026-08-03T10:10:37.471858",
+          "duree_s": 96.371698,
+          "conditions_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_1.conditions.json"
+        },
+        {
+          "numero_staircase": 2,
+          "regime": "severe",
+          "seed_roving": 20276568,
+          "seed_catch": 20276569,
+          "seed_sujet": 20276570,
+          "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_2.jsonl",
+          "chemin_rendu": "r1",
+          "n_essais": 38,
+          "n_reversals": 8,
+          "complet": true,
+          "validite": {
+            "n_catch": 4,
+            "n_catch_ok": 4,
+            "taux_reussite_catch": 1.0,
+            "seuil_reussite_catch": 0.9,
+            "valide": true
+          },
+          "horodatage_debut": "2026-08-03T10:10:37.495592",
+          "horodatage_fin": "2026-08-03T10:12:26.772058",
+          "duree_s": 109.276466,
+          "conditions_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_2.conditions.json"
+        },
+        {
+          "numero_staircase": 3,
+          "regime": "severe",
+          "seed_roving": 20284487,
+          "seed_catch": 20284488,
+          "seed_sujet": 20284489,
+          "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_3.jsonl",
+          "chemin_rendu": "viridis",
+          "n_essais": 19,
+          "n_reversals": 8,
+          "complet": true,
+          "validite": {
+            "n_catch": 2,
+            "n_catch_ok": 2,
+            "taux_reussite_catch": 1.0,
+            "seuil_reussite_catch": 0.9,
+            "valide": true
+          },
+          "horodatage_debut": "2026-08-03T10:12:26.797595",
+          "horodatage_fin": "2026-08-03T10:13:58.821124",
+          "duree_s": 92.023529,
+          "conditions_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_3.conditions.json"
+        },
+        {
+          "numero_staircase": 4,
+          "regime": "severe",
+          "seed_roving": 20292406,
+          "seed_catch": 20292407,
+          "seed_sujet": 20292408,
+          "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_4.jsonl",
+          "chemin_rendu": "viridis",
+          "n_essais": 50,
+          "n_reversals": 8,
+          "complet": true,
+          "validite": {
+            "n_catch": 5,
+            "n_catch_ok": 5,
+            "taux_reussite_catch": 1.0,
+            "seuil_reussite_catch": 0.9,
+            "valide": true
+          },
+          "horodatage_debut": "2026-08-03T10:13:58.845744",
+          "horodatage_fin": "2026-08-03T10:26:19.872057",
+          "duree_s": 741.026313,
+          "conditions_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_4.conditions.json"
+        },
+        {
+          "numero_staircase": 5,
+          "regime": "severe",
+          "seed_roving": 20300325,
+          "seed_catch": 20300326,
+          "seed_sujet": 20300327,
+          "log_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_5.jsonl",
+          "chemin_rendu": "r1",
+          "n_essais": 37,
+          "n_reversals": 8,
+          "complet": true,
+          "validite": {
+            "n_catch": 4,
+            "n_catch_ok": 4,
+            "taux_reussite_catch": 1.0,
+            "seuil_reussite_catch": 0.9,
+            "valide": true
+          },
+          "horodatage_debut": "2026-08-03T10:26:19.896228",
+          "horodatage_fin": "2026-08-03T10:27:55.772612",
+          "duree_s": 95.876384,
+          "conditions_path": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/session_severe_5.conditions.json"
+        }
+      ],
+      "statut_orchestration": "CONTINUE",
+      "n_staircases_lancees": 6,
+      "pauses_inter_staircases": [
+        {
+          "entre": [
+            0,
+            1
+          ],
+          "duree_s": 0.028317
+        },
+        {
+          "entre": [
+            1,
+            2
+          ],
+          "duree_s": 0.023734
+        },
+        {
+          "entre": [
+            2,
+            3
+          ],
+          "duree_s": 0.025537
+        },
+        {
+          "entre": [
+            3,
+            4
+          ],
+          "duree_s": 0.02462
+        },
+        {
+          "entre": [
+            4,
+            5
+          ],
+          "duree_s": 0.024171
+        }
+      ],
+      "note_pauses": "SURFACÉES, jamais jugées (mission 8a.6) : pauses LIBRES au prereg, aucune borne, aucune garde n'en dépend."
+    }
+  },
+  "scellement_seuils": {
+    "chemin": "/home/iluin/project/python/pocPhysicator/outputs/arcC/logs/seuils_scelles_p3prime.json",
+    "sha256": "d714661c250341622414923ec27a16edd1830febcb081aedcee55bd77e5432f7",
+    "nature": "PROCEDURAL, pas cryptographique (mission 8a.5) : protege du regard ACCIDENTEL, rend l'ALTERATION detectable ; la consultation ne laisse aucune trace -- si le fichier est ouvert avant le prononce, la non-cecite se CONSIGNE au verdict."
+  }
+}
