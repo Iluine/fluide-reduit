@@ -207,6 +207,140 @@ def gather_chemin_de_cout(pyramide, cote_px: int, *,
     return ecran
 
 
+# ----- variante KERNEL UNIQUE ----------------------------------------------
+#
+# POURQUOI ELLE EXISTE. La première mesure (2026-08-03, artefact
+# `claude/lectures/tranche-cout-rendu-2026-08-03.json`) a donné 20 ms pour un
+# écran 1920², contre 0,183 ms de bande passante incompressible : **ratio 109×**.
+# Le coût mesuré était celui de la boucle Python sur 11 slots et de l'indexation
+# avancée, pas celui de la structure creuse. La garde 1 de §A48 impose un
+# plancher sur l'ARITHMÉTIQUE ; elle ne dit rien de l'implémentation, et
+# l'implémentation dominait d'un facteur cent. La lecture est restée
+# INDÉTERMINÉE — un chiffre qui mesure la lenteur du code de session ne peut
+# prononcer aucune branche.
+#
+# CE QUI CHANGE, ET CE QUI NE CHANGE PAS. Un thread par pixel, un seul kernel,
+# zéro copie (on passe les pointeurs device des fenêtres, jamais leur contenu).
+# L'ARITHMÉTIQUE EST LA MÊME : division entière, plus proche voisin, aucune
+# interpolation. Le parcours va du FIN vers le GROSSIER avec arrêt au premier
+# slot couvrant — strictement équivalent à l'insertion dure grossier→fin, et une
+# seule écriture par pixel au lieu de plusieurs. L'équivalence n'est pas
+# supposée : `tests/test_chemin_de_cout.py` compare les deux implémentations
+# valeur par valeur.
+
+_SOURCE_KERNEL = r"""
+extern "C" __global__
+void gather_plancher(float* ecran, const int cote, const long long origine,
+                     const unsigned long long* ptrs, const int* oy,
+                     const int* ox, const int* facteur, const int n_slots,
+                     const int n_fov)
+{
+    const long long idx = (long long)blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx >= (long long)cote * cote) return;
+
+    const long long fy = origine + idx / cote;   // coordonnées NIVEAU FIN
+    const long long fx = origine + idx % cote;
+    if (fy < 0 || fx < 0) { ecran[idx] = nanf(""); return; }
+
+    // slots triés du FIN au GROSSIER : le premier qui couvre gagne.
+    for (int s = 0; s < n_slots; ++s) {
+        const long long jy = fy / facteur[s] - oy[s];   // plus proche voisin
+        const long long jx = fx / facteur[s] - ox[s];
+        if (jy >= 0 && jy < n_fov && jx >= 0 && jx < n_fov) {
+            ecran[idx] = ((const float*)ptrs[s])[jy * n_fov + jx];
+            return;
+        }
+    }
+    ecran[idx] = nanf("");   // fail-loud : aucun slot ne couvre ce pixel
+}
+"""
+
+
+class GatherKernel:
+    """Gather du chemin-de-coût en UN kernel. Mêmes gardes que la voie Python.
+
+    Les métadonnées de slots (pointeurs, origines, facteurs) sont mises en cache
+    et reconstruites uniquement quand `centre_fin` bouge — ce qu'un moteur ferait
+    aussi. Dans une mesure à fovéa immobile leur coût est donc amorti à zéro, et
+    ce fait doit être DÉCLARÉ avec le chiffre : il ne s'annule pas en régime
+    mobile, où la fovéa se déplace à chaque frame."""
+
+    def __init__(self, pyramide):
+        _verrouiller_appelant()          # garde 2, à la construction
+        self.pyramide = pyramide
+        self._cp = sys.modules["cupy"]
+        self._kernel = self._cp.RawModule(
+            code=_SOURCE_KERNEL).get_function("gather_plancher")
+        self._centre_cache: int | None = None
+        self._meta: tuple | None = None
+
+    def _metadonnees(self, indice_systeme: int, indice_champ: int):
+        """Tableaux device décrivant les slots, triés du FIN au GROSSIER.
+
+        ZÉRO COPIE des données : on ne transmet que `.data.ptr`, l'adresse
+        device de chaque bloc `(n_fov, n_fov)` — contigu par construction, les
+        deux dernières dimensions d'un tableau C-contigu l'étant toujours."""
+        cp = self._cp
+        geo = self.pyramide.geo
+        centre = self.pyramide.centre_fin
+        if self._centre_cache == centre and self._meta is not None:
+            return self._meta
+
+        ptrs, oys, oxs, facteurs = [], [], [], []
+        for j in sorted(geo.niveaux_gpu, reverse=True):   # FIN -> GROSSIER
+            facteur = 2 ** (geo.niveau_fin - j)
+            fenetres = self.pyramide.fenetres[j]
+            for indice_slot, (oy, ox) in enumerate(geo.origines(j, centre)):
+                bloc = fenetres[indice_slot, indice_systeme, indice_champ]
+                ptrs.append(bloc.data.ptr)
+                oys.append(oy)
+                oxs.append(ox)
+                facteurs.append(facteur)
+
+        self._meta = (cp.asarray(ptrs, dtype=cp.uint64),
+                      cp.asarray(oys, dtype=cp.int32),
+                      cp.asarray(oxs, dtype=cp.int32),
+                      cp.asarray(facteurs, dtype=cp.int32),
+                      len(ptrs))
+        self._centre_cache = centre
+        return self._meta
+
+    def gather(self, cote_px: int, *, indice_systeme: int = 0,
+               indice_champ: int = 3, controler_couverture: bool = True):
+        """Même contrat que `gather_chemin_de_cout`, en un kernel.
+
+        `controler_couverture=False` retire UNIQUEMENT le contrôle fail-loud —
+        jamais l'écriture des NaN, qui reste faite par le kernel. Le paramètre
+        existe pour mesurer le contrôle séparément (il force une synchronisation
+        device->hôte), pas pour s'en passer en usage réel."""
+        _verrouiller_appelant()          # garde 2, à chaque appel
+        cp = self._cp
+        if cote_px <= 0:
+            raise ValueError(f"GatherKernel.gather : cote_px={cote_px} <= 0.")
+
+        ptrs, oys, oxs, facteurs, n_slots = self._metadonnees(
+            indice_systeme, indice_champ)
+        origine = self.pyramide.centre_fin - cote_px // 2
+        ecran = cp.empty((cote_px, cote_px), dtype=cp.float32)
+
+        total = cote_px * cote_px
+        fils = 256
+        self._kernel(((total + fils - 1) // fils,), (fils,),
+                     (ecran, np.int32(cote_px), np.int64(origine),
+                      ptrs, oys, oxs, facteurs,
+                      np.int32(n_slots), np.int32(self.pyramide.geo.n_fov)))
+
+        if controler_couverture:
+            manquants = int(cp.isnan(ecran).sum())
+            if manquants:
+                raise RuntimeError(
+                    f"gather_chemin-de-coût (kernel) : {manquants} pixel(s) sur "
+                    f"{total} ne sont couverts par AUCUNE fenêtre active. Trou "
+                    "de couverture structurel — un remplissage par défaut "
+                    "fausserait le coût mesuré.")
+        return ecran
+
+
 def albedo_ecran(ecran_s: np.ndarray, s_half: float) -> np.ndarray:
     """Readout albédo appliqué APRÈS le gather : `A = 1 − exp(−s / s_half)`.
 

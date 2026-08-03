@@ -1,0 +1,217 @@
+{
+  "protocole": "claude/prereg-tranche-cout-rendu-2026-08-03.md",
+  "machine": {
+    "gpu": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+    "vram_totale_mo": 3780.75,
+    "vram_libre_avant_mo": 3681.625,
+    "cupy": "14.1.1",
+    "python": "3.12.3"
+  },
+  "configuration": {
+    "quadruplet": "V4",
+    "n_fov": 512,
+    "n_niv": 10,
+    "n0": 256,
+    "slots": [
+      {
+        "niveau": 9,
+        "c": 8,
+        "role": "fovea"
+      },
+      {
+        "niveau": 8,
+        "c": 8,
+        "role": "fovea"
+      },
+      {
+        "niveau": 1,
+        "c": 4,
+        "role": "fovea"
+      },
+      {
+        "niveau": 2,
+        "c": 4,
+        "role": "fovea"
+      },
+      {
+        "niveau": 3,
+        "c": 4,
+        "role": "fovea"
+      },
+      {
+        "niveau": 4,
+        "c": 4,
+        "role": "fovea"
+      },
+      {
+        "niveau": 5,
+        "c": 4,
+        "role": "fovea"
+      },
+      {
+        "niveau": 6,
+        "c": 4,
+        "role": "fovea"
+      },
+      {
+        "niveau": 7,
+        "c": 4,
+        "role": "fovea"
+      },
+      {
+        "niveau": 9,
+        "c": 8,
+        "role": "energie"
+      },
+      {
+        "niveau": 9,
+        "c": 8,
+        "role": "energie"
+      }
+    ],
+    "placement_energie": "2 au niveau le plus fin [INFÉRENCE DE SESSION, préreg §2]"
+  },
+  "m1_residence": {
+    "octets_etat_mo": 120.0,
+    "delta_memgetinfo_mo": 120.0,
+    "ecart_mempool_mo": 0.0,
+    "cellules_actives_gpu": 2883584,
+    "n_slots_total": 11
+  },
+  "m2_gather": {
+    "512": {
+      "n": 300,
+      "mediane_ms": 2.7072479724884033,
+      "p99_ms": 4.252586469650268,
+      "min_ms": 2.546816110610962,
+      "max_ms": 5.147007942199707,
+      "cote_px": 512,
+      "pixels": 262144,
+      "ns_par_pixel_median": 10.327331438020337
+    },
+    "1024": {
+      "n": 300,
+      "mediane_ms": 7.586607933044434,
+      "p99_ms": 8.04095845222473,
+      "min_ms": 7.496992111206055,
+      "max_ms": 8.340415954589844,
+      "cote_px": 1024,
+      "pixels": 1048576,
+      "ns_par_pixel_median": 7.2351531343883835
+    },
+    "1440": {
+      "n": 300,
+      "mediane_ms": 12.47438383102417,
+      "p99_ms": 12.978642044067383,
+      "min_ms": 12.34768009185791,
+      "max_ms": 13.029248237609863,
+      "cote_px": 1440,
+      "pixels": 2073600,
+      "ns_par_pixel_median": 6.01581010369607
+    },
+    "1920": {
+      "n": 300,
+      "mediane_ms": 20.120095252990723,
+      "p99_ms": 20.65436891555786,
+      "min_ms": 19.97769546508789,
+      "max_ms": 20.891712188720703,
+      "cote_px": 1920,
+      "pixels": 3686400,
+      "ns_par_pixel_median": 5.457925144582987
+    }
+  },
+  "m2_loi": {
+    "ns_par_pixel": 5.01455441024912,
+    "cout_fixe_ms": 1.8579562074777678,
+    "residu_max_ms": 0.4705103202852836,
+    "deduction_1920x1080_ms": 12.256136232570345
+  },
+  "m2b_gather_kernel": {
+    "512": {
+      "n": 300,
+      "mediane_ms": 0.05318399891257286,
+      "p99_ms": 0.07366912208497524,
+      "min_ms": 0.046431999653577805,
+      "max_ms": 0.07891199737787247,
+      "cote_px": 512,
+      "pixels": 262144,
+      "ns_par_pixel_median": 0.20288085522679467
+    },
+    "1024": {
+      "n": 300,
+      "mediane_ms": 0.19193600118160248,
+      "p99_ms": 0.20870623484253883,
+      "min_ms": 0.1796479970216751,
+      "max_ms": 0.24271999299526215,
+      "cote_px": 1024,
+      "pixels": 1048576,
+      "ns_par_pixel_median": 0.18304443472061394
+    },
+    "1440": {
+      "n": 300,
+      "mediane_ms": 0.4509440064430237,
+      "p99_ms": 0.4636441734433174,
+      "min_ms": 0.42399999499320984,
+      "max_ms": 0.4735040068626404,
+      "cote_px": 1440,
+      "pixels": 2073600,
+      "ns_par_pixel_median": 0.2174691389096372
+    },
+    "1920": {
+      "n": 300,
+      "mediane_ms": 0.8203200101852417,
+      "p99_ms": 0.8427385836839676,
+      "min_ms": 0.8071359992027283,
+      "max_ms": 0.8586239814758301,
+      "cote_px": 1920,
+      "pixels": 3686400,
+      "ns_par_pixel_median": 0.22252604442959031
+    }
+  },
+  "m2b_loi": {
+    "ns_par_pixel": 0.22775807468800396,
+    "cout_fixe_ms": -0.023507389283880457,
+    "residu_max_ms": 0.023378260458565503,
+    "deduction_1920x1080_ms": 0.44877175438916456
+  },
+  "m2b_note": "Arithmétique IDENTIQUE à M-2, équivalence testée bit à bit. Métadonnées de slots en CACHE : coût amorti à zéro à fovéa immobile, PAS en régime mobile. M-2b est donc un plancher de plus.",
+  "ratio_m2b_sur_m5": 4.477729271281168,
+  "m3_verrou": {
+    "n": 300,
+    "mediane_ms": 0.0016959999920800328,
+    "p99_ms": 0.001888000057078898,
+    "min_ms": 0.0016319999704137444,
+    "max_ms": 0.005247999913990498
+  },
+  "m4_controle_couverture": {
+    "n": 300,
+    "mediane_ms": 0.18724799901247025,
+    "p99_ms": 0.20356159284710884,
+    "min_ms": 0.18012799322605133,
+    "max_ms": 0.213919997215271,
+    "cote_px": 1920
+  },
+  "m4_note": "Poste NON isolé par le pré-enregistrement, apparu à l'écriture du driver : le contrôle fail-loud force une synchronisation device->hôte par appel, donc M-2 l'inclut. Isolé et déclaré ici, jamais retiré du gather.",
+  "part_verrou_pct_m2": 0.008429383513121953,
+  "part_verrou_pct_m2b": 0.20674858238518992,
+  "part_controle_pct_m2": 0.9306516527780206,
+  "part_controle_pct_m2b": 22.826213756529793,
+  "m5_temoin_bande_passante": {
+    "n": 300,
+    "mediane_ms": 0.18320000171661377,
+    "p99_ms": 0.1874006363749504,
+    "min_ms": 0.1802240014076233,
+    "max_ms": 0.1945600062608719,
+    "cote_px": 1920
+  },
+  "m5_note": "TÉMOIN D'IMPLÉMENTATION, non prévu au préreg. La garde 1 de §A48 impose un plancher sur l'ARITHMÉTIQUE, pas sur l'implémentation : ce gather boucle en Python sur 11 slots. Le coût structurel est ENCADRÉ entre M-5 (bande passante incompressible) et M-2 (cette implémentation). Un ratio élevé mesure la lenteur du code de session, pas la structure.",
+  "ratio_m2_sur_m5": 109.8258464217367,
+  "temoin_degenerescence": {
+    "ns_par_pixel_temoin_512": 10.327331438020337,
+    "ns_par_pixel_grand": 5.457925144582987,
+    "ecart_relatif": 0.8921716887726568,
+    "se_distingue": true
+  },
+  "violations_garde_2": [],
+  "portee": "LE GATHER-PLANCHER coûte ces chiffres — JAMAIS « le rendu coûte X » (§A48 garde 4). Plancher de la classe gather : l'opérateur de couture réel ajoutera de l'arithmétique. La dette « mesurable quand le compositeur existera » reste OUVERTE."
+}

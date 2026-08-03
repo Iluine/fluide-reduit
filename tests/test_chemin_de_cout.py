@@ -246,6 +246,81 @@ def test_cote_px_invalide() -> None:
         gather_chemin_de_cout(pyr, 0)
 
 
+# ----- KERNEL UNIQUE : équivalence stricte ----------------------------------
+
+def _cupy_ou_skip():
+    from src.f1_gpu.backend import cupy_disponible
+    if not cupy_disponible():
+        pytest.skip("chemin GPU indisponible — l'équivalence kernel/Python ne "
+                    "peut pas être vérifiée ici (jamais supposée).")
+    import cupy
+    return cupy
+
+
+@pytest.mark.parametrize("cote_px", [16, 24, 32])
+def test_kernel_strictement_equivalent_a_la_voie_python(cote_px) -> None:
+    """LE test du kernel : mêmes valeurs, BIT À BIT.
+
+    Le kernel parcourt du FIN vers le GROSSIER avec arrêt au premier slot
+    couvrant ; la voie Python insère du GROSSIER vers le FIN avec écrasement.
+    Les deux sont censés être équivalents — c'est un raisonnement, donc il se
+    teste. Si le kernel divergeait, on aurait changé l'ARITHMÉTIQUE en croyant
+    ne changer que l'implémentation, et le chiffre cesserait d'être comparable
+    au précédent."""
+    cp = _cupy_ou_skip()
+    from src.f1_gpu.chemin_de_cout import GatherKernel
+
+    geo = GeometriePyramide(n_fov=N_FOV, n_niv=N_NIV, n0=N0, slots=SLOTS)
+    transferts = TransfertComptable(cp)
+    pyr = PyramideFovea(cp, geo, transferts, eps_detail=1e30)
+    transferts.frame_suivante()
+
+    rng = np.random.default_rng(20260803)
+    for j in geo.niveaux_gpu:
+        forme = pyr.fenetres[j][:, :, 3, :, :].shape
+        pyr.fenetres[j][:, :, 3, :, :] = cp.asarray(
+            rng.random(forme).astype(np.float32))
+
+    par_python = cp.asnumpy(gather_chemin_de_cout(pyr, cote_px))
+    par_kernel = cp.asnumpy(GatherKernel(pyr).gather(cote_px))
+
+    np.testing.assert_array_equal(par_kernel, par_python)
+
+
+def test_kernel_fail_loud_sur_trou_de_couverture() -> None:
+    """Le kernel écrit des NaN pour un pixel non couvert et le contrôle lève —
+    même comportement que la voie Python, pas un remplissage silencieux."""
+    cp = _cupy_ou_skip()
+    from src.f1_gpu.chemin_de_cout import GatherKernel
+
+    geo = GeometriePyramide(n_fov=N_FOV, n_niv=N_NIV, n0=N0, slots=SLOTS)
+    transferts = TransfertComptable(cp)
+    pyr = PyramideFovea(cp, geo, transferts, eps_detail=1e30)
+    transferts.frame_suivante()
+
+    with pytest.raises(RuntimeError, match="AUCUNE fenêtre active"):
+        GatherKernel(pyr).gather(4096)
+
+
+def test_kernel_verrouille_aussi() -> None:
+    """La garde 2 s'applique au kernel, à la construction ET à l'appel : une
+    seconde voie d'accès serait une porte dérobée sur la serrure."""
+    cp = _cupy_ou_skip()
+    from src.f1_gpu.chemin_de_cout import GatherKernel
+
+    geo = GeometriePyramide(n_fov=N_FOV, n_niv=N_NIV, n0=N0, slots=SLOTS)
+    transferts = TransfertComptable(cp)
+    pyr = PyramideFovea(cp, geo, transferts, eps_detail=1e30)
+    transferts.frame_suivante()
+
+    with pytest.raises(CheminDeCoutInterdit):
+        _appeler_depuis("src.arcC_abx", GatherKernel, pyr)
+
+    kernel = GatherKernel(pyr)  # construit hors chemin perceptuel...
+    with pytest.raises(CheminDeCoutInterdit):  # ...mais l'appel reste gardé
+        _appeler_depuis("src.arcC_abx", kernel.gather, 32)
+
+
 # ----- readout -------------------------------------------------------------
 
 def test_albedo_ecran_est_la_formule_de_la_maison() -> None:
