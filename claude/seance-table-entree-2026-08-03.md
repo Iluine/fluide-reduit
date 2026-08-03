@@ -45,7 +45,9 @@ mécaniquement. Justifications (session 2026-08-03, vérifiées sur artefacts) :
   pathologie : interdiction trop large ou trou) :
   - **(i) déterminisme d'ordre** — contrainte sur les *kernels du chemin de commit*,
     orthogonale à b. Déjà satisfaite par l'architecture : la re-dérivation est
-    « CPU f64 pur, hors-frame par construction » `[GRAVÉ : SPEC-FOVEA-Z.md:288]`.
+    « CPU f64 pur, hors-frame par construction » `[GRAVÉ : SPEC-FOVEA-Z.md:302]`
+    *(numéro rafraîchi le 2026-08-03 — §A50 ; l'ancre était `:288`, exacte à 17:28,
+    périmée à 18:25 par l'insertion de `51b9eef`. Le texte cité fait foi.)*
     Elle vit à la section commit, pas dans la table.
   - **(ii) précision d'accumulation** — contrainte sur le *bilan* : f16 est déterministe,
     son mal propre est la dérive d'accumulation. Réparable sans toucher au stockage
@@ -91,7 +93,8 @@ futur chemin moteur naîtra sans elle.
 
 Appuis de contrat : É1 contraint la **reconstruction** (« préservés EXACTEMENT —
 propriété de projection du quadtree » `[GRAVÉ : PREREGISTRATION.md:3258]`), qui est CPU
-f64 de bout en bout `[GRAVÉ : SPEC:288]` ; « le VIVANT est contracté au TÉMOIGNAGE »
+f64 de bout en bout `[GRAVÉ : SPEC:302 « CPU f64 pur, hors-frame » — §A50]` ; « le
+VIVANT est contracté au TÉMOIGNAGE »
 `[GRAVÉ : §A36 P0-b clause 2, :6494]` — un vivant f16 ne trahit aucun référent qu'il n'a
 plus. Ce que f16 peut abîmer : la dérive **visible** du bilan vivant (une rivière qui
 maigrit) — faute de plausibilité, jugée au perceptuel, pas par É1.
@@ -265,7 +268,9 @@ entités (7) → redépôt eulérien (§6). Une physique peut habiter une chaîn
     multi-PC est le seul modèle multi compatible avec la table §4.
   - **É3 inter-machines acquiert un consommateur.** Amendement 2 : « É3 est
     MACHINE-LOCALE… inter-machines, sous-JND — NON MESURÉ », falsificateur marqué
-    GRATUIT `[GRAVÉ : SPEC:292]`. Deux fovéas chevauchantes sur deux machines = l'écart
+    GRATUIT `[GRAVÉ : SPEC:306 « Amendement 2 — É3 est MACHINE-LOCALE, fait mesuré »
+    — numéro rafraîchi le 2026-08-03, §A50 ; l'ancre était `:292`]`. Deux fovéas
+    chevauchantes sur deux machines = l'écart
     inter-machines lu en espace readout : la mesure dormante a désormais sa décision
     (règle D17).
   - **Transfert d'autorité** (entité passant de la région de A à celle de B) = couture,
@@ -368,3 +373,12 @@ slots issus d'ici : test invariant n°1, FSI minimal (une entité, un couplage, 
 sens), esquisse du modèle de lecture ledger, squelette de gouverneur. La tranche reste
 la seule source d'information que le papier ne peut pas produire : le coût du rendu,
 l'autre moitié du chiffrage.
+
+*(**AMENDÉ le 2026-08-03 — §A48/§A49** : les deux premiers items sont TRANCHÉS depuis
+18:03. **P0-son = β3** (§A49) : β-impulsif acheté, β-continu nommé à seuil NON dérivé,
+encadrement psychophysique qui écrit des branches et jamais un seuil. **L'échange
+compositeur est clos par la coupe deux-compositeurs** (§A48) : le compositeur
+INSTRUMENT reste post-P3 ; un `chemin-de-coût` est autorisé avant P3, jugé au coût
+SEUL, sous quatre gardes. Cette liste énumérait le reste dû de 17:28 — clause
+normative amendée à la ligne, §A47-PRÉCISION-2. **Restent dus : la séance-table et la
+tranche.**)*
