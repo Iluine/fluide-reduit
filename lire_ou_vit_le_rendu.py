@@ -20,6 +20,17 @@ disparu, si un nombre extrait d'un texte ne s'y retrouve pas, ou si une
 branche devait reposer sur une distinction que le biais d'instrument de
 `§A60` peut effacer.
 
+**SECONDE PASSE (relecture adverse du 04/08).** La première lecture
+(artefact `ou-vit-le-rendu-2026-08-04.json`, commit `bbabe02`) laissait
+`I-r5` **promise et non mécanisée** : elle ne calculait que les ms/s au
+lieu de « calculer des deux façons et reporter l'écart » (prereg §7). Le
+paquet entier est désormais produit par UNE fonction appelée deux fois —
+budgets gravés (16,7 / 33,333) et 1000/f — et la branche devient
+INDÉTERMINÉE si elle diffère entre les deux. S'y ajoutent le volet de
+`I-r4` qui manquait (biais de `§A61` sur `R_plancher` lui-même), les
+côtés 30 Hz **étiquetés par `I`**, et un témoin de non-régression contre
+la première lecture, qui n'est jamais écrasée.
+
 Usage : `.venv/bin/python lire_ou_vit_le_rendu.py`
 """
 from __future__ import annotations
@@ -38,7 +49,10 @@ JOURNAL = ICI.parent / "pocCascade2phys" / "PREREGISTRATION.md"
 ARTEFACT_C = pathlib.Path("claude/lectures/multiplicateur-c-3d-2026-08-04.json")
 ARTEFACT_GATHER = pathlib.Path("claude/lectures/tranche-cout-rendu-2026-08-03.json")
 ARTEFACT_P2 = pathlib.Path("claude/lectures/p2_chiffrage_rendu.lecture.json")
-SORTIE = pathlib.Path("claude/lectures/ou-vit-le-rendu-2026-08-04.json")
+# PREMIÈRE LECTURE — verdict-grade, JAMAIS écrasée. Elle sert ici de témoin
+# de non-régression : les grandeurs sous budget gravé doivent y être retrouvées.
+ARTEFACT_PREMIERE = pathlib.Path("claude/lectures/ou-vit-le-rendu-2026-08-04.json")
+SORTIE = pathlib.Path("claude/lectures/ou-vit-le-rendu-ir5-2026-08-04.json")
 
 # --------------------------------------------------------------------------
 # LES SEULES CONSTANTES ÉCRITES ICI, ET ELLES SONT DÉCLARÉES AU PREREG §8
@@ -204,63 +218,127 @@ def main() -> int:
     images_par_fenetre_30hz = IMAGES_PAR_SECONDE / 30.0
     R_porte = reserve_porte_ms / images_par_fenetre_30hz
 
-    # ------------------------------------------- (I-r5) budget gravé vs 1000
-    par_seconde_grave = {f: f * budget[f] for f in (60.0, 30.0)}
+    # ------------------------------------------------------------------------
+    # (I-r5) EXÉCUTÉE. Le prereg prescrivait « le lecteur calcule DES DEUX
+    # FAÇONS et reporte l'écart » (P:202). La première lecture ne calculait que
+    # les ms/s : la clause était PROMISE, pas mécanisée — exactement le défaut
+    # que le corpus reproche partout ailleurs. Tout le paquet de grandeurs est
+    # donc produit par UNE fonction, appelée deux fois, sur deux jeux de budgets.
+    # ------------------------------------------------------------------------
+    def evaluer(bud: dict[float, float]) -> dict:
+        def delta(R: float, I: float) -> float:
+            return (travail_par_seconde(R, I, 30.0, bud[30.0], nonF, C)
+                    - travail_par_seconde(R, I, 60.0, bud[60.0], nonF, C))
+
+        # CE QUE L'ANNULATION COÛTE, ET CE QUI LA CASSE. Sans ce contraste,
+        # « R s'annule » ne serait qu'une vérification de mon algèbre par mon
+        # code. L'annulation vient de (M-1) — 60 images par seconde PARTOUT.
+        # Placement alternatif, explicitement HORS porte : le rendu suit la
+        # cadence physique (30 fps à 30 Hz, pas d'interpolation). R n'y
+        # disparaît plus.
+        def delta_rendu_a_la_cadence(R: float) -> float:
+            return ((30.0 * bud[30.0] - 30.0 * R - 30.0 * nonF) / C
+                    - (60.0 * bud[60.0] - 60.0 * R - 60.0 * nonF) / C)
+
+        d_plancher, d_porte = delta(R_plancher, 0.0), delta(R_porte, 0.0)
+        ref = max(abs(d_plancher), abs(d_porte), 1e-12)
+        sensi = abs(d_porte - d_plancher) / ref
+        a_plancher, a_porte = (delta_rendu_a_la_cadence(R_plancher),
+                               delta_rendu_a_la_cadence(R_porte))
+        ref_alt = max(abs(a_plancher), abs(a_porte), 1e-12)
+
+        # Point mort : Δ = 0 ⇔ I = nonF − (60·B60 − 30·B30)/30. Le second
+        # terme est NUL si et seulement si les budgets valent 1000/f.
+        point_mort = nonF - (60.0 * bud[60.0] - 30.0 * bud[30.0]) / 30.0
+
+        cotes_ = {}
+        for etiquette, R in (("R_plancher", R_plancher), ("R_porte", R_porte)):
+            cotes_[etiquette] = {
+                "R_ms": R,
+                "s_max_60hz": cote_max(R, 0.0, 60.0, bud[60.0], nonF, C),
+                "ms_par_fenetre_60hz": ms_par_fenetre(R, 0.0, 60.0, bud[60.0], nonF),
+                "cap_60hz": travail_par_seconde(R, 0.0, 60.0, bud[60.0], nonF, C) / 60.0,
+                "cap_30hz_I_nul": travail_par_seconde(R, 0.0, 30.0, bud[30.0], nonF, C) / 30.0,
+                # ÉTIQUETTE OBLIGATOIRE : à 30 Hz le côté DÉPEND de I, qui est
+                # inconnu et gravé « non gratuit ». Un `s_max` 30 Hz sans son
+                # `I` est un chiffre du coin favorable.
+                "s_max_30hz_selon_I": {
+                    f"I={I:.4f}": cote_max(R, I, 30.0, bud[30.0], nonF, C)
+                    for I in (0.0, nonF / 2.0, nonF)
+                },
+            }
+        haut = cotes_["R_plancher"]["s_max_60hz"]
+        bas = cotes_["R_porte"]["s_max_60hz"]
+        _exiger(haut is not None and bas is not None,
+                "l'encadrement du côté est vide : un des deux R épuise le budget")
+        return {
+            "budgets_ms": dict(bud),
+            "ms_par_seconde": {f: f * bud[f] for f in (60.0, 30.0)},
+            "delta_au_plancher": d_plancher,
+            "delta_a_la_porte": d_porte,
+            "sensibilite_relative_a_R": sensi,
+            "R_s_annule": sensi < BANDE_ANNULATION,
+            "contraste_rendu_a_la_cadence": {
+                "delta_au_plancher": a_plancher, "delta_a_la_porte": a_porte,
+                "sensibilite_relative_a_R": abs(a_porte - a_plancher) / ref_alt,
+            },
+            "point_mort_I_ms": point_mort,
+            "delta_selon_I": {f"I={I:.4f}": delta(R_plancher, I)
+                              for I in (0.0, nonF / 2.0, nonF, 2.0 * nonF)},
+            "cotes": cotes_,
+            "s_haut": haut, "s_bas": bas,
+            "etendue_cote": (haut - bas) / haut,
+        }
+
+    budget_mille = {60.0: MS_PAR_SECONDE / 60.0, 30.0: MS_PAR_SECONDE / 30.0}
+    lectures = {"budget_grave": evaluer(budget), "budget_1000_sur_f": evaluer(budget_mille)}
+
+    def _ecart(chemin) -> float:
+        a, b = chemin(lectures["budget_grave"]), chemin(lectures["budget_1000_sur_f"])
+        return abs(a - b) / max(abs(a), abs(b), 1e-12)
+
+    ecarts_i_r5 = {
+        "point_mort_I": _ecart(lambda d: d["point_mort_I_ms"]),
+        "delta_a_I_nul": _ecart(lambda d: d["delta_au_plancher"]),
+        "s_max_60hz_plancher": _ecart(lambda d: d["s_haut"]),
+        "cap_60hz_plancher": _ecart(lambda d: d["cotes"]["R_plancher"]["cap_60hz"]),
+        "etendue_cote": _ecart(lambda d: d["etendue_cote"]),
+    }
+    # LA GARDE DE I-r5 : un verdict qui différerait entre les deux façons de
+    # compter serait un verdict porté par un arrondi ⇒ INDÉTERMINÉ.
+    branche_stable = (lectures["budget_grave"]["R_s_annule"]
+                      == lectures["budget_1000_sur_f"]["R_s_annule"])
+
+    grave = lectures["budget_grave"]
+    delta_au_plancher = grave["delta_au_plancher"]
+    delta_a_la_porte = grave["delta_a_la_porte"]
+    sensibilite_a_R = grave["sensibilite_relative_a_R"]
+    R_s_annule = grave["R_s_annule"]
+    alt_plancher = grave["contraste_rendu_a_la_cadence"]["delta_au_plancher"]
+    alt_porte = grave["contraste_rendu_a_la_cadence"]["delta_a_la_porte"]
+    sensibilite_alt = grave["contraste_rendu_a_la_cadence"]["sensibilite_relative_a_R"]
+    point_mort_I = grave["point_mort_I_ms"]
+    arbitrage_par_I = grave["delta_selon_I"]
+    cotes = grave["cotes"]
+    s_haut, s_bas = grave["s_haut"], grave["s_bas"]
+    etendue_cote = grave["etendue_cote"]
+    par_seconde_grave = grave["ms_par_seconde"]
     ecart_arrondi = abs(par_seconde_grave[60.0] - par_seconde_grave[30.0])
     ecart_arrondi_rel = ecart_arrondi / MS_PAR_SECONDE
 
-    # ------------------------------------------------ W-R1 : R s'annule-t-il ?
-    # (I-r2) `Δ` n'est JAMAIS calculé à I = 0 en silence : on le rend comme
-    # fonction de I, avec son point mort.
-    def delta(R: float, I: float) -> float:
-        return (travail_par_seconde(R, I, 30.0, budget[30.0], nonF, C)
-                - travail_par_seconde(R, I, 60.0, budget[60.0], nonF, C))
-
-    delta_au_plancher = delta(R_plancher, 0.0)
-    delta_a_la_porte = delta(R_porte, 0.0)
-    reference = max(abs(delta_au_plancher), abs(delta_a_la_porte), 1e-12)
-    sensibilite_a_R = abs(delta_a_la_porte - delta_au_plancher) / reference
-    R_s_annule = sensibilite_a_R < BANDE_ANNULATION
-
-    # CE QUE L'ANNULATION COÛTE, ET CE QUI LA CASSE. Sans ce contraste,
-    # « R s'annule » ne serait qu'une vérification de mon algèbre par mon
-    # code. L'annulation vient de (M-1) — 60 images par seconde PARTOUT —
-    # et de rien d'autre. Placement alternatif, explicitement HORS porte :
-    # le rendu suit la cadence physique (30 fps à 30 Hz, pas
-    # d'interpolation). R n'y disparaît plus.
-    def delta_rendu_a_la_cadence(R: float) -> float:
-        a_30 = (30.0 * budget[30.0] - 30.0 * R - 30.0 * nonF) / C
-        a_60 = (60.0 * budget[60.0] - 60.0 * R - 60.0 * nonF) / C
-        return a_30 - a_60
-
-    alt_plancher = delta_rendu_a_la_cadence(R_plancher)
-    alt_porte = delta_rendu_a_la_cadence(R_porte)
-    ref_alt = max(abs(alt_plancher), abs(alt_porte), 1e-12)
-    sensibilite_alt = abs(alt_porte - alt_plancher) / ref_alt
-
-    # Point mort de l'arbitrage : Δ = 0 ⇔ I = nonF (au terme d'arrondi près).
-    point_mort_I = nonF - (par_seconde_grave[60.0] - par_seconde_grave[30.0]) / 30.0
-    arbitrage_par_I = {
-        f"I={I:.3f}": delta(R_plancher, I)
-        for I in (0.0, nonF / 2.0, nonF, 2.0 * nonF)
-    }
-
-    # ------------------------------------------------------- le côté, encadré
-    cotes = {}
-    for etiquette, R in (("R_plancher", R_plancher), ("R_porte", R_porte)):
-        cotes[etiquette] = {
-            "R_ms": R,
-            "s_max_60hz": cote_max(R, 0.0, 60.0, budget[60.0], nonF, C),
-            "s_max_30hz_I_nul": cote_max(R, 0.0, 30.0, budget[30.0], nonF, C),
-            "ms_par_fenetre_60hz": ms_par_fenetre(R, 0.0, 60.0, budget[60.0], nonF),
-            "cap_60hz": travail_par_seconde(R, 0.0, 60.0, budget[60.0], nonF, C) / 60.0,
-            "cap_30hz_I_nul": travail_par_seconde(R, 0.0, 30.0, budget[30.0], nonF, C) / 30.0,
+    # ------- I-r4, VOLET MANQUANT : le biais de §A61 sur R_plancher LUI-MÊME.
+    # La première lecture perturbait C et non-F, jamais R — or R_plancher est
+    # mesuré sur des séries d'environ 0,25 s, très en deçà du plus court T_conv
+    # observé (2,5 s à 64³). Il peut vivre ENTIER dans le transitoire.
+    sensibilite_s_max_a_R = {}
+    for nom, facteur in (("R_plancher+15%", 1.0 + BIAIS_A60),
+                         ("R_plancher-15%", 1.0 - BIAIS_A60)):
+        perturbe = cote_max(R_plancher * facteur, 0.0, 60.0, budget[60.0], nonF, C)
+        _exiger(perturbe is not None, f"{nom} épuise le budget")
+        sensibilite_s_max_a_R[nom] = {
+            "s_max_60hz": perturbe,
+            "ecart_relatif": abs(perturbe - s_haut) / s_haut,
         }
-    s_haut = cotes["R_plancher"]["s_max_60hz"]
-    s_bas = cotes["R_porte"]["s_max_60hz"]
-    _exiger(s_haut is not None and s_bas is not None,
-            "l'encadrement du côté est vide : un des deux R épuise le budget")
-    etendue_cote = (s_haut - s_bas) / s_haut
 
     # ------- (I-r4) l'étendue survit-elle au biais d'instrument de §A60 ?
     etendues_perturbees = {}
@@ -287,6 +365,11 @@ def main() -> int:
         branche, texte = "INDÉTERMINÉ", (
             "une grandeur de décision n'est pas finie : sortie sûre, jamais "
             "un verdict par défaut.")
+    elif not branche_stable:
+        branche, texte = "INDÉTERMINÉ", (
+            "I-r5 : la branche diffère selon que l'on compte avec les budgets "
+            "gravés (16,7 / 33,333) ou avec 1000/f. Un verdict porté par un "
+            "arrondi n'est pas un verdict.")
     elif not R_s_annule:
         branche, texte = "W-R2", (
             "Δ dépend de R : le rendu entre dans l'arbitrage de cadence. "
@@ -309,6 +392,31 @@ def main() -> int:
         branche, texte = "INDÉTERMINÉ", (
             "combinaison non prévue par le prereg : sortie sûre, jamais un "
             "verdict par défaut.")
+
+    # ------- TÉMOIN DE NON-RÉGRESSION contre la première lecture (bbabe02).
+    # Ce qui change ici doit être ce que I-r5 AJOUTE, jamais ce qu'elle déplace.
+    premiere = _charger(ARTEFACT_PREMIERE)
+    non_regression = {}
+    for nom, avant, apres in (
+        ("delta_au_plancher",
+         float(_cle(premiere, "annulation_de_R.delta_fenetres_hz_au_plancher",
+                    str(ARTEFACT_PREMIERE))), delta_au_plancher),
+        ("s_max_60hz_plancher",
+         float(_cle(premiere, "cote.encadrement.R_plancher.s_max_60hz",
+                    str(ARTEFACT_PREMIERE))), s_haut),
+        ("etendue_cote",
+         float(_cle(premiere, "cote.etendue_relative",
+                    str(ARTEFACT_PREMIERE))), etendue_cote),
+        ("point_mort_I",
+         float(_cle(premiere, "arbitrage_de_cadence.point_mort_I_ms",
+                    str(ARTEFACT_PREMIERE))), point_mort_I),
+    ):
+        ecart = abs(avant - apres) / max(abs(avant), 1e-12)
+        _exiger(ecart < 1e-9,
+                f"RÉGRESSION sur « {nom} » : {avant} → {apres} (écart {ecart:.3e}). "
+                "La clause I-r5 devait AJOUTER une lecture, pas en déplacer une.")
+        non_regression[nom] = {"premiere_lecture": avant, "ici": apres,
+                               "ecart_relatif": ecart}
 
     # ---------------------------------------------------------------- sortie
     tete = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
@@ -345,6 +453,10 @@ def main() -> int:
             },
         },
         "interdiction_heritee_de_P2": interdiction_p2,
+        "temoin_de_non_regression": {
+            "contre": str(ARTEFACT_PREMIERE),
+            "grandeurs": non_regression,
+        },
         "modele": {
             "M-1": "60 images par seconde dans TOUS les placements",
             "M-2": ("les temps s'ADDITIONNENT — majorant du temps, donc "
@@ -391,13 +503,32 @@ def main() -> int:
             "biais_A60": BIAIS_A60,
             "distinguable": cote_distinguable,
         },
-        "arrondi_du_budget_grave": {
-            "ms_par_seconde": par_seconde_grave,
+        "I_r5_les_deux_facons": {
+            "note": ("CLAUSE EXÉCUTÉE. La première lecture (artefact "
+                     "ou-vit-le-rendu-2026-08-04.json, lecteur bbabe02) ne "
+                     "calculait que les ms/s : I-r5 y était PROMISE, pas "
+                     "mécanisée. Tout le paquet est ici produit deux fois."),
+            "ms_par_seconde_grave": par_seconde_grave,
             "ecart_ms": ecart_arrondi,
             "ecart_relatif": ecart_arrondi_rel,
-            "note": ("I-r5 : le corpus grave 16,7 et 33,333, soit 1002 et "
-                     "1000 ms/s. L'écart est un arrondi ; aucun verdict ici "
-                     "ne repose dessus."),
+            "ecarts_entre_les_deux_facons": ecarts_i_r5,
+            "branche_stable_entre_les_deux": branche_stable,
+            "ce_que_l_ecart_touche": (
+                "Les grandeurs PAR FRAME (s_max, cap, étendue) sont "
+                "insensibles : l'arrondi se simplifie. Le POINT MORT et Δ, "
+                "eux, vivent par seconde et portent l'écart en entier — d'où "
+                "un point mort à 1,768 sous les budgets gravés et exactement "
+                "non-F sous 1000/f."),
+            "lectures": lectures,
+        },
+        "sensibilite_de_s_max_au_biais_sur_R": {
+            "note": ("VOLET MANQUANT DE I-r4 : la première lecture perturbait "
+                     "C et non-F, jamais R_plancher, qui est mesuré sur des "
+                     "séries d'environ 0,25 s — très en deçà du plus court "
+                     "T_conv de §A61 (2,5 s à 64³). Il peut vivre ENTIER dans "
+                     "le transitoire."),
+            "s_max_60hz_de_reference": s_haut,
+            "perturbations": sensibilite_s_max_a_R,
         },
         "branche": branche,
         "texte": texte,
@@ -411,9 +542,19 @@ def main() -> int:
     print(f"  Δ(R_plancher) = {delta_au_plancher:.4f} fenêtres·Hz")
     print(f"  Δ(R_porte)    = {delta_a_la_porte:.4f} fenêtres·Hz")
     print(f"  sensibilité à R = {sensibilite_a_R:.3e} (bande {BANDE_ANNULATION})")
-    print(f"  point mort I = {point_mort_I:.4f} ms")
+    mille = lectures["budget_1000_sur_f"]
+    print(f"  point mort I = {point_mort_I:.4f} ms (budgets gravés) "
+          f"| {mille['point_mort_I_ms']:.4f} ms (1000/f) — non-F = {nonF:.4f}")
+    print(f"  I-r5 écarts entre les deux façons : "
+          + ", ".join(f"{k} {v:.2%}" for k, v in ecarts_i_r5.items()))
     print(f"  s_max 60 Hz : {s_haut:.2f} (R_plancher) → {s_bas:.2f} (R_porte)")
+    print("  s_max 30 Hz selon I (R_plancher) : "
+          + ", ".join(f"{k}→{v:.2f}" for k, v in
+                      cotes["R_plancher"]["s_max_30hz_selon_I"].items()))
     print(f"  étendue = {etendue_cote:.1%}, minimale sous ±15 % = {etendue_min:.1%}")
+    print("  s_max vs biais ±15 % sur R_plancher : "
+          + ", ".join(f"{k} {v['ecart_relatif']:.2%}"
+                      for k, v in sensibilite_s_max_a_R.items()))
     print(f"→ {SORTIE}")
     return 0
 
