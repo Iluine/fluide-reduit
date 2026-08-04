@@ -1,0 +1,290 @@
+{
+ "protocole": "claude/prereg-ou-vit-le-rendu-2026-08-04.md (commit e2eba15)",
+ "lecteur": {
+  "fichier": "lire_ou_vit_le_rendu.py",
+  "tete_git": "b027a7b"
+ },
+ "nature": "LECTURE, PAS MESURE — aucun GPU, aucun cupy, aucun chronomètre. §A61 respecté par construction.",
+ "ancres_lues": {
+  "PREREGISTRATION.md:4142": "prédictiongpu = As3 − 14.432 ; cible L1+L3 = 16.7 − As3, reportées sans interprétation. Sonde — la décision (design jouable / candidat aminci / porte 33.3) revient à Romain à la lecture. - Portes 33.3 (motif T2 : où vit le rendu — à traiter",
+  "PREREGISTRATION.md:4218": "c=8, placement emboîté, champs d'échelle. Scénario R2 inchangé. F batché = 12.655 ms [ancres MESURÉES : 1.685 / 0.845]. Budget 16.7 (T2 inchangé). Porte 33.3 = REPLI PRÉ-NOMMÉ avec motif T2 traité : physique 30 Hz + rendu 60 fps par interpo",
+  "PREREGISTRATION.md:9559": "PREREGISTRATION.md:4142 — « Portes 33.3 (motif T2 : où vit le rendu — à traiter explicitement si ouverte) » — reste le verrou réel. Aucun des cinq caps calculés cette nuit n'inclut le rendu, et le non-F retenu à 1,835 ms est un non-F 2D à l",
+  "reserve_porte_ms_EXTRAITE_DU_TEXTE": 13.0
+ },
+ "entrees": {
+  "C_fenetre_64_ms": {
+   "valeur": 2.4292640686035156,
+   "source": "claude/lectures/multiplicateur-c-3d-2026-08-04.json"
+  },
+  "non_f_ms": {
+   "valeur": 1.8350321960449225,
+   "source": "claude/lectures/multiplicateur-c-3d-2026-08-04.json",
+   "PROVENANCE": "non-F 2D à l'échelle de l'instrument, PAS un non-F 3D à 1920 — PREREGISTRATION.md:9559"
+  },
+  "budget_frame_ms": {
+   "60.0": 16.7,
+   "30.0": 33.333333333333336
+  },
+  "R_plancher_ms": {
+   "valeur": 0.5423287531523979,
+   "gather_plancher_ms": 0.44877175438916456,
+   "encodage_fusionne_ms": 0.09355699876323342,
+   "sources": [
+    "claude/lectures/tranche-cout-rendu-2026-08-03.json",
+    "claude/lectures/p2_chiffrage_rendu.lecture.json"
+   ]
+  },
+  "R_porte_ms": {
+   "valeur": 6.5,
+   "reserve_par_fenetre_33ms": 13.0,
+   "images_par_fenetre_30hz": 2.0
+  }
+ },
+ "interdiction_heritee_de_P2": "mediane << marge V4 (2.199 ms) : LECTURE GRAVEE D'AVANCE -- le cout inconnu du rendu ne vit PAS dans l'encodage ; il vit dans la COMPOSITION et dans l'optique au-dela de Y = A (R2+). La dette se DEPLACE, elle ne retrecit pas. INTERDICTION PRE-ECRITE d'en conclure « le rendu tient ».",
+ "temoin_de_non_regression": {
+  "contre": "claude/lectures/ou-vit-le-rendu-2026-08-04.json",
+  "grandeurs": {
+   "delta_au_plancher": {
+    "premiere_lecture": 21.83828698040412,
+    "ici": 21.83828698040412,
+    "ecart_relatif": 0.0
+   },
+   "s_max_60hz_plancher": {
+    "premiere_lecture": 51.98745041827663,
+    "ici": 51.98745041827663,
+    "ecart_relatif": 0.0
+   },
+   "etendue_cote": {
+    "premiere_lecture": 0.16411395368684864,
+    "ici": 0.16411395368684864,
+    "ecart_relatif": 0.0
+   },
+   "point_mort_I": {
+    "premiere_lecture": 1.7683655293782596,
+    "ici": 1.7683655293782596,
+    "ecart_relatif": 0.0
+   }
+  }
+ },
+ "modele": {
+  "M-1": "60 images par seconde dans TOUS les placements",
+  "M-2": "les temps s'ADDITIONNENT — majorant du temps, donc MINORANT du cap : tout cap lu ici est PESSIMISTE",
+  "M-3": "un seul GPU ⇒ le placement « hors budget » (P-d) n'existe pas",
+  "n_interpolations": {
+   "60 Hz": 0.0,
+   "30 Hz": 30.0
+  }
+ },
+ "annulation_de_R": {
+  "delta_fenetres_hz_au_plancher": 21.83828698040412,
+  "delta_fenetres_hz_a_la_porte": 21.83828698040415,
+  "sensibilite_relative_a_R": 1.3014624020605311e-15,
+  "bande": 0.005,
+  "R_s_annule": true,
+  "d_ou_vient_l_annulation": {
+   "cause": "(M-1) 60 images par seconde dans les DEUX placements ⇒ le terme 60·R est identique des deux côtés et disparaît de la différence. L'annulation est une conséquence du modèle, et le modèle est le texte de la porte (:4218).",
+   "contraste_placement_rendu_a_la_cadence": {
+    "note": "HORS porte : le rendu suit la cadence physique (30 fps à 30 Hz, aucune interpolation). R n'y disparaît plus — c'est ce que l'annulation coûte.",
+    "delta_au_plancher": 28.53573202347218,
+    "delta_a_la_porte": 102.10951089559487,
+    "sensibilite_relative_a_R": 0.7205379619078829
+   }
+  }
+ },
+ "arbitrage_de_cadence": {
+  "note": "I-r2 : Δ n'est JAMAIS rendu comme un scalaire unique. I (coût d'une interpolation de readout) est INCONNU et explicitement non gratuit (:4219).",
+  "delta_selon_I": {
+   "I=0.0000": 21.83828698040412,
+   "I=0.9175": 10.507496188072878,
+   "I=1.8350": -0.8232946042583649,
+   "I=3.6701": -23.484876188920794
+  },
+  "point_mort_I_ms": 1.7683655293782596,
+  "formule": "Δ = 30·(nonF − I)/C, au terme d'arrondi près"
+ },
+ "cote": {
+  "encadrement": {
+   "R_plancher": {
+    "R_ms": 0.5423287531523979,
+    "s_max_60hz": 51.98745041827663,
+    "ms_par_fenetre_60hz": 1.3020580955275163,
+    "cap_60hz": 5.895875724633007,
+    "cap_30hz_I_nul": 12.51969434861282,
+    "s_max_30hz_selon_I": {
+     "I=0.0000": 66.82110518562743,
+     "I=0.9175": 66.14228143332636,
+     "I=1.8350": 65.44923047125961
+    }
+   },
+   "R_porte": {
+    "R_ms": 6.5,
+    "s_max_60hz": 43.45558438803424,
+    "ms_par_fenetre_60hz": 0.7604516185413707,
+    "cap_60hz": 3.4434164288955853,
+    "cap_30hz_I_nul": 7.614775757137975,
+    "s_max_30hz_selon_I": {
+     "I=0.0000": 56.61542673484083,
+     "I=0.9175": 55.663467659944345,
+     "I=1.8350": 54.67778395761176
+    }
+   }
+  },
+  "etendue_relative": 0.16411395368684864,
+  "etendues_sous_biais_A60": {
+   "C+15%": 0.16411395368684856,
+   "C-15%": 0.16411395368684858,
+   "nonF+15%": 0.168020643370084,
+   "nonF-15%": 0.16038876053183526
+  },
+  "etendue_minimale": 0.16038876053183526,
+  "biais_A60": 0.15,
+  "distinguable": true
+ },
+ "I_r5_les_deux_facons": {
+  "note": "CLAUSE EXÉCUTÉE. La première lecture (artefact ou-vit-le-rendu-2026-08-04.json, lecteur bbabe02) ne calculait que les ms/s : I-r5 y était PROMISE, pas mécanisée. Tout le paquet est ici produit deux fois.",
+  "ms_par_seconde_grave": {
+   "60.0": 1002.0,
+   "30.0": 1000.0000000000001
+  },
+  "ecart_ms": 1.9999999999998863,
+  "ecart_relatif": 0.0019999999999998864,
+  "ecarts_entre_les_deux_facons": {
+   "point_mort_I": 0.036329971109144966,
+   "delta_a_I_nul": 0.03632997110914696,
+   "s_max_60hz_plancher": 0.0007763752147599786,
+   "cap_60hz_plancher": 0.002327317836824555,
+   "etendue_cote": 0.0028143420857417796
+  },
+  "branche_stable_entre_les_deux": true,
+  "ce_que_l_ecart_touche": "Les grandeurs PAR FRAME (s_max, cap, étendue) sont insensibles : l'arrondi se simplifie. Le POINT MORT et Δ, eux, vivent par seconde et portent l'écart en entier — d'où un point mort à 1,768 sous les budgets gravés et exactement non-F sous 1000/f.",
+  "lectures": {
+   "budget_grave": {
+    "budgets_ms": {
+     "60.0": 16.7,
+     "30.0": 33.333333333333336
+    },
+    "ms_par_seconde": {
+     "60.0": 1002.0,
+     "30.0": 1000.0000000000001
+    },
+    "delta_au_plancher": 21.83828698040412,
+    "delta_a_la_porte": 21.83828698040415,
+    "sensibilite_relative_a_R": 1.3014624020605311e-15,
+    "R_s_annule": true,
+    "contraste_rendu_a_la_cadence": {
+     "delta_au_plancher": 28.53573202347218,
+     "delta_a_la_porte": 102.10951089559487,
+     "sensibilite_relative_a_R": 0.7205379619078829
+    },
+    "point_mort_I_ms": 1.7683655293782596,
+    "delta_selon_I": {
+     "I=0.0000": 21.83828698040412,
+     "I=0.9175": 10.507496188072878,
+     "I=1.8350": -0.8232946042583649,
+     "I=3.6701": -23.484876188920794
+    },
+    "cotes": {
+     "R_plancher": {
+      "R_ms": 0.5423287531523979,
+      "s_max_60hz": 51.98745041827663,
+      "ms_par_fenetre_60hz": 1.3020580955275163,
+      "cap_60hz": 5.895875724633007,
+      "cap_30hz_I_nul": 12.51969434861282,
+      "s_max_30hz_selon_I": {
+       "I=0.0000": 66.82110518562743,
+       "I=0.9175": 66.14228143332636,
+       "I=1.8350": 65.44923047125961
+      }
+     },
+     "R_porte": {
+      "R_ms": 6.5,
+      "s_max_60hz": 43.45558438803424,
+      "ms_par_fenetre_60hz": 0.7604516185413707,
+      "cap_60hz": 3.4434164288955853,
+      "cap_30hz_I_nul": 7.614775757137975,
+      "s_max_30hz_selon_I": {
+       "I=0.0000": 56.61542673484083,
+       "I=0.9175": 55.663467659944345,
+       "I=1.8350": 54.67778395761176
+      }
+     }
+    },
+    "s_haut": 51.98745041827663,
+    "s_bas": 43.45558438803424,
+    "etendue_cote": 0.16411395368684864
+   },
+   "budget_1000_sur_f": {
+    "budgets_ms": {
+     "60.0": 16.666666666666668,
+     "30.0": 33.333333333333336
+    },
+    "ms_par_seconde": {
+     "60.0": 1000.0000000000001,
+     "30.0": 1000.0000000000001
+    },
+    "delta_au_plancher": 22.661581584662486,
+    "delta_a_la_porte": 22.661581584662457,
+    "sensibilite_relative_a_R": 1.2541803105940327e-15,
+    "R_s_annule": true,
+    "contraste_rendu_a_la_cadence": {
+     "delta_au_plancher": 29.359026627730543,
+     "delta_a_la_porte": 102.93280549985317,
+     "sensibilite_relative_a_R": 0.7147748331043748
+    },
+    "point_mort_I_ms": 1.8350321960449225,
+    "delta_selon_I": {
+     "I=0.0000": 22.661581584662486,
+     "I=0.9175": 11.330790792331243,
+     "I=1.8350": 0.0,
+     "I=3.6701": -22.66158158466243
+    },
+    "cotes": {
+     "R_plancher": {
+      "R_ms": 0.5423287531523979,
+      "s_max_60hz": 51.94708865029332,
+      "ms_par_fenetre_60hz": 1.2990277924972136,
+      "cap_60hz": 5.882154147895368,
+      "cap_30hz_I_nul": 12.51969434861282,
+      "s_max_30hz_selon_I": {
+       "I=0.0000": 66.82110518562743,
+       "I=0.9175": 66.14228143332636,
+       "I=1.8350": 65.44923047125961
+      }
+     },
+     "R_porte": {
+      "R_ms": 6.5,
+      "s_max_60hz": 43.397785886801415,
+      "ms_par_fenetre_60hz": 0.7574213155110677,
+      "cap_60hz": 3.4296948521579464,
+      "cap_30hz_I_nul": 7.614775757137975,
+      "s_max_30hz_selon_I": {
+       "I=0.0000": 56.61542673484083,
+       "I=0.9175": 55.663467659944345,
+       "I=1.8350": 54.67778395761176
+      }
+     }
+    },
+    "s_haut": 51.94708865029332,
+    "s_bas": 43.397785886801415,
+    "etendue_cote": 0.16457713003024335
+   }
+  }
+ },
+ "sensibilite_de_s_max_au_biais_sur_R": {
+  "note": "VOLET MANQUANT DE I-r4 : la première lecture perturbait C et non-F, jamais R_plancher, qui est mesuré sur des séries d'environ 0,25 s — très en deçà du plus court T_conv de §A61 (2,5 s à 64³). Il peut vivre ENTIER dans le transitoire.",
+  "s_max_60hz_de_reference": 51.98745041827663,
+  "perturbations": {
+   "R_plancher+15%": {
+    "s_max_60hz": 51.88883787495895,
+    "ecart_relatif": 0.0018968528466825913
+   },
+   "R_plancher-15%": {
+    "s_max_60hz": 52.08569026718429,
+    "ecart_relatif": 0.0018896839163538414
+   }
+  }
+ },
+ "branche": "W-R1",
+ "texte": "Δ est indépendant de R : où vit le rendu ne décide PAS la cadence, il décide le CÔTÉ. Le dû de :4142 est levé quant à la cadence et reporté intact sur le côté de fenêtre. Ce que la cadence attend n'est plus le rendu mais le NON-F 3D, l'un des deux multiplicateurs dus de §A53.",
+ "portee": "PLACE le rendu dans le budget — ne le CHIFFRE pas. La dette P2 (composition + optique R2+) reste ouverte. Ni la cadence, ni le côté, ni le placement ne sont tranchés."
+}
