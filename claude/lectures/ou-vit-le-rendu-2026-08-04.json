@@ -1,0 +1,122 @@
+{
+ "protocole": "claude/prereg-ou-vit-le-rendu-2026-08-04.md (commit e2eba15)",
+ "lecteur": {
+  "fichier": "lire_ou_vit_le_rendu.py",
+  "tete_git": "bbabe02"
+ },
+ "nature": "LECTURE, PAS MESURE — aucun GPU, aucun cupy, aucun chronomètre. §A61 respecté par construction.",
+ "ancres_lues": {
+  "PREREGISTRATION.md:4142": "prédictiongpu = As3 − 14.432 ; cible L1+L3 = 16.7 − As3, reportées sans interprétation. Sonde — la décision (design jouable / candidat aminci / porte 33.3) revient à Romain à la lecture. - Portes 33.3 (motif T2 : où vit le rendu — à traiter",
+  "PREREGISTRATION.md:4218": "c=8, placement emboîté, champs d'échelle. Scénario R2 inchangé. F batché = 12.655 ms [ancres MESURÉES : 1.685 / 0.845]. Budget 16.7 (T2 inchangé). Porte 33.3 = REPLI PRÉ-NOMMÉ avec motif T2 traité : physique 30 Hz + rendu 60 fps par interpo",
+  "PREREGISTRATION.md:9559": "PREREGISTRATION.md:4142 — « Portes 33.3 (motif T2 : où vit le rendu — à traiter explicitement si ouverte) » — reste le verrou réel. Aucun des cinq caps calculés cette nuit n'inclut le rendu, et le non-F retenu à 1,835 ms est un non-F 2D à l",
+  "reserve_porte_ms_EXTRAITE_DU_TEXTE": 13.0
+ },
+ "entrees": {
+  "C_fenetre_64_ms": {
+   "valeur": 2.4292640686035156,
+   "source": "claude/lectures/multiplicateur-c-3d-2026-08-04.json"
+  },
+  "non_f_ms": {
+   "valeur": 1.8350321960449225,
+   "source": "claude/lectures/multiplicateur-c-3d-2026-08-04.json",
+   "PROVENANCE": "non-F 2D à l'échelle de l'instrument, PAS un non-F 3D à 1920 — PREREGISTRATION.md:9559"
+  },
+  "budget_frame_ms": {
+   "60.0": 16.7,
+   "30.0": 33.333333333333336
+  },
+  "R_plancher_ms": {
+   "valeur": 0.5423287531523979,
+   "gather_plancher_ms": 0.44877175438916456,
+   "encodage_fusionne_ms": 0.09355699876323342,
+   "sources": [
+    "claude/lectures/tranche-cout-rendu-2026-08-03.json",
+    "claude/lectures/p2_chiffrage_rendu.lecture.json"
+   ]
+  },
+  "R_porte_ms": {
+   "valeur": 6.5,
+   "reserve_par_fenetre_33ms": 13.0,
+   "images_par_fenetre_30hz": 2.0
+  }
+ },
+ "interdiction_heritee_de_P2": "mediane << marge V4 (2.199 ms) : LECTURE GRAVEE D'AVANCE -- le cout inconnu du rendu ne vit PAS dans l'encodage ; il vit dans la COMPOSITION et dans l'optique au-dela de Y = A (R2+). La dette se DEPLACE, elle ne retrecit pas. INTERDICTION PRE-ECRITE d'en conclure « le rendu tient ».",
+ "modele": {
+  "M-1": "60 images par seconde dans TOUS les placements",
+  "M-2": "les temps s'ADDITIONNENT — majorant du temps, donc MINORANT du cap : tout cap lu ici est PESSIMISTE",
+  "M-3": "un seul GPU ⇒ le placement « hors budget » (P-d) n'existe pas",
+  "n_interpolations": {
+   "60 Hz": 0.0,
+   "30 Hz": 30.0
+  }
+ },
+ "annulation_de_R": {
+  "delta_fenetres_hz_au_plancher": 21.83828698040412,
+  "delta_fenetres_hz_a_la_porte": 21.83828698040415,
+  "sensibilite_relative_a_R": 1.3014624020605311e-15,
+  "bande": 0.005,
+  "R_s_annule": true,
+  "d_ou_vient_l_annulation": {
+   "cause": "(M-1) 60 images par seconde dans les DEUX placements ⇒ le terme 60·R est identique des deux côtés et disparaît de la différence. L'annulation est une conséquence du modèle, et le modèle est le texte de la porte (:4218).",
+   "contraste_placement_rendu_a_la_cadence": {
+    "note": "HORS porte : le rendu suit la cadence physique (30 fps à 30 Hz, aucune interpolation). R n'y disparaît plus — c'est ce que l'annulation coûte.",
+    "delta_au_plancher": 28.53573202347218,
+    "delta_a_la_porte": 102.10951089559487,
+    "sensibilite_relative_a_R": 0.7205379619078829
+   }
+  }
+ },
+ "arbitrage_de_cadence": {
+  "note": "I-r2 : Δ n'est JAMAIS rendu comme un scalaire unique. I (coût d'une interpolation de readout) est INCONNU et explicitement non gratuit (:4219).",
+  "delta_selon_I": {
+   "I=0.000": 21.83828698040412,
+   "I=0.918": 10.507496188072878,
+   "I=1.835": -0.8232946042583649,
+   "I=3.670": -23.484876188920794
+  },
+  "point_mort_I_ms": 1.7683655293782596,
+  "formule": "Δ = 30·(nonF − I)/C, au terme d'arrondi près"
+ },
+ "cote": {
+  "encadrement": {
+   "R_plancher": {
+    "R_ms": 0.5423287531523979,
+    "s_max_60hz": 51.98745041827663,
+    "s_max_30hz_I_nul": 66.82110518562743,
+    "ms_par_fenetre_60hz": 1.3020580955275163,
+    "cap_60hz": 5.895875724633007,
+    "cap_30hz_I_nul": 12.51969434861282
+   },
+   "R_porte": {
+    "R_ms": 6.5,
+    "s_max_60hz": 43.45558438803424,
+    "s_max_30hz_I_nul": 56.61542673484083,
+    "ms_par_fenetre_60hz": 0.7604516185413707,
+    "cap_60hz": 3.4434164288955853,
+    "cap_30hz_I_nul": 7.614775757137975
+   }
+  },
+  "etendue_relative": 0.16411395368684864,
+  "etendues_sous_biais_A60": {
+   "C+15%": 0.16411395368684856,
+   "C-15%": 0.16411395368684858,
+   "nonF+15%": 0.168020643370084,
+   "nonF-15%": 0.16038876053183526
+  },
+  "etendue_minimale": 0.16038876053183526,
+  "biais_A60": 0.15,
+  "distinguable": true
+ },
+ "arrondi_du_budget_grave": {
+  "ms_par_seconde": {
+   "60.0": 1002.0,
+   "30.0": 1000.0000000000001
+  },
+  "ecart_ms": 1.9999999999998863,
+  "ecart_relatif": 0.0019999999999998864,
+  "note": "I-r5 : le corpus grave 16,7 et 33,333, soit 1002 et 1000 ms/s. L'écart est un arrondi ; aucun verdict ici ne repose dessus."
+ },
+ "branche": "W-R1",
+ "texte": "Δ est indépendant de R : où vit le rendu ne décide PAS la cadence, il décide le CÔTÉ. Le dû de :4142 est levé quant à la cadence et reporté intact sur le côté de fenêtre. Ce que la cadence attend n'est plus le rendu mais le NON-F 3D, l'un des deux multiplicateurs dus de §A53.",
+ "portee": "PLACE le rendu dans le budget — ne le CHIFFRE pas. La dette P2 (composition + optique R2+) reste ouverte. Ni la cadence, ni le côté, ni le placement ne sont tranchés."
+}
