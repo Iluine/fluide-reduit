@@ -68,6 +68,18 @@ Configuration : vocabulaire réel (3 scalaires + 2 statiques, 9 champs,
 `max(300 frames, 3 s)` de série, médiane intra-bloc. À 128³ le plancher de
 300 frames domine (~18 s) ; à 64³ et 32³, les 3 s.
 
+**Le dimensionnement est fixé PAR CÔTÉ, UNE FOIS, en tête de session — pas
+par bloc.** Un pré-chrono d'un bloc plancher (30 + 300 frames) par côté,
+consigné et NON consommé, convertit les 3 s en un compte
+`serie[côté] = max(300, ⌈3 s / t̂_frame⌉)`, gravé dans l'artefact avant la
+première mesure. Deux blocs du même côté ont ainsi un TRAVAIL identique ;
+leur durée mur peut différer — c'est le signal, pas un confondu. Un
+dimensionnement par bloc rendrait deux blocs 64³ inappariables : positions
+différentes dans la dérive ET travail différent. Biais du pré-chrono, nommé :
+il s'exécute dans le transitoire, donc `t̂` est LENT et les blocs peuvent
+durer moins de 3 s au régime rapide — jamais sous 300 frames, le plancher
+tient. Le pré-chrono précède le premier refroidissement.
+
 **Le cycle** : blocs enchaînés `64³ → 128³ → 32³`, **sans jamais laisser le
 GPU au repos entre blocs** (conséquence opératoire de W-B/v1, confirmée par
 `§A61`). Chaque paire de blocs ADJACENTS dans le temps donne un rapport
@@ -99,9 +111,9 @@ ne fait que la BORNER pour le thermique.
 température GPU ≤ 55 °C, plafonné à 180 s ; la température atteinte est
 consignée dans l'artefact. **« Chaud »** : enchaîné sans idle.
 
-**Ordre d'exécution, gravé ici** : `M-s → M-c1 → M-c2 → M-c3 → M-c4 → M-d
-→ M-s′` — les « chauds » enchaînés, les « froids » précédés du refroidissement
-mesuré. **`M-s′` reprend le plan de `M-s`, DÉPART FROID compris** — sinon un
+**Ordre d'exécution, gravé ici** : `pré-chrono (3 côtés) → M-s → M-c1 →
+M-c2 → M-c3 → M-c4 → M-d → M-s′` — les « chauds » enchaînés, les « froids »
+précédés du refroidissement mesuré. **`M-s′` reprend le plan de `M-s`, DÉPART FROID compris** — sinon un
 désaccord thermique entre les deux se lirait comme un verdict sonde. **Cinq
 refroidissements en tout** (`M-s`, `M-c1`, `M-c3`, `M-d`, `M-s′`) : le début
 de session n'est pas supposé froid, il est rendu froid. **`M-d` vient APRÈS
@@ -113,8 +125,9 @@ tout run.
 
 Relevé `nvidia-smi` (~20 Hz) : horloge SM, température, puissance,
 `clocks_event_reasons` — pendant toutes les mesures sauf les blocs `OFF` de
-`M-s`. Traces complètes conservées. Budget : **≈ 11 min de GPU actif,
-dérivé ; mur ≤ 26 min au plafond des cinq refroidissements** (180 s chacun).
+`M-s`. Traces complètes conservées. Budget : **≈ 12 min de GPU actif,
+dérivé (pré-chrono compris) ; mur ≤ 27 min au plafond des cinq
+refroidissements** (180 s chacun).
 Seul le plafond est gravé — la valeur attendue dépend des refroidissements
 réels, qui ne sont pas dérivables ici.
 
@@ -186,6 +199,8 @@ population mouvante (la troisième faute de `§A61-5`) :
    paire est **≤ 0,43 % au majorant** (au pire cas dérivé : 12,5 s ×
    0,017 %/s = 0,2125 %, arrondi PAR EXCÈS à 0,22 %) — borne
    PRÉ-DÉRIVÉE, re-vérifiée contre la pente mesurée par `M-d` (`I-q5`).
+   Les 12,5 s sont NOMINAUX : le lecteur recalcule la borne sur les durées
+   de blocs RÉELLES et la pente de `M-d` — volet mécanisé d'`I-q5`.
 2. Ce biais résiduel est signé par l'ordre du couple : il **change de signe
    entre ALLER et RETOUR**. **La lecture finale est la MOYENNE GÉOMÉTRIQUE
    des deux lectures orientées** — `√(r_ALLER · r_RETOUR)`, chacune étant la
@@ -322,7 +337,10 @@ blocs, la borne de §3 ne tient plus ⇒ les cycles de CE run ne sont **pas
 consommés** ; re-dimensionner les blocs sur la pente mesurée et re-runner.
 
 **(I-q6) Si la machine s'est mise à bien se porter** *(lisible seulement si
-la sonde a survécu à `I-q1` — sinon NON LISIBLE, voir I-q1)*. Si `M-d` ne montre NI
+la sonde a survécu à `I-q1` — sinon NON LISIBLE, voir I-q1)*. Le throttle se
+lit par **test de BIT sur la valeur entière** de `clocks_event_reasons`
+(`0x4` = SW Power Cap, celui des cinq séries de `§A61`), masque complet
+consigné — jamais par comparaison de chaîne. Si `M-d` ne montre NI
 dérive NI throttle (`0x4` absent partout), l'état matériel a changé depuis
 `§A61` (alimentation, pilote, profil de puissance — consignés dans
 l'artefact). ⇒ Ce run **ne réhabilite pas les absolus pour autant** : cela
@@ -338,7 +356,13 @@ demanderait un protocole de stationnarité dédié, avec son prereg.
    jamais réduits.
 3. **Kernels intouchés** : `git diff` vide, empreintes relues dans l'artefact.
 4. **Jamais de repos GPU non contrôlé entre blocs** ; tout idle est
-   intentionnel, mesuré, consigné.
+   intentionnel, mesuré, consigné. Mécanisation exigée du driver : **sonde
+   UNIQUE de session** (arrêtée seulement autour des blocs `OFF` de `M-s`,
+   coût ≤ une période, consigné en idle intentionnel — la sonde reste
+   l'instrument du critère « froid » même si `I-q1` la retire de la chaîne
+   de verdict) ; **états PRÉ-ALLOUÉS par côté**, ré-initialisés
+   device-to-device à chaque bloc, copie chronométrée ; **écart mur entre
+   fin de bloc et début du suivant consigné à chaque frontière**.
 5. **Traces complètes dans l'artefact** — les rapports appariés sont des
    formes avant d'être des scalaires.
 6. **Environnement consigné** : version du pilote, plafond de puissance
