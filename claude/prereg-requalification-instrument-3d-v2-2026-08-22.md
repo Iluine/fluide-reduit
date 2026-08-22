@@ -109,7 +109,10 @@ ne fait que la BORNER pour le thermique.
 
 **« Froid »** se définit par une mesure, pas un décret : idle jusqu'à
 température GPU ≤ 55 °C, plafonné à 180 s ; la température atteinte est
-consignée dans l'artefact. **« Chaud »** : enchaîné sans idle.
+consignée dans l'artefact. **« Chaud »** : enchaîné sans idle. La pente de
+`M-d` est estimée par **Theil–Sen sur médianes de tranches** — l'estimateur
+robuste promis, nommé ici parce que le banc a montré que le taire laissait
+un choix de protocole au driver.
 
 **Ordre d'exécution, gravé ici** : `pré-chrono (3 côtés) → M-s → M-c1 →
 M-c2 → M-c3 → M-c4 → M-d → M-s′` — les « chauds » enchaînés, les « froids »
@@ -142,13 +145,29 @@ Pour un contraste `X→Y` : chaque paire de blocs adjacents `(X_i, Y_i)` donne
 - **L'écart interquartile/2 DÉCIDE, SEUL.** Les branches de §4 se lisent sur
   lui et sur rien d'autre.
 - **L'étendue/2 est un TEST DE FORME, pas un second juge** : si le rapport
-  `(étendue/2)/(interquartile/2)` dépasse **4,4**, le verdict du contraste est
+  `(étendue/2)/(interquartile/2)` dépasse **5,5**, le verdict du contraste est
   **INDÉTERMINÉ** et les blocs extrêmes sont nommés dans l'artefact. Sous ce
   seuil, elle est consignée sans voix au chapitre.
 
-Le seuil 4,4 est le **p90 du rapport sous hypothèse gaussienne i.i.d.**,
-stable entre n = 12 et n = 16 (4,36–4,39, vérifié par deux simulations
-indépendantes, graines 4224 et 777 — illustratives, hors projet). La
+**Toutes les dispersions de ce document s'entendent RELATIVES à la médiane
+du contraste** — les trois contrastes vivent à trois ordres de grandeur
+d'écart (r ≈ 8,4 contre r ≈ 0,017) et une dispersion absolue comparée au
+seuil de 2 % aurait rendu Q-A/Q-C dépendants de l'échelle (fabrication
+trouvée par le banc du driver, garde 9, corrigée). Cas dégénérés, gravés :
+dispersion nulle des deux côtés = rien à juger, le test de forme ne tire
+pas ; corps central nul avec extrême non nul = **INDÉTERMINÉ**, sortie sûre.
+La dispersion d'un contraste se calcule sur l'**UNION des `r_i` des deux
+ordres** — lecture conservatrice : le biais de paire signé (±0,43 % au
+majorant) GONFLE cette union, direction Q-B, jamais Q-A.
+
+**Le seuil 5,5, et pourquoi il a remplacé 4,4.** La première version gravait
+4,4 = p90 **par contraste** ; le banc du driver a montré que l'agrégation de
+§4 en changeait le sens — trois contrastes à 10 % chacun font
+`1 − 0,9³ = 27 %` de faux positif GLOBAL. La convention vit au niveau où la
+décision se prend (règle de `§A60`) : c'est le **FP global ~10 %** qui est
+la convention, et le seuil par contraste s'en DÉRIVE — quantile `0,9^⅓` ≈
+p96,5 du rapport sous le même modèle, soit 5,36 (n = 16) / 5,53 (n = 12),
+**seuil unique 5,5** pris au plus grand. La
 relecture adverse a attaqué l'hypothèse i.i.d. et l'attaque a échoué **dans
 la bonne direction** : une dérive résiduelle linéaire raccourcit les queues
 du rapport et fait BAISSER le faux positif (9,6 % → 4,2 % à pente 4× le
@@ -263,12 +282,20 @@ ne dit qu'il épargnerait les contrastes que `I` et le non-F demanderont.
 
 Le seuil de 2 % vient de §1 (3× la concordance de `§A53`) ; celui de 15 % de
 `§A60`. Aucun des deux n'est nouveau. **Deux constantes de ce document, en
-revanche, SONT NEUVES : le facteur 3 de la règle d'usage `3·σ_r`, et le 4,4
-du test de forme de §3.** Ni dérivées, ni héritées — des **CONVENTIONS**,
-déclarées comme telles, que l'endossement de ce document achète
-explicitement. La seconde a une calibration (p90 gaussien, vérifié deux
-fois), mais l'arbitrage qu'elle fige — ~10 % de faux positifs acceptés
-contre la détection d'un bloc contaminé — est une décision, pas une mesure.
+revanche, SONT NEUVES : le facteur 3 de la règle d'usage `3·σ_r`, et le
+budget de faux positif GLOBAL ~10 % du test de forme** — dont le seuil par
+contraste 5,5 est DÉRIVÉ (§3), pas choisi. Ni dérivées, ni héritées — des
+**CONVENTIONS**, déclarées comme telles, que l'endossement de ce document
+achète explicitement. **Budget d'INDÉTERMINÉ sur instrument sain,
+nommé pour n'être découvert par personne.** Une seule de ses deux
+composantes est calculable AVANT le run — celle du test de forme, parce que
+le rapport étendue/interquartile est invariant d'échelle et ne dépend donc
+PAS de σ : **9,25 % mesuré** (deux contrastes à n = 16, un à n = 12, seuil
+5,5). Celle d'`I-q4` dépend de σ et se calcule après coup (§5). Le total ne
+peut donc pas être gravé ici sans supposer connue la grandeur même que ce
+run mesure : il est CONSIGNÉ dans l'artefact, et il vaut AU MOINS les
+9,25 % du test de forme — de l'ordre d'un run sain sur dix à refaire,
+~12 min de GPU, le prix du conservatisme.
 Tout protocole consommateur devra soit les reprendre en les citant, soit
 dériver de SA décision ses propres seuils — la règle de `§A60` : l'effet qui
 compte se dérive de la décision, il ne se choisit pas.
@@ -304,7 +331,9 @@ sous une sonde jugée perturbante.
 **(I-q2) La dérive doit être VUE pour être annulée.** Si, dans les runs de
 cycles, l'écart absolu entre le premier et le dernier bloc d'un même côté est
 < **1 %**, alors la répétabilité constatée ne DÉMONTRE PAS la robustesse à la
-dérive — c'est le résultat commode. ⇒ La répétabilité est consignée, la
+dérive — c'est le résultat commode. La condition s'évalue **PAR CONTRASTE** :
+`max(écart du côté X, écart du côté Y) < 1 %` ⇒ CE contraste est suspendu,
+et le global avec lui (agrégation de §4). ⇒ La répétabilité est consignée, la
 robustesse reste **NON ÉTABLIE**, et un re-run est dû dans les conditions où
 `M-d` montre la dérive. **Articulation avec §4, écrite pour être codée, pas
 relue : tant que la CONDITION d'`I-q2` est REMPLIE — écart premier→dernier
@@ -325,9 +354,21 @@ contraste — pas de moyenne qui enterre le désaccord.
 `med(64_{i+1})/med(64_i)` : c'est un test de **dérive cycle-à-cycle**, pas une
 cohérence des rapports entre eux. Il borne précisément l'hypothèse de §3 —
 dérive petite à l'échelle d'un cycle — et n'importe toujours aucune valeur
-externe. Critère : si `|produit − 1|` dépasse la dérive que la pente de `M-d`
-prédit sur la durée d'un cycle, il existe une dérive NON expliquée par ce qui
-a été caractérisé ⇒ **INDÉTERMINÉ**. **Quand `I-q2` mord (pas de dérive
+externe. **Critère, corrigé par le banc du driver (garde 9)** : la première
+version lisait le MAXIMUM des produits contre la prédiction moyenne —
+99–100 % d'INDÉTERMINÉ sur instrument sain, mesuré deux fois (banc et
+contre-simulation), la famille exacte de la faute d'échelle de §3. La
+lecture gravée est : `|médiane(produits) − (1 + pente·T̂_cycle)| >
+max(IQR/2 des produits, borne de biais de §3 recalculée sur un cycle)` ⇒
+**INDÉTERMINÉ** — le premier terme couvre le bruit, le second est le
+plancher DÉRIVÉ de la décision : c'est précisément l'hypothèse de §3 que ce
+critère protège. **Son taux de faux positif n'est PAS annoncé ici** : il
+dépend de la dispersion vraie de l'instrument — l'inconnue que ce protocole
+existe pour mesurer — et le banc du driver le fait varier de 0 % à ~6 % sur
+la plage plausible de `n` et de σ. Il se calcule **APRÈS COUP** contre la
+dispersion LUE, par le même modèle que la puissance du §3, et se consigne
+dans l'artefact ; un scalaire publié maintenant serait un chiffre de coin
+(faute `§A62-bis-4`), et la règle est déjà celle du §3. **Quand `I-q2` mord (pas de dérive
 visible), `I-q4` passe TRIVIALEMENT et ne compte pour rien** — les deux
 critères ne se secourent pas.
 
