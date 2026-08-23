@@ -736,8 +736,13 @@ l'attribut manquant. Le contrat du `§1` est que le gather ne bouge pas.
 - [ ] **Étape 3 : prouver que `chemin_de_cout.py` n'a pas bougé**
 
 ```bash
-git diff --stat HEAD -- src/f1_gpu/chemin_de_cout.py src/f1_gpu/pyramide.py
+git diff --stat 8d839fb -- src/f1_gpu/chemin_de_cout.py src/f1_gpu/pyramide.py
 ```
+
+`8d839fb` est la BASE de branche (le commit du plan), **pas `HEAD`**.
+Comparer à `HEAD` ne verrait que l'arbre de travail et laisserait passer une
+modification COMMITÉE dans une tâche antérieure — le contrat du `§1` doit
+tenir sur toute la série, pas sur le dernier commit.
 
 Attendu : **sortie vide**. Si elle ne l'est pas, la tâche est en échec quel
 que soit l'état des tests.
