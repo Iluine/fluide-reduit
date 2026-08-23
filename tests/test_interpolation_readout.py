@@ -250,3 +250,49 @@ def test_la_tentative_est_consignee_meme_si_l_exception_est_avalee():
     except RuntimeError:
         pass
     assert len(violations_consignees()) == avant + 1
+
+
+def test_le_gather_est_inchange_et_lit_la_vue():
+    """Verrou (e) — le contrat du §1 du spec.
+
+    Deux choses en une, et les deux comptent : (1) le gather rend LES MÊMES
+    OCTETS sur la pyramide qu'avant l'existence de ce module — le plancher
+    « plus proche voisin » de §A48 garde 1 n'a pas bougé ; (2) le même gather,
+    NON MODIFIÉ, sait lire la vue interpolée, parce qu'elle expose la même
+    surface. `chemin_de_cout.py` n'a pas une ligne de différence."""
+    from src.f1_gpu.chemin_de_cout import gather_chemin_de_cout
+
+    pyr = _pyramide()
+    _peindre_s(pyr, 4.0)
+    cote = N_FOV
+
+    # (1) le gather sur la pyramide, inchangé
+    ecran_direct = gather_chemin_de_cout(pyr, cote, indice_champ=INDICE_CHAMP_S)
+    assert np.allclose(ecran_direct, 4.0)
+
+    # (2) le MÊME gather sur la vue : α = 1 doit reproduire le gather direct
+    tampon = TamponReadout(pyr)
+    tampon.capturer(pyr)
+    vue = tampon.melanger(pyr, 1.0)
+    ecran_vue = gather_chemin_de_cout(vue, cote, indice_champ=0)
+
+    assert ecran_direct.tobytes() == ecran_vue.tobytes(), (
+        "à α=1 la vue doit rendre exactement le gather direct")
+
+
+def test_deux_appels_rendent_les_memes_octets():
+    """Verrou (f) — fonction pure, anti-PERSIST. La SYNTHÈSE est sans état,
+    même si `s_prev` en a un : c'est la seconde jambe de la défense du
+    §4-bis — de l'HISTOIRE, pas de la SYNTHÈSE."""
+    pyr = _pyramide()
+    _peindre_s(pyr, 2.0)
+    tampon = TamponReadout(pyr)
+    tampon.capturer(pyr)
+    _peindre_s(pyr, 5.0)
+
+    premier = {j: np.array(tampon.melanger(pyr, ALPHA_INTERPOLER).fenetres[j],
+                           copy=True) for j in pyr.geo.niveaux_gpu}
+    second = {j: np.array(tampon.melanger(pyr, ALPHA_INTERPOLER).fenetres[j],
+                          copy=True) for j in pyr.geo.niveaux_gpu}
+    for j in pyr.geo.niveaux_gpu:
+        assert premier[j].tobytes() == second[j].tobytes()
