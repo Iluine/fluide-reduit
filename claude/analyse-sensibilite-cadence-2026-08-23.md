@@ -203,6 +203,155 @@ Ils sont **du contexte pour la remontée**, ils ne décident rien :
 
 ---
 
-## §7. RÉSULTATS
+## §7. RÉSULTATS — **BRANCHE (b) : SENSIBLE**, et la sensibilité tient dans UNE grandeur
 
-*(vide — à APPENDRE après le calcul, dans un commit distinct de celui-ci)*
+Lecteur : `lire_sensibilite_cadence.py`. Artefact :
+`claude/lectures/sensibilite-cadence-2026-08-23.json`.
+**Aucune mesure, aucun GPU, aucun `cupy`.** Balayage : **343 coins × 3 671
+valeurs de `I` × 2 façons de compter les budgets.**
+
+### §7-0 — DEUX GARDES ONT MORDU AVANT TOUT RÉSULTAT
+
+**(1) LE §3 ÉCRIVAIT UNE BORNE TROP ÉTROITE.** Le `§3` posait `± 2,3 %` de
+dépendance au rang ; l'artefact de `§A63` porte **2,3348 %** (`I-q3`, 64→128).
+La borne est désormais **LUE dans l'artefact**, plus écrite à la main — le
+domaine balayé est **ÉLARGI**, jamais rétréci. Arrondir 2,3348 vers 2,3 après
+l'avoir lu aurait été rétrécir l'incertitude pour se faciliter la conclusion.
+La garde qui l'a vu est un `_exiger`, pas une relecture.
+
+> **Cette borne reste EMPRUNTÉE, et le document le redit ici** : `σ_r` n'est
+> pas gravée, `§8` de la re-qualification reste FERMÉ (`§A63`). 2,3348 % est
+> une dépendance au rang **INEXPLIQUÉE**, pas une incertitude qualifiée.
+
+**(2) LE TÉMOIN DE NON-RÉGRESSION A ATTRAPÉ UNE FAUTE DE MA PROPRE ALGÈBRE.**
+Le lecteur meurt si son modèle ne reproduit pas les quatre grandeurs de
+l'artefact `I-r5`. Il est mort une fois — l'étendue du côté rapportée au côté
+BAS au lieu du côté HAUT. Corrigé, les quatre grandeurs se reproduisent à
+**écart relatif 0,000·10⁰ exactement** (`Δ`, `s_max` 60 Hz, étendue, point mort).
+*Sans ce témoin, le balayage aurait tourné sur un modèle inventé.*
+
+### §7-1 — `T-2` NE BASCULE NULLE PART : le troc EXISTE dans tout le domaine
+
+| façon de compter | `s30/s60` sur tout le domaine | `T-2` bascule ? |
+|---|---|---|
+| budgets gravés (16,7 / 33,333) | **[1,2544 ; 1,2908]** | **non** |
+| `1000/f` | **[1,2554 ; 1,2918]** | **non** |
+
+Le 30 Hz achète **toujours** un côté **25 à 29 % plus grand**, dans les 343
+coins et à toutes les valeurs de `I` balayées. **Le troc « résolution
+temporelle contre résolution spatiale » n'est jamais annulé par
+l'incertitude** : aucune cadence ne domine l'autre sur les deux axes.
+
+### §7-2 — `T-1` BASCULE, ET C'EST CE QUI TIRE LA BRANCHE (b)
+
+| façon de compter | `Δ` sur le domaine (fenêtres·Hz) | lieu du croisement `Δ = 0` | coins où il tombe dans `[0, non-F]` |
+|---|---|---|---|
+| budgets gravés | **[−5,6277 ; +31,1340]** | `I` ∈ [**1,4567** ; **1,8112**] ms | 245 / 343 |
+| `1000/f` | **[−4,6360 ; +32,1257]** | `I` ∈ [**1,5234** ; **1,8350**] ms | 196 / 343 |
+
+Le signe de `Δ` change à l'intérieur du domaine : il existe des points où le
+30 Hz délivre plus de travail et d'autres où c'est le 60 Hz. **`T-1` bascule
+⇒ branche (b).**
+
+**Les DEUX façons de compter tirent la MÊME branche** ⇒ la clause `I-r5` du
+`§2` E-2 **ne rend pas la lecture INDÉTERMINÉE**. L'arrondi 1002/1000 déplace
+le croisement de **3,63 %** — exactement ce que `§A62-bis-2` avait établi pour
+le point mort — sans toucher la branche.
+
+### §7-3 — CE QUI NE COMPTE PAS, MÉCANISÉ PLUTÔT QU'AFFIRMÉ
+
+| énoncé | vérification | résultat |
+|---|---|---|
+| `C` ne touche ni `T-1` ni `T-2` | signe de `Δ` invariant ; `s30/s60` invariant | écart **4,4·10⁻¹⁶** |
+| `R` s'annule exactement de `Δ` | `Δ` invariant sous ±17,6 % sur `R` | écart **1,1·10⁻¹³** |
+| `R` touche `s30/s60` | chiffré au lieu d'être tu | **2·10⁻⁴** — sans jamais approcher 1 |
+
+`C` est **exactement neutre** : diviseur positif de `Δ`, et il s'annule du
+rapport des deux côtés parce que les deux le portent (E-4). ⇒ **La maladie
+d'instrument de `§A61` ne peut PAS, par `C`, faire basculer la décision de
+cadence.** `R` s'annule de `Δ` — c'est l'annulation de `§A62-3`, ici
+re-vérifiée sous biais et non plus seulement à valeur nominale.
+
+> ⇒ **Sur les trois grandeurs de la question du `§1`, DEUX sont hors de cause.
+> `Δ ∝ (non-F − I)` : décider la cadence sur `T-1`, c'est décider le signe de
+> `non-F − I`, et rien d'autre.**
+
+### §7-4 — LA GRANDEUR NOMMÉE ET SA PRÉCISION, **DÉRIVÉE DE LA DÉCISION**
+
+Ce que le `§5` branche (b) exige, et la règle de `§A60` : *l'effet qui compte
+se dérive de la décision, il ne se choisit pas.*
+
+**Grandeur : `I`, le coût d'une interpolation de readout — rapporté au non-F**
+qui porte l'étiquette de `PREREGISTRATION.md:9559`
+« non-F **2D à l'échelle de l'instrument**, pas un rendu 3D à 1920. »
+
+**Lecture en ABSOLU** — si `I` et le non-F sont connus séparément, chacun
+portant `± 15 %` (`§A60`) combiné à la borne de rang :
+
+| façon de compter | signe DÉCIDÉ si | zone INDÉCIDABLE |
+|---|---|---|
+| budgets gravés | `I` < **1,4567 ms** ou `I` > **2,0929 ms** | large de **0,6362 ms** |
+| `1000/f` | `I` < **1,5234 ms** ou `I` > **2,1596 ms** | large de **0,6362 ms** |
+
+**Lecture en RAPPORT** — si `I` et le non-F sont mesurés **adjacents dans le
+temps**, un biais multiplicatif commun s'annule du rapport :
+
+> **Le signe est DÉCIDÉ si `|I/non-F − 1| > 2,335 %` ; INDÉCIDABLE dans
+> `[0,9767 ; 1,0233]`.**
+
+**La décision n'a donc pas besoin de deux absolus : elle a besoin d'un
+RAPPORT.** C'est exactement la classe que `§A61` laisse « probablement saine,
+**à ÉTABLIR, pas à supposer** » — et que `§A63` a précisément **échoué** à
+qualifier.
+
+**Et la précision requise, 2,335 %, EST le chiffre que `§A63` a mesuré comme
+dépendance au rang inexpliquée.** La décision de cadence se joue donc
+**exactement au bord de ce que l'instrument sait aujourd'hui rendre**. Ce
+n'est pas une coïncidence commode : c'est la même borne des deux côtés, parce
+que c'est la même machine.
+
+### §7-5 — CE QUE ÇA COÛTE, ET CE QUE ÇA NE TRANCHE PAS
+
+- **En absolu** : une mesure 3D ABSOLUE — **INTERDITE par `§A61`** tant que
+  l'instrument n'est pas qualifié.
+- **En rapport** : un contraste apparié intra-run — la classe que la
+  re-qualification devait qualifier et **n'a pas qualifiée** (`§A63`,
+  INDÉTERMINÉ global, `σ_r` non gravée).
+
+> ⇒ **Dans les deux cas, la re-qualification REVIENT sur le chemin critique de
+> la cadence.** La branche (a) — « la re-qualification sort du chemin
+> critique » — **n'est pas tirée.**
+
+**Ce document NE TRANCHE PAS** entre « le problème est matériel » et « le
+problème est l'estimateur » : `§A63-1` a laissé l'attribution **OUVERTE**, et
+rien ici ne la referme. Il ne prononce pas non plus sur la Porte 3 de `§A58`.
+
+### §7-6 — LE CONTEXTE DU `§6`, REPORTÉ ET NE DÉCIDANT RIEN
+
+Ces chiffres étaient nommés au `§6` **avant** d'être vus, précisément pour
+qu'ils ne puissent pas devenir des critères.
+
+| | 60 Hz | 30 Hz à `I` = 0 | 30 Hz au point mort |
+|---|---|---|---|
+| `s_max` au plancher mesuré du rendu | **51,99** (invariant à `I`) | **66,82** | **65,45** |
+| cap, plancher mesuré | **5,90** | 12,52 | 11,76 |
+| `s_max` sous la réserve gravée | **43,46** | 56,62 | 54,68 |
+| cap, réserve gravée | 3,44 | 7,61 | 6,86 |
+
+**V4 en demande 11.** L'interdiction héritée de P2 continue de mordre : le
+plancher de rendu est confortable et **ne sauve rien**.
+
+**Part relative de `Δ`** : sur tout le domaine, `Δ` va de **−1,59 %** à
+**+8,80 %** du travail du côté 60 Hz — le « 6,2 % » de `§A62-3` en est la
+valeur **nominale à `I` = 0**, désormais encadrée. **Ce n'est pas un critère**
+et ce document ne l'a pas transformé en seuil : `T-1` est un test de SIGNE,
+et il a été écrit avant que ces bornes existent.
+
+---
+
+## §8. ARRÊT
+
+**Branche (b) tirée. STOP.** Rien ne s'enchaîne : ni la Porte 3 de `§A58`, ni
+un cinquième protocole de qualification, ni une mesure de `I`. La cadence
+appartient à Romain (`§A62`), et ce document ne fait que lui rendre la forme
+exacte de ce qui manque.
