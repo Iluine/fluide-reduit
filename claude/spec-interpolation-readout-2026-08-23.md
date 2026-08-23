@@ -103,15 +103,23 @@ coût n'était pas nommé.
 | régime | condition | coût |
 |---|---|---|
 | **échange de pointeurs** | `F` écrit **hors place** | **0 octet** |
-| **copie d2d** | `F` écrit **EN PLACE** | `180 224 o` lus + écrits (n_fov = 64), 30/s |
+| **copie d2d** ← **C'EST CELUI-CI** | `F` écrit **EN PLACE** | `245 760 o` lus + écrits (n_fov = 64), 30/s |
 
-**Indication, donnée pour une indication et pas pour un fait** : le noyau 3D
-écrit dans un tampon de sortie **distinct** de son entrée —
-`src/f1_gpu/substrat_fusionne_3d_param.py:336` « q_out[idx]           = un; »
-— ce qui rend l'échange de pointeurs plausible. Mais **ce module vise la
-pyramide 2D**, et le régime y est **à ÉTABLIR avant tout chiffrage de `I`**,
-jamais à supposer. Sous le régime d'échange le terme vaut **exactement zéro**
-et `I` est inchangé.
+> **DÛ FERMÉ (amendement 2) — c'est la COPIE, pas l'échange.** Sur la pyramide
+> 2D, `F` écrit **EN PLACE** : `src/f1_gpu/pyramide.py:501` « _, dt_cfl = self.pas_f(fen, xp, fen) »
+> — le tampon de sortie passé à `pas_f` **est** le tampon d'entrée `fen`. Un
+> échange de pointeurs ne peut donc rien conserver : `s_prev` doit être une
+> **COPIE RÉELLE, prise AVANT `pas_f`**.
+>
+> ⇒ **`I` porte `245 760 o` lus + écrits par image interpolée** (`n_fov` = 64),
+> 30 fois par seconde. **Le terme n'est PAS nul.** Le dû se ferme du côté
+> DÉFAVORABLE, et il se ferme **par lecture du code**, pas par une mesure.
+
+*L'indication qui avait été donnée pointait dans l'autre sens et elle était
+hors sujet* : le noyau **3D** écrit dans un `q_out` distinct
+(`src/f1_gpu/substrat_fusionne_3d_param.py:336` « q_out[idx]           = un; »),
+mais ce module vise la pyramide **2D**, et c'est elle qui décide. **C'est
+exactement pourquoi elle avait été étiquetée « indication, pas un fait ».**
 
 ---
 
@@ -203,10 +211,16 @@ incompatibles. Le second est retenu.*
 
 Un `s_prev` par fenêtre sert **les deux modes** (c'est `§2` : un seul noyau).
 
-| `n_fov` | `11 × n_fov² × 4 o` | en Kio |
+**Le tampon se dimensionne sur les PLANS `s`, pas sur les SLOTS.** Le tenseur
+est `src/f1_gpu/pyramide.py:385` « `references[j]` de shape (n_slots(j), n_systemes(j), 4, n_fov, n_fov) »
+— et un slot `c = 8` porte **DEUX systèmes** (`SYSTEMES_PAR_C`, `§A16`), donc
+deux plans `s`. Pour V4 (2 fins `c=8` + 2 énergie `c=8` + 7 `c=4`) :
+`4×2 + 7×1` = **15 plans `s` pour 11 slots.**
+
+| `n_fov` | `15 × n_fov² × 4 o` | en Kio |
 |---|---|---|
-| 64 | **180 224 o** | **176 Kio** (exactement) |
-| 52 | **118 976 o** | **116,19 Kio** |
+| 64 | **245 760 o** | **240 Kio** (exactement) |
+| 52 | **162 240 o** | **158,44 Kio** |
 
 Contre **3 781 Mo** de VRAM machine. Chiffré, non plaidé.
 
@@ -222,10 +236,11 @@ Contre **3 781 Mo** de VRAM machine. Chiffré, non plaidé.
 > état de readout rangé parmi eux finirait consommé. L'ambiguïté est tuée ici
 > plutôt que laissée à l'implémentation.
 
-> ⚠ **ÉTIQUETTE : `11` est la DEMANDE de V4, un MAJORANT de dimensionnement —
+> ⚠ **ÉTIQUETTE : `11` slots — donc `15` plans — est la DEMANDE de V4, un
+> MAJORANT de dimensionnement —
 > pas un engagement.** V4 est mort en 3D (`§A53`, `R-3`) et **aucun cap ne
 > l'atteint** (5,90 à 60 Hz au plancher mesuré du rendu). `11` est retenu parce
-> qu'un majorant à 176 Kio ne coûte rien à assumer. Sans cette étiquette, ce
+> qu'un majorant à 240 Kio ne coûte rien à assumer. Sans cette étiquette, ce
 > serait un chiffre de coin de plus.
 
 ---
