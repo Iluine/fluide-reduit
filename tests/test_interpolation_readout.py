@@ -83,13 +83,16 @@ def test_melange_a_un_demi():
         assert np.allclose(vue.fenetres[j][:, :, 0], 5.0)
 
 
-def test_les_deux_modes_partagent_un_seul_chemin():
-    """Verrou (b) — §2 du spec MÉCANISÉ.
+def test_melanger_est_deterministe():
+    """Déterminisme de `melanger` — et RIEN DE PLUS.
 
-    `I` est annoncé INVARIANT AU MODE par construction. Non vérifié, cet
-    énoncé est une garde promise, donc une garde absente (§A62-bis-2). Ici
-    on l'exécute : à `α` ÉGAL, les deux appels doivent rendre les MÊMES
-    OCTETS — s'il existait un chemin propre à un mode, ils différeraient."""
+    Ce test s'appelait « les deux modes partagent un seul chemin » et ne
+    vérifiait pas cela : comparer deux appels au MÊME `α` ne peut pas
+    distinguer un noyau unique d'un noyau branché sur `α`, puisque les deux
+    sont déterministes à `α` fixé. Renommé pour dire ce qu'il teste
+    réellement — une propriété vraie et utile. Le chemin unique est verrouillé
+    par `test_un_seul_noyau_affine_les_alphas_sont_colineaires`.
+    """
     pyr = _pyramide()
     _peindre_s(pyr, 3.0)
     tampon = TamponReadout(pyr)
@@ -132,3 +135,42 @@ def test_interpoler_ne_depasse_jamais():
     _peindre_s(pyr, 1.0)
     vue = tampon.melanger(pyr, ALPHA_INTERPOLER)
     assert vue.clamps == 0, "α=½ entre deux états positifs ne peut pas clamper"
+
+
+def test_un_seul_noyau_affine_les_alphas_sont_colineaires():
+    """Verrou (b), RÉPARÉ — §2 du spec RÉELLEMENT mécanisé.
+
+    « `I` est invariant au mode par construction » ne tient que s'il n'existe
+    qu'UN noyau. La conséquence testable est l'AFFINITÉ : `s_out` est linéaire
+    en `α`, donc trois évaluations sont colinéaires —
+
+        s_out(α) = s_out(0) + α·(s_out(1) − s_out(0))
+
+    Un chemin propre à un mode brise cette identité. Deux mutants qui passaient
+    la version précédente de ce verrou la violent : un branchement `if α > 1`
+    avec une autre formule, et un décalage constant de −0,001.
+
+    LES VALEURS SONT CHOISIES POUR QUE LE CLAMP NE MORDE JAMAIS (`s_prev = 3`,
+    `s_cur = 9`, donc `s_out ≥ 3` sur tout `α ∈ [0 ; 1,5]`). Le clamp brise
+    LÉGITIMEMENT l'affinité — le tester dans sa zone testerait autre chose.
+    """
+    pyr = _pyramide()
+    _peindre_s(pyr, 3.0)
+    tampon = TamponReadout(pyr)
+    tampon.capturer(pyr)
+    _peindre_s(pyr, 9.0)
+
+    zero = {j: np.array(tampon.melanger(pyr, 0.0).fenetres[j], copy=True)
+            for j in pyr.geo.niveaux_gpu}
+    un = {j: np.array(tampon.melanger(pyr, 1.0).fenetres[j], copy=True)
+          for j in pyr.geo.niveaux_gpu}
+
+    for alpha in (ALPHA_INTERPOLER, ALPHA_EXTRAPOLER):
+        vue = tampon.melanger(pyr, alpha)
+        assert vue.clamps == 0, (
+            f"α={alpha} a clampé : le test sort de sa zone de validité")
+        for j in pyr.geo.niveaux_gpu:
+            attendu = zero[j] + alpha * (un[j] - zero[j])
+            assert np.allclose(vue.fenetres[j], attendu), (
+                f"α={alpha} au niveau {j} sort de la droite affine : "
+                "il existe un chemin propre à un mode")
