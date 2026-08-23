@@ -64,9 +64,8 @@ s_out = (1 − α)·s_prev + α·s_cur
 > modes à `α` égal » ne décrit rien. Le test qui en est sorti comparait deux
 > appels au **même** `α` — un test de DÉTERMINISME, que **tout** noyau branché
 > sur `α` satisfait, puisqu'il reste déterministe à `α` fixé.
-> **Deux mutants le passaient** : un branchement `if α > 1` avec une autre
-> formule, et un décalage constant de −0,001 qui faisait passer la suite
-> ENTIÈRE.
+> **Un mutant le passait, et il passait TOUTE la suite d'alors** : un
+> branchement `if α > 1` avec une autre formule.
 >
 > Ce que ce paragraphe affirme est qu'il n'existe **qu'un noyau**, et la
 > conséquence testable est l'**AFFINITÉ** : `s_out` est linéaire en `α`, donc
@@ -77,6 +76,24 @@ s_out = (1 − α)·s_prev + α·s_cur
 > montrée, pas une relecture**. C'est `§A53` au mot près, et c'est la même
 > découverte que le 03/08 sur `chemin_de_cout`. Le verrou censé mécaniser ce
 > paragraphe était lui-même **éteint**.
+
+> **PORTÉE EXACTE DU VERROU RÉPARÉ — MESURÉE, PAS SUPPOSÉE.** Une première
+> rédaction de cet amendement affirmait qu'un décalage constant de −0,001
+> violait aussi la colinéarité. **C'est FAUX**, et c'est l'implémenteur qui
+> l'a vu et signalé au lieu de corriger en silence. Vérifié en lançant les
+> deux mutants :
+>
+> | mutant | résultat |
+> |---|---|
+> | décalage **conditionné au mode** (`if α > 1`) | **1 failed, 6 passed** — l'unique échec est la colinéarité |
+> | décalage **inconditionnel** (`−0,001` partout) | **3 failed, 4 passed** — attrapé par les verrous de BORNES ; la colinéarité passe |
+>
+> Un décalage indépendant de `α` **s'annule** dans l'identité, puisque `s_out(0)`
+> et `s_out(1)` le portent aussi. ⇒ **Les deux familles de verrous sont NON
+> REDONDANTES : chacune est l'unique détecteur de sa classe.** Ce n'est pas une
+> faiblesse — c'est la portée exacte, et l'écrire évite de croire que le verrou
+> garde plus qu'il ne garde. **C'est `§A53` appliqué à la garde qui venait de
+> réparer une violation de `§A53`.**
 
 L'arithmétique affine est l'**hypothèse nulle** (null-first). Aucune
 justification perceptuelle n'est revendiquée pour elle : si une mesure future la
