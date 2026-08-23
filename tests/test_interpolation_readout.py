@@ -146,9 +146,20 @@ def test_un_seul_noyau_affine_les_alphas_sont_colineaires():
 
         s_out(α) = s_out(0) + α·(s_out(1) − s_out(0))
 
-    Un chemin propre à un mode brise cette identité. Deux mutants qui passaient
-    la version précédente de ce verrou la violent : un branchement `if α > 1`
-    avec une autre formule, et un décalage constant de −0,001.
+    Un chemin propre à un mode brise cette identité, et CE VERROU EST LE SEUL
+    QUI L'ATTRAPE — mesuré par mutation, pas supposé :
+
+      - décalage CONDITIONNÉ AU MODE (`if α > 1`) : `1 failed, 6 passed`, et
+        l'unique échec est ce test. Les six autres verrous le laissent passer.
+      - décalage INCONDITIONNEL (`− 0,001` partout) : `3 failed, 4 passed` —
+        attrapé par les verrous de BORNES de la tâche 1, et ce test-ci le laisse
+        passer, car un décalage indépendant de `α` s'annule dans l'identité
+        (`s_out(0)` et `s_out(1)` le portent aussi).
+
+    Les deux familles sont donc NON REDONDANTES : chacune est l'unique
+    détecteur de sa classe. Ce n'est pas une faiblesse du verrou, c'est sa
+    portée exacte — et l'écrire évite de croire qu'il garde plus qu'il ne garde
+    (`§A53` : un verrou ne garde que ce que son état de test allume).
 
     LES VALEURS SONT CHOISIES POUR QUE LE CLAMP NE MORDE JAMAIS (`s_prev = 3`,
     `s_cur = 9`, donc `s_out ≥ 3` sur tout `α ∈ [0 ; 1,5]`). Le clamp brise
