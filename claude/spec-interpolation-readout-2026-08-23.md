@@ -463,6 +463,84 @@ produite ailleurs lit `vue.fenetres` sans rien déclencher.
 
 ---
 
+## §13. AMENDEMENT 6 — **LA VOIE 2 EST TRANCHÉE (Romain), ET C'EST UNE DÉRIVATION**
+
+Le bug de registre du `§12-1` avait trois voies. **Romain tranche la voie 2**, et
+le motif n'est pas une préférence : **deux des trois meurent de contredire un
+document endossé.**
+
+### §13-1 — POURQUOI LES VOIES 1 ET 3 SONT MORTES
+
+Le `§2` est endossé : **un seul noyau affine, mêmes octets.**
+
+| voie | ce qu'elle ferait | pourquoi elle meurt |
+|---|---|---|
+| **1 — rouler `s_prev`** avec la fenêtre | exige un **masque de validité** sur les colonnes entrantes | un `α` **par cellule** ⇒ **un autre noyau** |
+| **3 — mélanger en coordonnées MONDE** par lecture indexée | change l'**arithmétique** du noyau (lecture décalée) | **un autre noyau** |
+| **2 — capturer post-roll / pré-`pas_f`, PAR NIVEAU** | ne touche pas au noyau | **retenue** |
+
+> **Les voies 1 et 3 meurent du mouvement même qui a tué la fusion au `§1-bis`** :
+> **contredire un document endossé n'est pas une option de design.**
+
+### §13-2 — CE QUE LA VOIE 2 ACHÈTE, PAR CONSTRUCTION
+
+Post-roll, `s_prev` (état `n−1`) et `s_cur` (état `n`, après `pas_f`) vivent dans
+**les mêmes coordonnées fenêtre par construction** — **y compris les colonnes
+entrantes, qui reçoivent du roll leur contenu `n−1`**
+(`src/f1_gpu/pyramide.py:491` « fen[...] = xp.roll(fen, -dx, axis=-1) »).
+
+⇒ **Pas de masque. Pas de cellule qui n'a jamais coexisté.** Le noyau affine du
+`§2` reste **intact**, et l'invariance de `I` au mode avec lui.
+
+### §13-3 — LE DÛ DU `§3-bis` EST TRANCHÉ PAR DÉRIVATION
+
+Capturer **pré-`pas_f`** pendant que `F` **écrit en place**
+(`src/f1_gpu/pyramide.py:501` « _, dt_cfl = self.pas_f(fen, xp, fen) ») **impose
+la copie d2d** : le régime « échange de pointeurs » **meurt**, et il meurt
+maintenant par la géométrie du point de capture, plus seulement par l'écriture
+en place.
+
+> ⇒ **`I` = noyau + copie, 30/s.** Et la copie se chiffre désormais **PAR
+> NIVEAU** — le point de capture vit dans la boucle par niveau de `frame()`,
+> pas en un geste global. Même volume total, **site de comptabilité différent**,
+> et c'est le site qui décide comment on le mesurera.
+
+### §13-4 — LE `§4` DEMANDE UNE RETOUCHE, ET ELLE EST LOAD-BEARING
+
+Sous la voie 2, **le sens d'écriture s'inverse** : la capture devient une
+écriture **état → readout**, qui est le **sens sûr**. Mais le verrou structurel
+doit désormais **nommer QUI écrit** :
+
+> **`frame()` écrit dans le tampon de readout ; le module, lui, ne fait que
+> LIRE l'état.**
+
+**Sans cette phrase, la garde « le module ne détient aucune référence en
+écriture » devient FAUSSE À LA LETTRE dans l'autre sens** — un lecteur y verrait
+une interdiction que la voie 2 viole, alors que la voie 2 la respecte dans le
+seul sens qui compte : **rien du readout ne remonte jamais dans l'état.**
+
+### §13-5 — LE `§9` NE MEURT PAS, IL S'AFFÛTE — ET MON RETRAIT SUR-CORRIGEAIT
+
+Le `§12-1` retirait l'argument du `§9` en bloc. **C'était un cran de trop.**
+
+- **Sous le bug** : ÉTAT fantômait à l'identique d'IMAGE. **Vrai** — et c'est ce
+  que le `§12-1` a établi.
+- **Sous la voie 2** : ÉTAT **se remet en registre par construction**, le roll
+  alignant les cellules monde. **IMAGE n'a aucun mécanisme équivalent** — deux
+  champs écran consécutifs ne portent aucune information de correspondance.
+
+⇒ L'argument passe de « **donné pour un argument, pas pour un fait** » à
+**ASYMÉTRIE STRUCTURELLE — conditionnelle au choix de la voie 2**, et il porte
+cette étiquette-là, pas une plus forte. **Ce n'est plus une intuition sur le
+fantômage : c'est une conséquence du design retenu.**
+
+> **Le `§9` reste NON CHIFFRÉ** : le placement IMAGE n'est toujours pas évalué,
+> et sous lui `R` ne s'annulerait toujours pas de `Δ`. L'asymétrie explique
+> pourquoi ÉTAT a été retenu ; elle ne dispense pas de traiter le placement
+> manquant avant tout chiffrage de `I`.
+
+---
+
 ## §11. CE QUE CE DOCUMENT NE FAIT PAS — **ARRÊT**
 
 - **Aucune mesure de `I`.** `§A61` l'interdit toujours, et `§A63` a rendu
