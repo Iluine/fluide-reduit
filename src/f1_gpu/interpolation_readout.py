@@ -53,18 +53,36 @@ ALPHA_EXTRAPOLER: float = 1.5
 # est en train d'atteindre un produit de readout. La liste est la MÉCANISATION
 # du §4 du spec : elle doit GRANDIR avec tout nouveau module qui écrit l'état
 # ou exécute `F`. Le nom SIMPLE est comparé : `src.f1_gpu.pyramide` -> `pyramide`.
+#
+# CE QUE CETTE GARDE NE PEUT PAS GARDER — une garde par liste ne couvre que les
+# modules NOMMÉS ici ; tout module d'état futur, pas encore écrit ou pas encore
+# ajouté, lui échappe jusqu'à ce que quelqu'un l'y mette. C'est pourquoi le
+# verrou de pile n'est JAMAIS le premier verrou, mais le second : le verrou
+# STRUCTUREL — `s_prev` et `s_out` vivent hors du tenseur que `F` consomme, et
+# `melanger` n'écrit nulle part dans ce tenseur — tient quel que soit
+# l'appelant, nommé ici ou non, et c'est LUI qui porte la garantie. La preuve :
+# cinq modules manquaient à la première rédaction de cette liste
+# (`temoin_fidele`, `production_fidele`, `fovea_2niveaux`, `solver_wetdry`,
+# `sediment`) et ont été trouvés par une REVUE qui a confronté la liste au
+# contenu réel de `src/` — pas par la garde elle-même, qui ne peut par
+# construction rien dire de ce qu'elle ne nomme pas.
 _MODULES_ETAT: frozenset[str] = frozenset({
-    "pyramide",                     # exécute `F` via `pas_f` (`pyramide.py:501`)
-    "transferts",                   # descend/remonte l'état
-    "ledger",                       # comptabilité de conservation
     "exner_gpu",
+    "fovea_2niveaux",                # exécute `pas_deux_niveaux`
+    "ledger",                        # comptabilité de conservation
+    "production_fidele",             # exécute `pas_f_fidele`
+    "pyramide",                      # exécute `F` via `pas_f` (`pyramide.py:501`)
+    "sediment",                      # chemin re-dérivé CPU
+    "solver_wetdry",                 # chemin re-dérivé CPU
+    "substrat_fidele",
     "substrat_fusionne",
     "substrat_fusionne_3d",
     "substrat_fusionne_3d_param",
     "substrat_jetable",
     "substrat_jetable_3d",
     "substrat_l3",
-    "substrat_fidele",
+    "temoin_fidele",                 # exécute `pas_f_fidele`
+    "transferts",                    # descend/remonte l'état
 })
 
 
