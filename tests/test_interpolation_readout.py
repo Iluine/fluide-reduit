@@ -185,3 +185,68 @@ def test_un_seul_noyau_affine_les_alphas_sont_colineaires():
             assert np.allclose(vue.fenetres[j], attendu), (
                 f"α={alpha} au niveau {j} sort de la droite affine : "
                 "il existe un chemin propre à un mode")
+
+
+def _appeler_depuis(nom_module: str, fonction, *args, **kwargs):
+    """Exécute `fonction` depuis une frame dont `__name__` est `nom_module`.
+
+    Même patron que `tests/test_chemin_de_cout.py` : on fabrique une frame
+    portant le nom d'un module d'état, sans importer ce module."""
+    code = compile("resultat = fonction(*args, **kwargs)", "<frame>", "exec")
+    portee = {"__name__": nom_module, "fonction": fonction,
+              "args": args, "kwargs": kwargs}
+    exec(code, portee)
+    return portee["resultat"]
+
+
+def test_l_etat_de_la_pyramide_est_bit_identique_apres_appel():
+    """Verrou (c), face STRUCTURELLE — la garde de fond du §4.
+
+    Le seul verrou que §A53 ne sait pas contourner : si le module n'écrit
+    nulle part dans le tenseur, aucune fuite n'est possible, quel que soit
+    l'appelant."""
+    pyr = _pyramide()
+    _peindre_s(pyr, 4.0)
+    tampon = TamponReadout(pyr)
+    tampon.capturer(pyr)
+    _peindre_s(pyr, 6.0)
+
+    avant = {j: np.array(pyr.fenetres[j], copy=True)
+             for j in pyr.geo.niveaux_gpu}
+    tampon.melanger(pyr, ALPHA_EXTRAPOLER)
+    for j in pyr.geo.niveaux_gpu:
+        assert avant[j].tobytes() == pyr.fenetres[j].tobytes(), (
+            f"le tenseur de F a été modifié au niveau {j} — FUITE")
+
+
+def test_la_serrure_leve_depuis_un_module_d_etat():
+    """Verrou (c), face DE PILE. `pyramide` est le module qui exécute `F` :
+    s'il apparaît dans la pile, un état de readout est en train d'atteindre
+    le chemin de la physique."""
+    from src.f1_gpu.interpolation_readout import ReadoutInterditDansEtat
+
+    pyr = _pyramide()
+    tampon = TamponReadout(pyr)
+    tampon.capturer(pyr)
+    with pytest.raises(ReadoutInterditDansEtat):
+        _appeler_depuis("pyramide", tampon.melanger, pyr, ALPHA_INTERPOLER)
+
+
+def test_la_tentative_est_consignee_meme_si_l_exception_est_avalee():
+    """La trace survit à un `except RuntimeError` bien intentionné.
+
+    Découvert par mutation sur `chemin_de_cout` le 03/08 : la serrure hérite
+    de `RuntimeError`, et un appelant qui enveloppe l'appel d'un
+    `except RuntimeError` l'avale EN SILENCE. L'exception peut être étouffée ;
+    la trace, non."""
+    from src.f1_gpu.interpolation_readout import violations_consignees
+
+    pyr = _pyramide()
+    tampon = TamponReadout(pyr)
+    tampon.capturer(pyr)
+    avant = len(violations_consignees())
+    try:
+        _appeler_depuis("pyramide", tampon.melanger, pyr, ALPHA_INTERPOLER)
+    except RuntimeError:
+        pass
+    assert len(violations_consignees()) == avant + 1

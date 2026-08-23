@@ -49,6 +49,74 @@ ALPHA_INTERPOLER: float = 0.5
 ALPHA_EXTRAPOLER: float = 1.5
 
 
+# Modules dont la seule présence dans la pile signale que le chemin de l'ÉTAT
+# est en train d'atteindre un produit de readout. La liste est la MÉCANISATION
+# du §4 du spec : elle doit GRANDIR avec tout nouveau module qui écrit l'état
+# ou exécute `F`. Le nom SIMPLE est comparé : `src.f1_gpu.pyramide` -> `pyramide`.
+_MODULES_ETAT: frozenset[str] = frozenset({
+    "pyramide",                     # exécute `F` via `pas_f` (`pyramide.py:501`)
+    "transferts",                   # descend/remonte l'état
+    "ledger",                       # comptabilité de conservation
+    "exner_gpu",
+    "substrat_fusionne",
+    "substrat_fusionne_3d",
+    "substrat_fusionne_3d_param",
+    "substrat_jetable",
+    "substrat_jetable_3d",
+    "substrat_l3",
+    "substrat_fidele",
+})
+
+
+class ReadoutInterditDansEtat(RuntimeError):
+    """Levée quand le chemin de l'ÉTAT tente d'atteindre un produit de readout.
+
+    Hérite de `RuntimeError` — la faute porte sur QUI appelle. N'est JAMAIS
+    rattrapée dans ce module : une serrure qui se rattrape est une promesse,
+    pas une serrure."""
+
+
+# Trace INDÉLÉBILE des violations — voir `_verrouiller_consommateur`.
+_VIOLATIONS: list[str] = []
+
+
+def violations_consignees() -> tuple[str, ...]:
+    """Violations survenues depuis le début du processus.
+
+    **TOUT DRIVER QUI PRONONCE UN CHIFFRE DOIT LIRE CECI AVANT DE L'ÉCRIRE.**
+    Une liste non vide signifie qu'un produit de readout a été atteint depuis
+    le chemin de l'état : la comptabilité de conservation n'est plus garantie.
+
+    POURQUOI LA TRACE EXISTE — la leçon de `chemin_de_cout`, trouvée par
+    mutation le 03/08 et non par relecture. `ReadoutInterditDansEtat` hérite de
+    `RuntimeError` ; un appelant qui écrit `except RuntimeError` — geste banal
+    et bien intentionné — **avale la serrure en silence**, et la garde redevient
+    une promesse. L'exception peut être étouffée ; la trace, non."""
+    return tuple(_VIOLATIONS)
+
+
+def _verrouiller_consommateur() -> None:
+    """Refuse l'appel si la pile traverse un module d'état, et CONSIGNE la
+    tentative AVANT de lever.
+
+    Remonte les frames par `sys._getframe` plutôt que par `inspect.stack()` :
+    ce dernier ouvre et lit les fichiers source de chaque frame, ce qui
+    coûterait des millisecondes dans un chemin dont `I` sera un jour mesuré."""
+    frame = sys._getframe(1)
+    while frame is not None:
+        nom = frame.f_globals.get("__name__", "")
+        if nom.rsplit(".", 1)[-1] in _MODULES_ETAT:
+            _VIOLATIONS.append(nom)          # consignée AVANT la levée
+            raise ReadoutInterditDansEtat(
+                f"interpolation de readout appelée depuis « {nom} », un "
+                "module d'ÉTAT. §4 du spec : `s_out` et `s_prev` sont "
+                "ÉPHÉMÈRES — jamais écrits dans l'état, jamais lus par `F`. "
+                "Une fuite corromprait la comptabilité de conservation sans "
+                "produire aucun symptôme. Tentative consignée — voir "
+                "`violations_consignees()`.")
+        frame = frame.f_back
+
+
 class VueInterpolee:
     """Ce que le gather reçoit à la place de la pyramide.
 
@@ -113,6 +181,7 @@ class TamponReadout:
         Le clamp ne lève JAMAIS : ceci est du code moteur, il tourne. Le seuil
         au-delà duquel un comptage invalide une mesure appartient au prereg de
         la lecture d'orientation, pas ici (§5 du spec)."""
+        _verrouiller_consommateur()
         xp = pyramide.xp
         a = float(alpha)
         clamps = 0
