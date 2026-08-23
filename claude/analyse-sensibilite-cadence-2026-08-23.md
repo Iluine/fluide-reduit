@@ -347,6 +347,32 @@ valeur **nominale à `I` = 0**, désormais encadrée. **Ce n'est pas un critère
 et ce document ne l'a pas transformé en seuil : `T-1` est un test de SIGNE,
 et il a été écrit avant que ces bornes existent.
 
+> **AMENDEMENT (2026-08-23, relecture adverse de Romain) — L'ÉTIQUETTE
+> MANQUAIT À LA BORNE HAUTE, ET C'EST LA FAUTE `§A62-bis-4`, COMMISE DANS LE
+> DOCUMENT QUI LA NOMME COMME CELLE À NE PAS REFAIRE.**
+> Régime de correction à la CLAUSE (`§A47-PRÉCISION-2`) : la ligne ci-dessus
+> n'est pas réécrite, elle est amendée ici, datée et visible. **Aucun chiffre
+> ne change ; ce qui change est ce qu'un lecteur peut en conclure.**
+>
+> Le **+8,80 %** n'est pas une valeur du domaine parmi d'autres : il est
+> atteint **exactement à `I` = 0**, au coin `non-F` = +15 %·+2,3 % et
+> `C` = −15 %·−2,3 % (`R` y est indifférent, puisqu'il s'annule de `Δ`). Or
+> `I` = 0 est **gravé impossible** par le corpus :
+> `PREREGISTRATION.md:4219` « par fenêtre [design nommé, non décidé, non gratuit]. »
+> Et `Δ` est **monotone décroissante en `I` sur les 343
+> coins** (vérifié dans l'artefact) : **tout le haut de la fourchette est la
+> limite `I → 0`**, donc inatteignable.
+>
+> ⇒ **La fourchette est ASYMÉTRIQUE, et son extrémité favorable est
+> INACCESSIBLE.** La borne basse **−1,59 %**, elle, est atteinte à
+> `I` = non-F gravé — une valeur que rien n'interdit. Écrire
+> « `Δ` ∈ [−1,59 % ; +8,80 %] » sans cette étiquette **sur-vend le côté
+> favorable**, exactement comme « ~67³ » sur-vendait le côté 30 Hz.
+>
+> **Ce que l'amendement NE fait PAS** : il ne nomme aucune cadence préférable
+> et n'ajoute aucun critère. `T-1` reste un test de signe, et le `§6` reste
+> une section qui ne décide rien. **La cadence appartient à Romain.**
+
 ---
 
 ## §8. ARRÊT
