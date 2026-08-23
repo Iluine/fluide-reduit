@@ -355,7 +355,13 @@ Aucune mesure, aucun cupy : §A61 tient."
   d'API.
 
 **Pourquoi cette tâche est séparée** : elle ne teste pas un comportement, elle
-teste que **le composant n'a qu'un seul chemin d'exécution**. Un relecteur peut
+teste que **le composant n'a qu'un seul chemin d'exécution**.
+
+> ⚠ **CORRIGÉ EN RONDE 1 (voir l'amendement 3 du spec).** La première version
+> de ce verrou comparait deux appels au MÊME `α` : elle testait le
+> DÉTERMINISME, que tout noyau branché sur `α` satisfait. Deux mutants la
+> passaient. Le verrou réel est l'**AFFINITÉ** — trois évaluations
+> colinéaires. Le test de déterminisme est conservé sous son vrai nom. Un relecteur peut
 légitimement accepter la tâche 1 et rejeter celle-ci.
 
 - [ ] **Étape 1 : écrire le test qui échoue**

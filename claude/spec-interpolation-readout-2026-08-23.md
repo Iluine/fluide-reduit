@@ -57,6 +57,27 @@ s_out = (1 − α)·s_prev + α·s_cur
 > d'arithmétique entre modes**. C'est une garde STRUCTURELLE : elle ne dépend
 > d'aucune vigilance, elle tient parce qu'il n'y a qu'un noyau.
 
+> **AMENDEMENT 3 (2026-08-23) — LA PREMIÈRE FORMULATION DU VERROU (b) ÉTAIT
+> ÉTEINTE, ET C'EST UNE MUTATION QUI L'A DIT.** Le `§7` demandait la
+> « **bit-identité entre les deux modes à `α` ÉGAL** ». L'énoncé est
+> **incohérent** : les deux modes SONT deux valeurs de `α`, donc « les deux
+> modes à `α` égal » ne décrit rien. Le test qui en est sorti comparait deux
+> appels au **même** `α` — un test de DÉTERMINISME, que **tout** noyau branché
+> sur `α` satisfait, puisqu'il reste déterministe à `α` fixé.
+> **Deux mutants le passaient** : un branchement `if α > 1` avec une autre
+> formule, et un décalage constant de −0,001 qui faisait passer la suite
+> ENTIÈRE.
+>
+> Ce que ce paragraphe affirme est qu'il n'existe **qu'un noyau**, et la
+> conséquence testable est l'**AFFINITÉ** : `s_out` est linéaire en `α`, donc
+> trois évaluations sont **colinéaires**. Un chemin propre à un mode la brise.
+>
+> **La faute a traversé trois étages** — spec, plan, implémentation — parce
+> qu'aucun ne pouvait la voir depuis sa position, et **seule une MUTATION l'a
+> montrée, pas une relecture**. C'est `§A53` au mot près, et c'est la même
+> découverte que le 03/08 sur `chemin_de_cout`. Le verrou censé mécaniser ce
+> paragraphe était lui-même **éteint**.
+
 L'arithmétique affine est l'**hypothèse nulle** (null-first). Aucune
 justification perceptuelle n'est revendiquée pour elle : si une mesure future la
 condamne, c'est un incrément, pas une reprise.
@@ -254,7 +275,7 @@ tests sont de la LOGIQUE — ils ne mesurent rien.
 | | verrou | ce qu'il attrape |
 |---|---|---|
 | **(a)** | `α = 0` rend exactement `s_prev` ; `α = 1` exactement `s_cur` | le noyau affine **aux bornes** — propriété du noyau, jamais un chemin de production (`§3` : les images exactes le CONTOURNENT) |
-| **(b)** | **bit-identité entre les deux modes à `α` égal** | `§2` MÉCANISÉ — sans lui, l'invariance de `I` au mode est une promesse, donc une garde absente (`§A62-bis-2`) |
+| **(b)** | **AFFINITÉ** : `s_out(α) = s_out(0) + α·(s_out(1) − s_out(0))`, vérifiée aux deux `α` de mode, hors zone de clamp | `§2` MÉCANISÉ — sans lui, l'invariance de `I` au mode est une promesse, donc une garde absente (`§A62-bis-2`). **Voir l'amendement 3 : la première formulation était éteinte.** |
 | **(c)** | l'état de la pyramide est **bit-identique après appel** ; `_verrouiller_consommateur()` lève sur un appelant hors rendu | `§4` — la garde éphémère |
 | **(d)** | le clamp **compte** et le compteur est rendu ; il ne lève pas | `§5` |
 | **(e)** | `chemin_de_cout` rend **les mêmes octets qu'avant** sur un `s` non interpolé | la non-régression de `§A48` — le plancher n'a pas bougé |
