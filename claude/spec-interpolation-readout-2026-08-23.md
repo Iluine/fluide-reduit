@@ -397,6 +397,72 @@ elle survivait, une mesure future trancherait sur un chiffre mal nommé.*
 
 ---
 
+## §12. AMENDEMENT 5 — CE QUE LA REVUE FINALE A MIS EN DÉFAUT
+
+Trois clauses de ce spec sont **fausses ou sur-vendues**. Elles sont amendées
+ici, pas réécrites plus haut.
+
+### §12-1 — LE BUG DE REGISTRE, ET L'ARGUMENT DU `§9` QUI TOMBE AVEC LUI
+
+Les fenêtres sont **fovéa-relatives** (`src/f1_gpu/pyramide.py:264` « centre_j = centre_fin // (2 ** (self.niveau_fin - j)) »)
+et `frame()` **translate le contenu** avant d'appliquer `F`, dans la même
+boucle (`src/f1_gpu/pyramide.py:491` « fen[...] = xp.roll(fen, -dx, axis=-1) »
+puis `src/f1_gpu/pyramide.py:501` « _, dt_cfl = self.pas_f(fen, xp, fen) »).
+`s_prev`, lui, est indexé en coordonnées **locales** et n'est jamais roulé.
+
+⇒ **Le mélange combinait la cellule monde `x` avec la cellule `x − dx`.** Sur
+les colonnes entrantes, la valeur produite **n'a jamais existé** : mesuré à
+**153,52** entre deux cellules qui n'ont jamais coexisté. Silencieux —
+`clamps == 0`, aucune levée.
+
+> ⚠ **LE `§9` DE CE SPEC EST FAUX SUR CE POINT.** Il donnait le fantômage sous
+> fovéa mobile comme argument **pour** le placement ÉTAT, en le rangeant du côté
+> du placement IMAGE. **Le placement ÉTAT le porte à l'identique, et pour la
+> raison exacte que le `§9` nommait lui-même** (« les fenêtres aussi »).
+> L'argument était étiqueté « donné pour un argument, pas pour un fait » — **il
+> était faux, et l'étiquette est ce qui a permis de le dire sans rien rétracter
+> d'autre.**
+
+**Ce qui est fait, et ce qui ne l'est pas.** Le composant **REFUSE désormais de
+produire** sous fovéa mobile : la corruption silencieuse est devenue un échec
+bruyant. **Le design n'est PAS tranché.** Le point de capture correct est
+post-roll / pré-`pas_f`, **par niveau**, à l'intérieur de `frame()`. Trois
+voies, coûts différents, **toutes dans `I`** et **aucune neutre pour le
+`§3-bis`** : un point d'extension dans `frame()`, un `s_prev` en coordonnées
+monde, ou un `roll` miroir de `s_prev`. **Décision de Romain.**
+
+### §12-2 — LE `§2` SUR-VEND : « MÊMES OCTETS ÉCRITS » EST FAUX DEPUIS LE `§5`
+
+Le `§2` grave que `I` est invariant au mode « par construction — mêmes octets
+lus, **mêmes octets écrits** ». Le clamp du `§5`, ajouté après, est une
+**écriture par masque dont le volume dépend des DONNÉES** et n'est atteignable
+qu'en EXTRAPOLER. Les deux modes exécutent donc des quantités de travail
+différentes, et les tests le gravent eux-mêmes (`clamps > 0` en extrapoler,
+`clamps == 0` en interpoler).
+
+⇒ **L'invariance de `I` au mode tient sur l'ARITHMÉTIQUE AFFINE, pas sur le
+clamp.** Le verrou (b) le dit d'ailleurs à sa façon : il choisit ses valeurs
+« pour que le clamp ne morde jamais ». **Le prereg de la lecture d'orientation
+devra traiter ce confondant**, pas le découvrir.
+
+### §12-3 — LE `§4` DÉCRIT UNE LISTE BLANCHE, LE CODE EST UNE LISTE NOIRE
+
+Le `§4` écrit que la serrure lève « si l'appelant de `s_out` **n'est pas sur le
+chemin de rendu** ». Le code fait l'inverse : il lève si l'appelant **est
+nommé** dans `_MODULES_ETAT`. Tout module non nommé passe.
+
+Le commentaire du module est honnête et nomme cette limite ; **c'est ce spec qui
+ne l'avait pas été.** Et la liste s'est révélée fausse **deux fois** en deux
+rondes de revue — cinq modules manquants, puis trois. **Aucun test ne peut dire
+ce qui manque à une liste** : c'est le **verrou STRUCTUREL** qui porte la
+garantie, et lui seul.
+
+Second point de portée, non corrigé : la serrure garde la **production** de
+`s_out`, pas son **accès**. Un module d'état qui reçoit une `VueInterpolee`
+produite ailleurs lit `vue.fenetres` sans rien déclencher.
+
+---
+
 ## §11. CE QUE CE DOCUMENT NE FAIT PAS — **ARRÊT**
 
 - **Aucune mesure de `I`.** `§A61` l'interdit toujours, et `§A63` a rendu
