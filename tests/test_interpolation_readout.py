@@ -44,6 +44,20 @@ def _peindre_s(pyr, valeur: float) -> None:
         pyr.fenetres[j][:, :, INDICE_CHAMP_S, :, :] = float(valeur)
 
 
+def _peindre_s_gradient(pyr) -> None:
+    """Peint `s` avec un motif NON UNIFORME, dépendant de la position.
+
+    Un champ constant rend le gather INSENSIBLE à `centre_fin` : un décalage
+    de la vue passerait alors tous les verrous du fichier. Mesuré par la revue
+    de la tâche 4, pas supposé."""
+    for j in pyr.geo.niveaux_gpu:
+        fen = pyr.fenetres[j]
+        n = fen.shape[-1]
+        y = np.arange(n, dtype=np.float32).reshape(1, 1, n, 1)
+        x = np.arange(n, dtype=np.float32).reshape(1, 1, 1, n)
+        fen[:, :, INDICE_CHAMP_S, :, :] = 100.0 * j + 10.0 * y + x
+
+
 def test_alpha_zero_rend_s_prev():
     """Verrou (a) — borne basse. Propriété du NOYAU : les images exactes
     CONTOURNENT le noyau en production (§3 du spec)."""
@@ -252,25 +266,37 @@ def test_la_tentative_est_consignee_meme_si_l_exception_est_avalee():
     assert len(violations_consignees()) == avant + 1
 
 
-def test_le_gather_est_inchange_et_lit_la_vue():
-    """Verrou (e) — le contrat du §1 du spec.
+def test_le_gather_lit_la_vue_octet_pour_octet():
+    """Verrou (e) — ce que ce test prouve, ET CE QU'IL NE PROUVE PAS.
 
-    Deux choses en une, et les deux comptent : (1) le gather rend LES MÊMES
-    OCTETS sur la pyramide qu'avant l'existence de ce module — le plancher
-    « plus proche voisin » de §A48 garde 1 n'a pas bougé ; (2) le même gather,
-    NON MODIFIÉ, sait lire la vue interpolée, parce qu'elle expose la même
-    surface. `chemin_de_cout.py` n'a pas une ligne de différence."""
+    IL PROUVE : le MÊME gather, non modifié, sait lire la vue interpolée — à
+    `α = 1` elle rend octet pour octet ce que le gather rend sur la pyramide.
+    La surface exposée par `VueInterpolee` est donc suffisante ET correctement
+    propagée.
+
+    IL NE PROUVE PAS que « le gather rend les mêmes octets qu'avant
+    l'existence de ce module » — et AUCUN test ne le peut, il faudrait une
+    référence historique. Cette garantie est portée ENTIÈREMENT par
+    `git diff --stat <base de branche> -- src/f1_gpu/chemin_de_cout.py`, vide,
+    et par le fait qu'aucun commit de la série n'a jamais touché ce fichier.
+    L'écrire ici évite la faute `§A62-bis-2` : une garde promise est une garde
+    absente, et un test qui promet plus qu'il ne tient est de la même famille.
+
+    LE CHAMP EST PEINT NON UNIFORME, et c'est LOAD-BEARING : sous un champ
+    constant le gather est insensible à `centre_fin`, et un décalage de la vue
+    passait les DOUZE verrous de ce fichier. Mesuré par la revue, pas supposé.
+    """
     from src.f1_gpu.chemin_de_cout import gather_chemin_de_cout
 
     pyr = _pyramide()
-    _peindre_s(pyr, 4.0)
+    _peindre_s_gradient(pyr)
     cote = N_FOV
 
-    # (1) le gather sur la pyramide, inchangé
     ecran_direct = gather_chemin_de_cout(pyr, cote, indice_champ=INDICE_CHAMP_S)
-    assert np.allclose(ecran_direct, 4.0)
+    assert not np.allclose(ecran_direct, ecran_direct.flat[0]), (
+        "le champ témoin doit être NON UNIFORME, sinon `centre_fin` ne "
+        "discrimine rien et ce verrou ne garde plus ce qu'il annonce")
 
-    # (2) le MÊME gather sur la vue : α = 1 doit reproduire le gather direct
     tampon = TamponReadout(pyr)
     tampon.capturer(pyr)
     vue = tampon.melanger(pyr, 1.0)
