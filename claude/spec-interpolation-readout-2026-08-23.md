@@ -83,6 +83,36 @@ contredisant un document endossé. ⇒
 > **30 par seconde**. C'est exactement le `30·` de `Δ = 30·(non-F − I)/C`.
 > Sans ce tranchage, `I` porterait un facteur 2 caché.
 
+### §3-bis — LA MISE À JOUR DE `s_prev` EST **DANS** `I` — petit frère du facteur 2
+
+Le tampon `s_prev` doit être avancé d'un pas de physique au pas suivant. Ce
+coût n'était pas nommé.
+
+> **TRANCHÉ : il est DANS `I`.** Motif, et il est structurel : **cette
+> maintenance n'existe QUE parce qu'on interpole** — à 60 Hz aucun `s_prev`
+> n'est nécessaire. Elle survient **une fois par pas de physique**, soit
+> **30/s à 30 Hz** — le même compte que `I`. La charger au **non-F** la ferait
+> entrer dans une grandeur **gravée et mesurée SANS interpolation** : ce serait
+> contaminer le **non-F gravé** (ancré au `§8`) avec un terme qui lui est étranger.
+>
+> ⇒ **`I` = noyau affine + maintenance de `s_prev`, par image interpolée.**
+> L'arithmétique tombe juste : `30·(noyau + maintenance) = 30·I`.
+
+**Deux régimes, et lequel s'applique est un DÛ, pas une supposition :**
+
+| régime | condition | coût |
+|---|---|---|
+| **échange de pointeurs** | `F` écrit **hors place** | **0 octet** |
+| **copie d2d** | `F` écrit **EN PLACE** | `180 224 o` lus + écrits (n_fov = 64), 30/s |
+
+**Indication, donnée pour une indication et pas pour un fait** : le noyau 3D
+écrit dans un tampon de sortie **distinct** de son entrée —
+`src/f1_gpu/substrat_fusionne_3d_param.py:336` « q_out[idx]           = un; »
+— ce qui rend l'échange de pointeurs plausible. Mais **ce module vise la
+pyramide 2D**, et le régime y est **à ÉTABLIR avant tout chiffrage de `I`**,
+jamais à supposer. Sous le régime d'échange le terme vaut **exactement zéro**
+et `I` est inchangé.
+
 ---
 
 ## §4. `s_out` EST ÉPHÉMÈRE — LA GARDE DE FOND
@@ -120,6 +150,33 @@ passe tous les verrous numériques*), retournée.
 > **Le chemin de `s_out` se termine dans le rendu. Aucun autre consommateur
 > n'existe, et aucun ne pourra exister sans AMENDEMENT de ce document.**
 
+### §4-bis — CE MODULE ENFREINT À LA LETTRE LES DEUX GARDES QU'IL CITE, ET VOICI POURQUOI IL EN A LE DROIT
+
+**Il faut le dire avant qu'un relecteur le trouve** : `§A20-3` et la spec P1
+(toutes deux ancrées ci-dessous) posent qu'**aucun état de readout
+load-bearing** n'existe — R1 est une fonction PURE. Or **`s_prev` EST un état de readout load-bearing : le
+premier du code.** Citer ces gardes en appui sans nommer ce point, c'est
+s'abriter derrière ce qu'on enfreint.
+
+La défense, en deux jambes, **et elle ne vaut que parce qu'elle est écrite** :
+
+1. **PÉRIMÈTRE.** Ces gardes sont scellées au périmètre de l'**INSTRUMENT** —
+   la chaîne de mesure R1, l'ABX de session. Le texte le dit lui-même :
+   `PREREGISTRATION.md:6570` « §A20-3 : l'état éphémère de readout est interdit tout court dans l'instrument), »
+   Ce module est du **code moteur**, hors de ce périmètre. Il n'entre pas dans
+   R1 et ne produit aucun stimulus d'essai.
+2. **NATURE.** `s_prev` ne contient que des **COPIES de champs réellement
+   produits par `F`**. C'est de l'**HISTOIRE**, pas de la **SYNTHÈSE**. La
+   synthèse — `s_out` — reste, elle, **sans état** : fonction pure de
+   `(s_prev, s_cur, α)`, vérifiée par le verrou (f) de `§7`.
+
+> **DÛ NOMMÉ, POUR LE PREREG DE LA LECTURE D'ORIENTATION** : *chronométrer un
+> composant À ÉTAT remet en cause l'hypothèse de PURETÉ de la chaîne de
+> mesure.* Ce prereg devra **TRAITER** ce point — pas le découvrir en cours de
+> route. Inscrit ici pour qu'il arrive à lui comme un dû, pas comme une
+> surprise.
+
+
 ---
 
 ## §5. LE CLAMP — COMPTÉ ET REPORTÉ, JAMAIS FAIL-LOUD
@@ -146,18 +203,29 @@ incompatibles. Le second est retenu.*
 
 Un `s_prev` par fenêtre sert **les deux modes** (c'est `§2` : un seul noyau).
 
-| `n_fov` | `11 × n_fov² × 4 o` |
-|---|---|
-| 64 | **176 128 o ≈ 176 Ko** |
-| 52 | **118 976 o ≈ 116 Ko** |
+| `n_fov` | `11 × n_fov² × 4 o` | en Kio |
+|---|---|---|
+| 64 | **180 224 o** | **176 Kio** (exactement) |
+| 52 | **118 976 o** | **116,19 Kio** |
 
-⇒ **+1 champ sur les 4 de la pyramide** (`CHAMPS_PAR_SYSTEME = 4`), contre
-**3 781 Mo** de VRAM machine. Chiffré, non plaidé.
+Contre **3 781 Mo** de VRAM machine. Chiffré, non plaidé.
+
+> ⚠ **CE QUE « +1 CHAMP » VEUT DIRE — ET CE QU'IL NE VEUT PAS.**
+> L'empreinte est **ÉQUIVALENTE à +1 champ** sur les 4 de la pyramide
+> (`CHAMPS_PAR_SYSTEME = 4`). **C'est une comparaison de TAILLE, et rien
+> d'autre.**
+>
+> **`s_prev` ne vit PAS dans le tenseur que `F` consomme.** C'est un **tampon
+> côté readout**, exactement comme `s_out`. La lecture inverse — `s_prev`
+> stocké comme cinquième champ du tenseur — serait la fuite que le verrou 1 de
+> `§4` déclare **structurellement impossible** : `F` balaie les champs, et un
+> état de readout rangé parmi eux finirait consommé. L'ambiguïté est tuée ici
+> plutôt que laissée à l'implémentation.
 
 > ⚠ **ÉTIQUETTE : `11` est la DEMANDE de V4, un MAJORANT de dimensionnement —
 > pas un engagement.** V4 est mort en 3D (`§A53`, `R-3`) et **aucun cap ne
 > l'atteint** (5,90 à 60 Hz au plancher mesuré du rendu). `11` est retenu parce
-> qu'un majorant à 176 Ko ne coûte rien à assumer. Sans cette étiquette, ce
+> qu'un majorant à 176 Kio ne coûte rien à assumer. Sans cette étiquette, ce
 > serait un chiffre de coin de plus.
 
 ---
