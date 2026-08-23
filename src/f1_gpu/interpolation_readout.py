@@ -1,7 +1,7 @@
 """INTERPOLATION DE READOUT — le composant de la porte 33,3 (§A18).
 
 Spec : `claude/spec-interpolation-readout-2026-08-23.md` (corps `ee87000`,
-amendements `c72b9b4`, `f310d03`).
+amendements `c72b9b4`, `f310d03`, `4c5252a`).
 
 CE MODULE N'EST PAS UN COMPOSITEUR ET NE REMPLACE RIEN. Il ÉCRIT un champ `s`
 interpolé ; le gather de `chemin_de_cout` le LIT. Ce dernier reste identique à
@@ -34,31 +34,59 @@ traversaient le noyau, elles le paieraient aussi et la comptabilité
 contredirait un document endossé. `I` est donc le coût d'UNE image
 INTERPOLÉE — 30 par seconde, exactement le `30·` de `Δ`.
 
-⚠ SOUS FOVÉA MOBILE, CE MODULE REFUSE DE PRODUIRE. C'est la vérité de son état
-ACTUEL, et ce n'est pas une régression : c'est la mise au jour d'un défaut qui
-existait déjà, muet. Les fenêtres sont FOVÉA-RELATIVES — `origines(j,
-centre_fin)` fait dépendre l'origine `ox` du centre — et `PyramideFovea.frame()`
-translate le contenu (`fen[...] = xp.roll(fen, -dx, axis=-1)`,
-`pyramide.py:491`) PUIS applique `F` (`pyramide.py:501`), dans la MÊME boucle.
-`s_prev`, lui, est indexé en coordonnées LOCALES à la fenêtre et n'est JAMAIS
-roulé. Après un `frame()` qui déplace la fovéa, l'adresse locale `(iy, ix)`
-porte donc la cellule monde `x` dans `s_cur` et la cellule monde `x − dx` dans
-`s_prev` : le mélange fantômerait d'une cellule fine par pas, et sur les
-colonnes ENTRANTES il produirait une valeur QUI N'A JAMAIS EXISTÉ — sans clamp,
-sans levée, `clamps == 0`. La signature exacte de §A53.
+⚠ LE REGISTRE SOUS FOVÉA MOBILE — CE QUI LE PERD. Les fenêtres sont
+FOVÉA-RELATIVES — `origines(j, centre_fin)` fait dépendre l'origine `ox` du
+centre — et `PyramideFovea.frame()` translate le contenu
+(`fen[...] = xp.roll(fen, -dx, axis=-1)`, `pyramide.py:491`) PUIS applique `F`
+(`pyramide.py:501`), dans la MÊME boucle par niveau. Une capture prise AVANT
+`frame()` n'est JAMAIS roulée : à l'adresse locale `(iy, ix)`, `s_cur` porte
+alors la cellule monde `x` et `s_prev` la cellule monde `x − dx`. Le mélange
+fantôme d'une cellule fine par pas, et sur les colonnes ENTRANTES il produit une
+valeur QUI N'A JAMAIS EXISTÉ — sans clamp, sans levée, `clamps == 0`. La
+signature exacte de §A53.
 
-CE QUE LA GARDE FAIT, ET TOUT CE QU'ELLE FAIT : transformer une corruption
-SILENCIEUSE en échec BRUYANT (`ReadoutHorsRegistre`). Elle ne RÉPARE rien. Le
-point de capture correct est post-roll et pré-`pas_f`, PAR NIVEAU, à l'intérieur
-de `frame()` — c'est une décision de DESIGN, qui appartient au propriétaire du
-projet et non à cette garde. Tant qu'elle n'est pas prise, le composant ne sert
-qu'à fovéa IMMOBILE (`frame(0)`, ou aucun `frame` entre `capturer` et
-`melanger`).
+LA VOIE 2 EST TRANCHÉE (§13 du spec, AMENDEMENT 6), ET C'EST UNE DÉRIVATION, PAS
+UNE PRÉFÉRENCE. Les deux autres voies meurent de contredire le §2, qui est
+endossé — un seul noyau affine : rouler `s_prev` avec la fenêtre exigerait un
+masque de validité sur les colonnes entrantes, donc un `α` PAR CELLULE, donc un
+AUTRE noyau ; mélanger en coordonnées MONDE changerait l'arithmétique du noyau
+(lecture décalée), donc un AUTRE noyau. Contredire un document endossé n'est pas
+une option de design, et c'est le motif — pas le goût — qui a choisi la voie 2.
+
+LE MÉCANISME — `ApplicateurCaptureRegistre`, en bas de ce module. Il ENVELOPPE
+`pas_f`, qui est INJECTABLE (`pyramide.py:392-395` : le stepper est un ATTRIBUT).
+`frame()` l'appelle une fois PAR NIVEAU, exactement POST-ROLL et PRÉ-PAS DE
+PHYSIQUE (`pyramide.py:501`) — le seul point de la boucle où `s_prev` (état
+`n−1`) et `s_cur` (état `n`) vivent dans les MÊMES coordonnées fenêtre par
+construction, COLONNES ENTRANTES COMPRISES, puisque celles-ci reçoivent du roll
+leur contenu `n−1` (§13-2 du spec). Pas de masque, pas de cellule qui n'a jamais
+coexisté, noyau du §2 INTACT. Et `pyramide.py` n'est pas touché d'une ligne :
+c'est cette contrainte qui a choisi le levier.
+
+QUI ÉCRIT QUOI — la retouche du §4 exigée par le §13-4, et elle est LOAD-BEARING.
+Sous la voie 2 le SENS D'ÉCRITURE S'INVERSE :
+
+    `frame()` (par l'applicateur) ÉCRIT dans le tampon de readout ; le module,
+    lui, ne fait que LIRE l'état.
+
+Sans cette phrase, la garde « le module ne détient aucune référence en écriture
+vers l'état » devient FAUSSE À LA LETTRE dans l'autre sens — un lecteur y verrait
+une interdiction que la voie 2 viole, alors qu'elle la respecte dans le seul sens
+qui compte. LA GARANTIE, ÉCRITE DANS CE SENS-LÀ : RIEN DU READOUT NE REMONTE
+JAMAIS DANS L'ÉTAT. `capturer_niveau` LIT la fenêtre et écrit dans `_s_prev` ;
+`melanger` LIT la fenêtre et écrit dans `_s_out` ; aucune des deux n'écrit un
+seul octet dans le tenseur que `F` consomme, et le verrou STRUCTUREL de test le
+vérifie sur les trois entrées.
+
+`ReadoutHorsRegistre` RESTE, en DÉFENSE EN PROFONDEUR — voir sa docstring.
 
 DOUZE VERROUS VERTS N'ONT PAS VU CE DÉFAUT parce qu'AUCUN n'appelait `frame()` :
 la fovéa était immobile dans tous les tests. Un verrou ne garde que ce que son
 état de test allume (§A53) — et l'état de test le plus coûteux à oublier est
-celui que le composant rencontrera en production.
+celui que le composant rencontrera en production. Le verrou qui manquait à tout
+le banc est désormais là : `test_le_registre_tient_sous_fovea_mobile`, avec une
+fovéa QUI BOUGE et une vérification du REGISTRE lui-même — pas seulement
+l'absence d'exception.
 
 AUCUNE MESURE ICI. §A61 interdit toute mesure 3D absolue tant que l'instrument
 n'est pas qualifié, et §A63 ne l'a pas qualifié. Ce module se construit ; il ne
@@ -161,9 +189,27 @@ class ReadoutHorsRegistre(RuntimeError):
     non.
 
     CE QUE CETTE EXCEPTION NE FAIT PAS : elle ne remet pas `s_prev` en registre.
-    Le point de capture correct est post-roll et pré-`pas_f`, PAR NIVEAU, à
-    l'intérieur de `frame()` ; l'y placer est une décision de DESIGN, réservée au
-    propriétaire du projet."""
+    C'est `ApplicateurCaptureRegistre` qui le fait, en capturant post-roll et
+    pré-pas de physique, PAR NIVEAU (voie 2, §13 du spec).
+
+    POURQUOI ELLE RESTE ALORS QUE LE MÉCANISME EXISTE — DÉFENSE EN PROFONDEUR, et
+    les deux gardes ne gardent pas la même chose :
+
+      - l'APPLICATEUR met en registre le cycle qui passe par lui. Il ne peut rien
+        dire d'un cycle qui ne passe PAS par lui : `TamponReadout.capturer` reste
+        appelable, et une capture prise avant `frame()` est exactement le bug du
+        §12-1, à l'octet près. Le mécanisme corrige un usage ; il n'en interdit
+        aucun autre.
+      - CETTE EXCEPTION mord sur le CENTRE FOVÉAL, qu'il y ait un applicateur ou
+        non : `_centre_capture` est écrit à CHAQUE capture, donc une capture en
+        registre (prise DANS `frame()`, après `centre_fin += delta_x`) le laisse
+        égal au centre courant et la garde se tait ; une capture à l'ancienne
+        (prise AVANT `frame()`) le laisse en retard et la garde lève.
+
+    Retirer l'exception parce que le mécanisme existe rendrait donc SILENCIEUSE
+    la seule faute que le mécanisme ne couvre pas — celle de l'appelant qui ne
+    l'utilise pas. C'est le motif §A62-bis-2 retourné : une garde qu'on retire
+    parce qu'« on ne fera plus la faute » est une garde absente."""
 
 
 class ReadoutSansCapture(RuntimeError):
@@ -177,6 +223,27 @@ class ReadoutSansCapture(RuntimeError):
     DIAGNOSTIC diffère — protocole non amorcé d'un côté, protocole rompu par un
     déplacement de fovéa de l'autre — et qu'un message qui confond les deux
     envoie chercher la faute au mauvais endroit."""
+
+
+class ReadoutCaptureImpossible(RuntimeError):
+    """Levée quand la capture EN REGISTRE ne peut pas être posée correctement.
+
+    Deux fautes, toutes deux STRUCTURELLES — elles portent sur le montage, pas
+    sur les données, et elles se voient à l'installation ou au premier appel :
+
+      - `pas_f` reçoit un tableau qui n'est AUCUNE des fenêtres de la pyramide
+        sur laquelle l'applicateur a été installé. L'applicateur identifie le
+        niveau par l'IDENTITÉ du tableau (B2 : les buffers sont préalloués à la
+        construction et `frame()` n'écrit QUE dedans — `fen[...] = …`, jamais un
+        rebind) ; un tableau inconnu signifie que cette invariante a cessé de
+        tenir, et capturer « au petit bonheur » écrirait `s_prev` du mauvais
+        niveau, sans symptôme ;
+      - un applicateur est déjà installé sur cette pyramide. Deux applicateurs
+        empilés écrivent DEUX tampons dont un seul sera lu, et le lecteur n'a
+        aucun moyen de savoir lequel il tient.
+
+    Lever plutôt que deviner : un montage faux qui tourne quand même rend un
+    chiffre, et c'est la faute §A53 une fois de plus."""
 
 
 # Trace INDÉLÉBILE des violations — voir `_verrouiller_consommateur`.
@@ -293,11 +360,72 @@ class TamponReadout:
         précédent. Ce coût est DANS `I` (§3-bis du spec).
 
         MÉMORISE AUSSI le centre fovéal : les fenêtres sont fovéa-relatives,
-        donc `s_prev` n'a de sens QU'À CE CENTRE. `melanger` le revérifie."""
+        donc `s_prev` n'a de sens QU'À CE CENTRE. `melanger` le revérifie.
+
+        ⚠ C'EST LA CAPTURE À L'ANCIENNE — FOVÉA IMMOBILE SEULEMENT. Prise depuis
+        le chemin d'appelant, elle est nécessairement PRÉ-`frame()`, donc
+        pré-roll : dès que la fovéa bouge, `s_prev` reste dans les coordonnées
+        de l'ancienne fenêtre et `ReadoutHorsRegistre` lève (et c'est ce qu'il
+        faut : cf. sa docstring). Le cycle À FOVÉA MOBILE passe par
+        `installer_capture_en_registre` / `ApplicateurCaptureRegistre`, qui
+        capture PAR NIVEAU à l'intérieur de `frame()`, post-roll et pré-pas de
+        physique. Cette méthode-ci reste : `frame(0)` et les bancs à fovéa
+        immobile en vivent, et elle est le point de capture le plus simple qui
+        soit correct dans ce régime."""
         for j in pyramide.geo.niveaux_gpu:
             source = pyramide.fenetres[j][:, :, INDICE_CHAMP_S, :, :]
             self._s_prev[j][:, :, 0, :, :] = source
         self._centre_capture = int(pyramide.centre_fin)
+
+    def capturer_niveau(self, niveau: int, fenetres_du_niveau,
+                        centre_fin: int) -> None:
+        """`s_prev[niveau]` ← COPIE du `s` courant d'UN SEUL niveau.
+
+        LE POINT D'ENTRÉE DE LA VOIE 2, et il n'est appelé QUE par
+        `ApplicateurCaptureRegistre` — c'est-à-dire depuis l'intérieur de
+        `frame()`, POST-ROLL et PRÉ-PAS DE PHYSIQUE. La justification du point
+        de capture est au §13-2 du spec et dans l'en-tête de ce module ; ce qui
+        se joue ICI est la GRANULARITÉ : la capture est PAR NIVEAU parce que
+        `frame()` roule et fait avancer un niveau à la fois, dans la même
+        itération. Un geste global — avant ou après la boucle — serait
+        forcément pré-roll pour certains niveaux et post-`F` pour d'autres.
+
+        `centre_fin` EST PASSÉ, PAS RELU SUR LA PYRAMIDE, parce que le seul
+        appelant légitime le connaît déjà et que le rendre explicite dit ce qui
+        est mémorisé : le centre AU MOMENT DE LA CAPTURE. `frame()` incrémente
+        `centre_fin` AVANT sa boucle par niveau, donc une capture en registre
+        mémorise le centre D'APRÈS le déplacement — et c'est exactement ce qui
+        rend `ReadoutHorsRegistre` muette pour ce cycle et bavarde pour une
+        capture à l'ancienne.
+
+        AUCUN VERROU DE PILE ICI, ET C'EST VOULU (§13-4). Cette méthode s'exécute
+        avec `pyramide` dans la pile par construction : `_verrouiller_consommateur`
+        y lèverait à chaque frame. Elle n'a rien à y faire, car le sens d'écriture
+        est état → readout, LE SENS SÛR — on LIT la fenêtre, on ÉCRIT le tampon de
+        readout. Le verrou reste sur `melanger`, qui est l'autre sens : la
+        PRODUCTION d'un `s_out` que le chemin de l'état ne doit jamais atteindre.
+        """
+        cible = self._s_prev.get(niveau)
+        if cible is None:
+            raise ReadoutCaptureImpossible(
+                f"capture en registre demandée pour le niveau {niveau}, absent "
+                f"du tampon (niveaux alloués : {sorted(self._s_prev)}). Le "
+                "tampon se dimensionne à la construction sur "
+                "`pyramide.geo.niveaux_gpu` ; un niveau qui n'y est pas signale "
+                "que le tampon et la pyramide ne décrivent pas la même "
+                "géométrie.")
+        cible[:, :, 0, :, :] = fenetres_du_niveau[:, :, INDICE_CHAMP_S, :, :]
+        self._centre_capture = int(centre_fin)
+
+    def etat_precedent(self, niveau: int):
+        """`s_prev` du niveau, en `(n_slots, n_systemes, n_fov, n_fov)`.
+
+        LECTURE — pour vérifier le registre (c'est ce que fait le verrou de
+        fovéa mobile) ou pour un diagnostic. Ce n'est PAS une référence vers
+        l'état de `F` : `s_prev` vit dans le tampon de readout, hors du tenseur
+        que `F` consomme, et le §13-4 tient parce que rien de ce tampon ne
+        remonte jamais dans l'état."""
+        return self._s_prev[niveau][:, :, 0, :, :]
 
     def melanger(self, pyramide, alpha: float) -> VueInterpolee:
         """`s_out = (1−α)·s_prev + α·s_cur`, puis clamp `s ≥ 0` COMPTÉ.
@@ -315,6 +443,9 @@ class TamponReadout:
             faux et positif ;
           - `ReadoutHorsRegistre` — le centre fovéal a bougé depuis la capture :
             `s_prev` et `s_cur` ne décrivent plus les mêmes cellules du monde.
+            Sous une capture EN REGISTRE cette garde ne mord jamais (le centre
+            est mémorisé DANS `frame()`, après le déplacement) ; elle reste pour
+            l'appelant qui capture à l'ancienne — défense en profondeur.
 
         LE CLAMP NE PROMET `s ≥ 0` QUE POUR LES VALEURS FINIES, et les non
         finies sont COMPTÉES À PART (`VueInterpolee.non_finis`). Le fait
@@ -373,10 +504,12 @@ class TamponReadout:
                 "combinerait, à la même adresse locale, deux cellules du monde "
                 "DIFFÉRENTES — un fantôme d'une cellule fine par pas, et sur "
                 "les colonnes entrantes une valeur qui n'a JAMAIS existé, sans "
-                "clamp ni symptôme. Cette garde ne RÉPARE rien : le point de "
-                "capture correct est post-roll et pré-`pas_f`, PAR NIVEAU, à "
-                "l'intérieur de `frame()` — décision de DESIGN, réservée au "
-                "propriétaire du projet.")
+                "clamp ni symptôme. Cette garde ne RÉPARE rien, et elle n'a "
+                "plus à le faire : le mécanisme de capture EN REGISTRE existe "
+                "— `installer_capture_en_registre(pyramide)` enveloppe `pas_f` "
+                "et capture post-roll / pré-pas de physique, PAR NIVEAU (voie "
+                "2, §13 du spec). Cette levée signale une capture À L'ANCIENNE, "
+                "prise AVANT `frame()`.")
         xp = pyramide.xp
         a = float(alpha)
         clamps = 0
@@ -391,3 +524,125 @@ class TamponReadout:
             sortie[sous_zero] = 0.0
         return VueInterpolee(xp, pyramide.geo, pyramide.centre_fin,
                              self._s_out, clamps, non_finis)
+
+
+class ApplicateurCaptureRegistre:
+    """L'APPLICATEUR DE CAPTURE EN REGISTRE — la voie 2 du §13 du spec, montée.
+
+    IL ENVELOPPE `pas_f`. `PyramideFovea` expose son applicateur de `F` comme un
+    ATTRIBUT INJECTABLE (`pyramide.py:392-395`, signature
+    `pas_f(fenetres, xp, sortie) -> (etat, dt_cfl)`), et `frame()` l'appelle une
+    fois par niveau (`pyramide.py:501`). Envelopper cet attribut donne donc, sans
+    modifier UNE SEULE LIGNE de `pyramide.py`, un point d'exécution situé :
+
+        APRÈS le roll et la descente des colonnes entrantes (`pyramide.py:491`),
+        AVANT le pas de physique (`pyramide.py:501`),
+        DANS la boucle par niveau, et une fois par niveau.
+
+    POURQUOI LÀ ET PAS AILLEURS — §13-2 du spec. Post-roll, `s_prev` (état `n−1`)
+    et `s_cur` (état `n`, après `pas_f`) vivent dans LES MÊMES COORDONNÉES
+    FENÊTRE PAR CONSTRUCTION, **y compris les colonnes entrantes, qui reçoivent
+    du roll leur contenu `n−1`**. Pas de masque de validité, pas de cellule qui
+    n'a jamais coexisté, et le NOYAU AFFINE du §2 reste intact — c'est ce que la
+    voie 2 achète, et c'est la raison pour laquelle les voies « rouler `s_prev` »
+    (un `α` par cellule) et « coordonnées monde » (lecture décalée) sont mortes :
+    elles changeraient le noyau qu'un document endossé grave.
+
+    LES TROIS AUTRES POINTS DE CAPTURE CONCEVABLES, ET CE QU'ILS CASSENT :
+
+      - AVANT `frame()` (`TamponReadout.capturer`) : PRÉ-ROLL — c'est le bug du
+        §12-1, `s_prev` en coordonnées de l'ancienne fenêtre ;
+      - APRÈS `pas_f`, dans la même enveloppe : `s_prev` porterait l'état `n`,
+        pas `n−1` — le mélange serait l'identité, silencieusement ;
+      - APRÈS `frame()`, en un geste global : la boucle a déjà roulé ET fait
+        avancer TOUS les niveaux ; il n'existe plus, hors de la boucle, d'instant
+        où l'état `n−1` post-roll est encore lisible.
+
+    LA COPIE EST DUE, ET LE §13-3 LE TRANCHE : capturer pré-`pas_f` pendant que
+    `F` écrit EN PLACE (`self.pas_f(fen, xp, fen)`) impose la copie d2d — le
+    régime « échange de pointeurs » meurt, et il meurt désormais par la GÉOMÉTRIE
+    du point de capture, plus seulement par l'écriture en place. `I` = noyau +
+    copie, 30/s, et la copie se chiffre PAR NIVEAU, sur ce site-ci.
+
+    IDENTIFICATION DU NIVEAU — par IDENTITÉ du tableau. `frame()` passe `fen`
+    sans dire quel niveau c'est ; la correspondance est faite sur `id()` des
+    tableaux de `pyramide.fenetres`, ce qui est licite parce que B2 les préalloue
+    à la construction et que `frame()` n'écrit QUE dedans (`fen[...] = …`,
+    `fen[..., k:] = …`) sans jamais les rebinder. L'applicateur garde une
+    référence FORTE sur chacun — un `id()` ne peut donc pas être recyclé sous lui
+    — et re-vérifie l'identité (`is`) avant de capturer. Un tableau inconnu ne
+    donne PAS lieu à une devinette : `ReadoutCaptureImpossible`.
+
+    UNE FRAME INTERROMPUE LAISSE UN TAMPON HÉTÉROGÈNE, et ce n'est pas gardé
+    ici : si `frame()` lève au milieu de sa boucle (par exemple sur le recul
+    d'origine, `pyramide.py:479`), les niveaux déjà traversés ont capturé et les
+    autres non. Le tampon ne peut pas être plus cohérent que l'état qu'il
+    reflète, lequel est dans le même désordre — la pyramide a fait avancer
+    certains niveaux et pas d'autres. Rien à mécaniser ici : l'appelant qui
+    rattrape une levée de `frame()` tient une pyramide à jeter, pas un readout à
+    sauver. Écrit pour que la prochaine revue ne le redécouvre pas.
+
+    AUCUNE MESURE ICI, et pas de chronomètre : §A61 tient (§11 du spec)."""
+
+    __slots__ = ("tampon", "_pyramide", "_pas_f", "_niveau_par_id")
+
+    def __init__(self, pyramide, pas_f_sous_jacent, tampon=None):
+        self._pyramide = pyramide
+        self._pas_f = pas_f_sous_jacent
+        self.tampon = TamponReadout(pyramide) if tampon is None else tampon
+        self._niveau_par_id = {}
+        for j in pyramide.geo.niveaux_gpu:
+            fenetre = pyramide.fenetres[j]
+            self._niveau_par_id[id(fenetre)] = (int(j), fenetre)
+
+    def __call__(self, fenetres, xp, sortie=None):
+        """Capture le niveau PUIS délègue au `pas_f` enveloppé.
+
+        L'ORDRE DES DEUX LIGNES EST TOUT LE MÉCANISME : la capture est ce qui se
+        passe entre le roll (déjà fait par `frame()`) et le pas de physique (fait
+        juste après, ici). Les inverser rendrait `s_prev` égal à `s_cur`."""
+        entree = self._niveau_par_id.get(id(fenetres))
+        if entree is None or entree[1] is not fenetres:
+            connus = sorted(j for j, _ in self._niveau_par_id.values())
+            raise ReadoutCaptureImpossible(
+                "`pas_f` a reçu un tableau qui n'est aucune des fenêtres de la "
+                "pyramide sur laquelle la capture en registre a été installée "
+                f"(niveaux connus : {connus}). "
+                "Le niveau est identifié par l'IDENTITÉ du tableau, ce que B2 "
+                "autorise : les buffers sont préalloués à la construction et "
+                "`frame()` n'écrit que DEDANS. Un tableau inconnu signifie que "
+                "cette invariante a cessé de tenir ; capturer quand même "
+                "écrirait `s_prev` du mauvais niveau, sans aucun symptôme.")
+        niveau, _ = entree
+        # POST-ROLL, PRÉ-PAS DE PHYSIQUE — §13-2 du spec. Le centre fovéal passé
+        # est celui d'APRÈS le déplacement : `frame()` incrémente `centre_fin`
+        # avant d'entrer dans sa boucle par niveau.
+        self.tampon.capturer_niveau(niveau, fenetres, self._pyramide.centre_fin)
+        return self._pas_f(fenetres, xp, sortie)
+
+
+def installer_capture_en_registre(pyramide,
+                                  tampon=None) -> ApplicateurCaptureRegistre:
+    """Enveloppe l'applicateur de `F` de `pyramide` par la capture en registre.
+
+    C'EST LE SEUL GESTE DE MONTAGE, et il est fait DEPUIS L'EXTÉRIEUR de
+    `pyramide.py`, sur l'attribut `pas_f` que ce dernier expose déjà comme point
+    d'injection (`pyramide.py:392-395`). Le `pas_f` en place — celui du
+    constructeur, jetable par défaut, fusionné pour M-a-ter — est conservé et
+    appelé tel quel : la physique n'est ni remplacée ni contournée, elle est
+    PRÉCÉDÉE.
+
+    Rend l'applicateur, dont `.tampon` est le `TamponReadout` que `melanger`
+    consommera après le `frame()`. À appeler UNE FOIS, après la construction de
+    la pyramide et avant le premier `frame()` : un `frame()` intercalé
+    laisserait `s_prev` non capturé pour ce pas, et `melanger` lèverait
+    `ReadoutSansCapture` — bruyamment, ce qui est le comportement voulu."""
+    if isinstance(pyramide.pas_f, ApplicateurCaptureRegistre):
+        raise ReadoutCaptureImpossible(
+            "une capture en registre est DÉJÀ installée sur cette pyramide. "
+            "Deux applicateurs empilés captureraient dans deux tampons "
+            "distincts dont un seul serait lu, et rien ne dirait lequel : "
+            "réutiliser l'applicateur rendu par la première installation.")
+    applicateur = ApplicateurCaptureRegistre(pyramide, pyramide.pas_f, tampon)
+    pyramide.pas_f = applicateur
+    return applicateur

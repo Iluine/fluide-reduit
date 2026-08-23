@@ -14,11 +14,13 @@ from src.f1_gpu.interpolation_readout import (
     ALPHA_EXTRAPOLER,
     ALPHA_INTERPOLER,
     INDICE_CHAMP_S,
+    ReadoutCaptureImpossible,
     ReadoutHorsRegistre,
     ReadoutInterditDansEtat,
     ReadoutSansCapture,
     TamponReadout,
     _MODULES_ETAT,
+    installer_capture_en_registre,
 )
 from src.f1_gpu.pyramide import GeometriePyramide, PyramideFovea, Slot
 from src.f1_gpu.transferts import TransfertComptable
@@ -353,7 +355,7 @@ def test_deux_appels_rendent_les_memes_octets():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# LE TEST QUI MANQUAIT — aucun des douze verrous ci-dessus n'appelle `frame()`
+# LES TESTS QUI MANQUAIENT — aucun des douze verrous ci-dessus n'appelle `frame()`
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # La fovéa était IMMOBILE dans tout ce fichier, et c'est précisément l'état de
@@ -361,16 +363,34 @@ def test_deux_appels_rendent_les_memes_octets():
 # fenêtre, `frame()` roule le contenu des fenêtres quand la fovéa avance, donc
 # après un déplacement les deux opérandes du mélange ne décrivent plus les mêmes
 # cellules du monde. Douze verrous verts, aucun symptôme, `clamps == 0`.
+#
+# DEUX FAMILLES ICI, ET ELLES NE SE REMPLACENT PAS :
+#
+#   - la DÉFENSE EN PROFONDEUR (`ReadoutHorsRegistre`) — une capture prise à
+#     l'ancienne, avant `frame()`, lève toujours ; c'est la seule faute que le
+#     mécanisme ne couvre pas, puisqu'elle consiste à ne pas l'utiliser ;
+#   - le VERROU DE REGISTRE (`test_le_registre_tient_sous_fovea_mobile`) — une
+#     fovéa qui BOUGE RÉELLEMENT, et la vérification que `s_prev` et `s_cur`
+#     portent la MÊME cellule monde à la même adresse locale, colonnes entrantes
+#     comprises. C'est ce verrou-là qui manquait à tout le banc : les douze
+#     autres pouvaient certifier une corruption silencieuse, et « aucune
+#     exception n'est sortie » n'est pas une vérification du registre.
 
 
 def test_melanger_leve_hors_registre_apres_un_frame_qui_deplace_la_fovea():
     """LE défaut de la série, rendu BRUYANT — `capturer` → `frame()` → `melanger`.
 
-    C'est le cycle de PRODUCTION : on capture avant le pas de `F`, `frame()`
-    déplace la fovéa PUIS applique `F`, et on mélange après. Sans la garde, ce
-    cycle rendrait un champ fantômé d'une cellule fine, dont les colonnes
-    entrantes porteraient des valeurs qui n'ont jamais existé — sans clamp,
-    sans levée, sans compteur non nul. Rien en aval ne pourrait le voir."""
+    C'est le cycle de la capture À L'ANCIENNE : on capture avant le pas de `F`,
+    `frame()` déplace la fovéa PUIS applique `F`, et on mélange après. Sans la
+    garde, ce cycle rendrait un champ fantômé d'une cellule fine, dont les
+    colonnes entrantes porteraient des valeurs qui n'ont jamais existé — sans
+    clamp, sans levée, sans compteur non nul. Rien en aval ne pourrait le voir.
+
+    CE VERROU RESTE ALORS QUE LA VOIE 2 EST MONTÉE, et il n'est pas redondant :
+    il n'y a AUCUN applicateur ici. Le mécanisme met en registre le cycle qui
+    passe par lui ; il ne peut rien pour un appelant qui capture hors de
+    `frame()`, et c'est exactement ce que ce test exerce. Défense en
+    profondeur — la garde couvre la faute que le mécanisme ne couvre pas."""
     pyr = _pyramide()
     _peindre_s_gradient(pyr)
     tampon = TamponReadout(pyr)
@@ -486,3 +506,223 @@ def test_un_non_fini_est_compte_a_part_et_ne_gonfle_pas_les_clamps():
         reste = np.delete(vue.fenetres[j][:, :, 0].ravel(), 0)
         assert np.allclose(reste, 5.0), (
             "le NaN ne doit contaminer que sa propre cellule")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LE VERROU DE REGISTRE — fovéa qui BOUGE, registre VÉRIFIÉ (voie 2, §13)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# `frame(4)` déplace les TROIS niveaux de ce banc — dx = 1, 2, 4 (les origines
+# du niveau j avancent d'une cellule toutes les 2^(J−j) frames, B3) — et tous
+# par la branche `roll` puisque dx < N_FOV. `frame(1)` ne déplacerait que le
+# niveau fin : le verrou ne verrait alors le registre bouger qu'à un seul
+# niveau, et la capture PAR NIVEAU ne serait pas exercée pour ce qu'elle est.
+DELTA_FRAME = 4
+
+
+def _pas_f_doublant(fenetres, xp, sortie=None):
+    """Pas de physique JOUET : `s ← 2·s`, les autres champs intouchés.
+
+    LE DOUBLEMENT EST EXACT EN f32 pour toute valeur finie non débordante — la
+    mantisse ne bouge pas, seul l'exposant. C'est ce qui rend le verrou de
+    registre vérifiable À L'OCTET sur TOUTES les colonnes, y compris les
+    ENTRANTES dont le contenu (prédit depuis le niveau 0) n'est pas un nombre
+    rond : `s_cur == 2·s_prev` est alors une égalité exacte, pas un `allclose`.
+    Un pas additif (`s + K`) ne le serait pas — `(v + K) − K != v` en f32 dès que
+    `v` n'est pas rond — et un verrou qui doit tolérer une tolérance ne peut plus
+    distinguer un décalage d'une cellule d'un bruit d'arrondi.
+
+    Ce n'est PAS de la physique et ça n'a pas à l'être : ce qu'on vérifie ici est
+    la GÉOMÉTRIE du point de capture, pas ce que `F` calcule. Un pas réel rendrait
+    la relation entre `s_prev` et `s_cur` inobservable, donc le verrou muet."""
+    if sortie is None:
+        sortie = xp.empty_like(fenetres)
+    if sortie is not fenetres:
+        sortie[...] = fenetres
+    sortie[:, :, INDICE_CHAMP_S] *= 2.0
+    return sortie, 0.0
+
+
+def _pyramide_doublante():
+    """Pyramide dont `pas_f` est le doublant — `eps_detail` ÉNORME, et c'est
+    LOAD-BEARING : le masque de détail est alors vide partout, donc la remontée
+    fait `ref += 0.0` (exact) et `references[j]` reste À L'OCTET ce que `frame()`
+    y a écrit pendant le roll. C'est ce qui permet de prouver les colonnes
+    ENTRANTES : `ref` et `fen` reçoivent le MÊME bloc descendu
+    (`pyramide.py:494-495`), mais `ref` ne subit pas `pas_f` — c'est donc un
+    témoin du contenu `n−1` post-roll, encore lisible APRÈS la frame."""
+    geo = GeometriePyramide(n_fov=N_FOV, n_niv=N_NIV, n0=N0, slots=SLOTS)
+    transferts = TransfertComptable(np)
+    pyr = PyramideFovea(np, geo, transferts, eps_detail=1e30,
+                        pas_f=_pas_f_doublant)
+    transferts.frame_suivante()
+    return pyr
+
+
+def _estampille(j: int, n: int, ox: int) -> np.ndarray:
+    """Champ `(n, n)` où chaque cellule porte SON ADRESSE MONDE : la valeur ne
+    dépend que du niveau, de la ligne locale et de l'ABSCISSE MONDE `ox + ix`.
+
+    C'est le gradient identifiable du verrou : après un roll de `dx`, la cellule
+    monde `ox + dx + ix` occupe l'adresse locale `ix`, donc le contenu attendu à
+    l'adresse `ix` est `estampille(ox_après + ix)` — l'égalité EST la preuve que
+    l'adresse locale et la cellule monde se correspondent. Toutes les valeurs sont
+    des entiers < 2^24 : exactes en f32, et distinctes d'une cellule à l'autre."""
+    iy = np.arange(n, dtype=np.float32).reshape(n, 1)
+    x_monde = np.arange(ox, ox + n, dtype=np.float32).reshape(1, n)
+    return (10000.0 * j + 100.0 * iy + x_monde).astype(np.float32)
+
+
+def _origines_x(pyr) -> dict:
+    """Abscisse monde de l'origine de chaque niveau (commune aux slots : ils
+    translatent en LOCKSTEP, `pyramide.py:264-283`)."""
+    return {j: int(pyr.geo.origines(j, pyr.centre_fin)[0][1])
+            for j in pyr.geo.niveaux_gpu}
+
+
+def _peindre_estampilles(pyr) -> None:
+    for j in pyr.geo.niveaux_gpu:
+        fen = pyr.fenetres[j]
+        fen[:, :, INDICE_CHAMP_S, :, :] = _estampille(
+            j, fen.shape[-1], int(pyr.geo.origines(j, pyr.centre_fin)[0][1]))
+
+
+def test_le_registre_tient_sous_fovea_mobile():
+    """LE VERROU QUI MANQUAIT À TOUT LE BANC — fovéa MOBILE, registre VÉRIFIÉ.
+
+    Douze verrous verts n'ont pas vu la corruption parce qu'aucun n'appelait
+    `frame()` ; le treizième la voyait enfin, mais seulement comme une EXCEPTION
+    attendue — « rien n'est sorti » ne dit rien du registre. Celui-ci le vérifie
+    POSITIVEMENT, sous la voie 2 (§13 du spec) : on peint chaque cellule avec son
+    ADRESSE MONDE, on fait avancer la fovéa de `DELTA_FRAME` cellules fines, et
+    on prouve les quatre choses qui, ensemble, SONT le registre :
+
+      1. `s_cur == 2·s_prev` À L'OCTET, à TOUTE adresse locale, colonnes
+         ENTRANTES COMPRISES — le pas de physique jouet est un doublement exact,
+         donc cette égalité dit que les deux opérandes décrivent la même cellule ;
+      2. sur le RECOUVREMENT, `s_prev` porte l'estampille de la cellule monde que
+         l'adresse locale désigne APRÈS le déplacement (`ox_après + ix`) — la
+         correspondance adresse locale ↔ cellule monde, écrite en toutes lettres ;
+      3. sur les COLONNES ENTRANTES, `s_prev` est À L'OCTET le bloc descendu que
+         `frame()` a écrit pendant le roll (témoin : `references[j]`, intacte) —
+         c'est le §13-2 mécanisé : les colonnes entrantes reçoivent DU ROLL leur
+         contenu `n−1`, il n'y a donc ni masque à porter ni cellule à inventer ;
+      4. ces mêmes colonnes ne portent PAS l'estampille PÉRIMÉE (`ox_avant + ix`)
+         — c'est-à-dire exactement ce qu'une capture pré-roll y aurait laissé.
+
+    Puis `melanger` RÉUSSIT : sous une capture en registre, `ReadoutHorsRegistre`
+    ne mord plus, et le résultat est le noyau affine du §2 appliqué à deux
+    opérandes en registre — vérifié à l'octet, sans clamp."""
+    pyr = _pyramide_doublante()
+    applicateur = installer_capture_en_registre(pyr)
+    tampon = applicateur.tampon
+    _peindre_estampilles(pyr)
+    ox_avant = _origines_x(pyr)
+
+    pyr.frame(DELTA_FRAME)
+    ox_apres = _origines_x(pyr)
+
+    for j in pyr.geo.niveaux_gpu:
+        n = pyr.fenetres[j].shape[-1]
+        dx = ox_apres[j] - ox_avant[j]
+        assert 0 < dx < n, (
+            f"niveau {j} : dx={dx} — le verrou EXIGE un déplacement réel par "
+            "roll (0 ne roule rien, dx >= n_fov re-prédit la fenêtre entière et "
+            "ne teste plus le registre du roll)")
+
+        s_prev = tampon.etat_precedent(j)
+        s_cur = pyr.fenetres[j][:, :, INDICE_CHAMP_S, :, :]
+
+        # (1) registre STRICT à toutes les adresses locales, entrantes comprises.
+        assert np.array_equal(s_cur, s_prev * np.float32(2.0)), (
+            f"niveau {j} : `s_cur` n'est pas le doublé de `s_prev` — les deux "
+            "opérandes ne décrivent pas la même cellule, ou la capture n'est pas "
+            "prise entre le roll et le pas de physique")
+
+        # (2) l'adresse locale porte bien SA cellule monde, après déplacement.
+        attendu = _estampille(j, n, ox_apres[j])[:, :n - dx]
+        assert bool((s_prev[..., :n - dx] == attendu).all()), (
+            f"niveau {j} : sur le recouvrement, `s_prev` ne porte pas "
+            f"l'estampille de la cellule monde {ox_apres[j]}+ix — la capture "
+            "n'a pas suivi le roll")
+
+        # (3) colonnes ENTRANTES : le contenu `n−1` descendu par `frame()`.
+        ref = pyr.references[j][:, :, INDICE_CHAMP_S, :, :]
+        assert np.array_equal(s_prev[..., n - dx:], ref[..., n - dx:]), (
+            f"niveau {j} : les {dx} colonne(s) entrante(s) de `s_prev` ne sont "
+            "pas le bloc descendu pendant le roll")
+
+        # (4) et surtout PAS l'estampille périmée d'une capture pré-roll.
+        perimee = _estampille(j, n, ox_avant[j])[:, n - dx:]
+        assert not bool((s_prev[..., n - dx:] == perimee).any()), (
+            f"niveau {j} : une colonne entrante de `s_prev` porte encore "
+            "l'estampille d'AVANT le déplacement — capture pré-roll")
+
+    vue = tampon.melanger(pyr, ALPHA_INTERPOLER)      # ne doit PAS lever
+    assert vue.clamps == 0
+    for j in pyr.geo.niveaux_gpu:
+        s_prev = tampon.etat_precedent(j)
+        s_cur = pyr.fenetres[j][:, :, INDICE_CHAMP_S, :, :]
+        attendu = (1.0 - ALPHA_INTERPOLER) * s_prev + ALPHA_INTERPOLER * s_cur
+        assert np.array_equal(vue.fenetres[j][:, :, 0], attendu), (
+            f"niveau {j} : le mélange n'est pas le noyau affine du §2 appliqué "
+            "aux deux opérandes en registre")
+
+
+def test_la_capture_en_registre_se_refait_a_chaque_frame():
+    """DEUX frames d'affilée — le tampon suit, il ne se fige pas.
+
+    Une capture posée une seule fois (à l'installation, ou gardée d'une frame
+    précédente) laisserait `s_prev` deux pas en arrière ET dans les coordonnées
+    d'une fenêtre périmée : le premier `frame()` seul ne l'attraperait pas
+    toujours. Ici le doublement rend la faute visible à l'octet — `s_cur` vaudrait
+    quatre fois `s_prev`, pas deux."""
+    pyr = _pyramide_doublante()
+    applicateur = installer_capture_en_registre(pyr)
+    tampon = applicateur.tampon
+    _peindre_estampilles(pyr)
+
+    ox_avant = _origines_x(pyr)
+    pyr.frame(DELTA_FRAME)
+    ox_milieu = _origines_x(pyr)
+    pyr.frame(DELTA_FRAME)
+    ox_apres = _origines_x(pyr)
+
+    for j in pyr.geo.niveaux_gpu:
+        n = pyr.fenetres[j].shape[-1]
+        dx = ox_apres[j] - ox_milieu[j]
+        assert 0 < dx < n and ox_milieu[j] > ox_avant[j], (
+            f"niveau {j} : les DEUX frames doivent déplacer le niveau, sinon ce "
+            "verrou ne prouve pas la re-capture")
+        s_prev = tampon.etat_precedent(j)
+        s_cur = pyr.fenetres[j][:, :, INDICE_CHAMP_S, :, :]
+        assert np.array_equal(s_cur, s_prev * np.float32(2.0)), (
+            f"niveau {j} : `s_prev` n'a pas été recapturé à la seconde frame")
+        ref = pyr.references[j][:, :, INDICE_CHAMP_S, :, :]
+        assert np.array_equal(s_prev[..., n - dx:], ref[..., n - dx:]), (
+            f"niveau {j} : colonnes entrantes de la SECONDE frame hors registre")
+
+    tampon.melanger(pyr, ALPHA_INTERPOLER)            # ne doit PAS lever
+
+
+def test_installer_la_capture_deux_fois_leve():
+    """Deux applicateurs empilés écriraient deux tampons dont un seul serait lu,
+    et rien ne dirait lequel. Le montage faux est refusé AU MONTAGE, pas découvert
+    plus tard dans un chiffre."""
+    pyr = _pyramide_doublante()
+    installer_capture_en_registre(pyr)
+    with pytest.raises(ReadoutCaptureImpossible):
+        installer_capture_en_registre(pyr)
+
+
+def test_un_tableau_inconnu_ne_donne_pas_lieu_a_une_devinette():
+    """L'applicateur identifie le niveau par l'IDENTITÉ du tableau (B2 : buffers
+    préalloués, jamais rebindés). Un tableau de MÊME FORME mais d'un autre objet
+    ne doit pas être capturé « au petit bonheur » : écrire `s_prev` du mauvais
+    niveau serait muet de bout en bout."""
+    pyr = _pyramide_doublante()
+    applicateur = installer_capture_en_registre(pyr)
+    niveau = list(pyr.geo.niveaux_gpu)[0]
+    etranger = np.array(pyr.fenetres[niveau], copy=True)
+    with pytest.raises(ReadoutCaptureImpossible):
+        applicateur(etranger, np, etranger)
