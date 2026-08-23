@@ -14,7 +14,11 @@ from src.f1_gpu.interpolation_readout import (
     ALPHA_EXTRAPOLER,
     ALPHA_INTERPOLER,
     INDICE_CHAMP_S,
+    ReadoutHorsRegistre,
+    ReadoutInterditDansEtat,
+    ReadoutSansCapture,
     TamponReadout,
+    _MODULES_ETAT,
 )
 from src.f1_gpu.pyramide import GeometriePyramide, PyramideFovea, Slot
 from src.f1_gpu.transferts import TransfertComptable
@@ -218,13 +222,34 @@ def test_l_etat_de_la_pyramide_est_bit_identique_apres_appel():
 
     Le seul verrou que §A53 ne sait pas contourner : si le module n'écrit
     nulle part dans le tenseur, aucune fuite n'est possible, quel que soit
-    l'appelant."""
+    l'appelant.
+
+    C'EST LE TEST QUI A ÉTÉ CORRIGÉ, PAS SA DOCSTRING — et le choix se motive.
+    La première rédaction prenait son instantané APRÈS `TamponReadout(...)` et
+    APRÈS `capturer`, donc ne couvrait que `melanger` alors que sa prose
+    annonçait « le module ». Restreindre la prose à `melanger` aurait laissé
+    DEUX points d'entrée non gardés — et ce sont eux qui touchent le tenseur de
+    plus près : `__init__` le lit pour se dimensionner, `capturer` en copie un
+    champ. Une fuite y serait exactement aussi silencieuse. Le test couvre donc
+    désormais les TROIS entrées, en deux instantanés, parce que le pas de `F`
+    (ici simulé par une repeinture) doit légitimement modifier le tenseur entre
+    la capture et le mélange."""
     pyr = _pyramide()
     _peindre_s(pyr, 4.0)
+
+    # Instantané 1 — couvre `__init__` ET `capturer`.
+    avant_capture = {j: np.array(pyr.fenetres[j], copy=True)
+                     for j in pyr.geo.niveaux_gpu}
     tampon = TamponReadout(pyr)
     tampon.capturer(pyr)
-    _peindre_s(pyr, 6.0)
+    for j in pyr.geo.niveaux_gpu:
+        assert avant_capture[j].tobytes() == pyr.fenetres[j].tobytes(), (
+            f"`__init__`/`capturer` ont modifié le tenseur de F au niveau {j} "
+            "— FUITE")
 
+    _peindre_s(pyr, 6.0)          # tient lieu du pas de `F`
+
+    # Instantané 2 — couvre `melanger`.
     avant = {j: np.array(pyr.fenetres[j], copy=True)
              for j in pyr.geo.niveaux_gpu}
     tampon.melanger(pyr, ALPHA_EXTRAPOLER)
@@ -236,7 +261,10 @@ def test_l_etat_de_la_pyramide_est_bit_identique_apres_appel():
 def test_la_serrure_leve_depuis_un_module_d_etat():
     """Verrou (c), face DE PILE. `pyramide` est le module qui exécute `F` :
     s'il apparaît dans la pile, un état de readout est en train d'atteindre
-    le chemin de la physique."""
+    le chemin de la physique.
+
+    Conservé comme cas NOMMÉ et canonique ; la couverture de TOUTE la liste est
+    portée par `test_la_serrure_mord_depuis_chaque_module_declare`."""
     from src.f1_gpu.interpolation_readout import ReadoutInterditDansEtat
 
     pyr = _pyramide()
@@ -322,3 +350,139 @@ def test_deux_appels_rendent_les_memes_octets():
                           copy=True) for j in pyr.geo.niveaux_gpu}
     for j in pyr.geo.niveaux_gpu:
         assert premier[j].tobytes() == second[j].tobytes()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LE TEST QUI MANQUAIT — aucun des douze verrous ci-dessus n'appelle `frame()`
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# La fovéa était IMMOBILE dans tout ce fichier, et c'est précisément l'état de
+# test qui cachait le défaut : `s_prev` est indexé en coordonnées locales à la
+# fenêtre, `frame()` roule le contenu des fenêtres quand la fovéa avance, donc
+# après un déplacement les deux opérandes du mélange ne décrivent plus les mêmes
+# cellules du monde. Douze verrous verts, aucun symptôme, `clamps == 0`.
+
+
+def test_melanger_leve_hors_registre_apres_un_frame_qui_deplace_la_fovea():
+    """LE défaut de la série, rendu BRUYANT — `capturer` → `frame()` → `melanger`.
+
+    C'est le cycle de PRODUCTION : on capture avant le pas de `F`, `frame()`
+    déplace la fovéa PUIS applique `F`, et on mélange après. Sans la garde, ce
+    cycle rendrait un champ fantômé d'une cellule fine, dont les colonnes
+    entrantes porteraient des valeurs qui n'ont jamais existé — sans clamp,
+    sans levée, sans compteur non nul. Rien en aval ne pourrait le voir."""
+    pyr = _pyramide()
+    _peindre_s_gradient(pyr)
+    tampon = TamponReadout(pyr)
+    centre_avant = int(pyr.centre_fin)
+    tampon.capturer(pyr)
+
+    pyr.frame(1)                       # déplace la fovéa d'UNE cellule fine
+    assert int(pyr.centre_fin) == centre_avant + 1, (
+        "le test suppose que `frame(1)` avance le centre fovéal ; s'il ne le "
+        "fait plus, ce verrou ne garde plus rien")
+
+    with pytest.raises(ReadoutHorsRegistre):
+        tampon.melanger(pyr, ALPHA_INTERPOLER)
+
+
+def test_un_frame_sans_deplacement_de_fovea_ne_leve_pas():
+    """Le JUMEAU — la face qui doit PASSER (§A52).
+
+    Un critère qui ne se vérifie que sur le cas défavorable punit la qualité
+    qu'il contrôle : il faut prouver que la garde ne mord pas sur l'usage
+    LÉGITIME. `frame(0)` est possible dans cette API, et ce n'est pas une
+    supposition — c'est LU dans le code puis VÉRIFIÉ ici : `pyramide.py:463`
+    ne rejette que `delta_x < 0`, `frame(0)` laisse donc `centre_fin`
+    inchangé, ne roule aucune fenêtre (`dx == 0` à tous les niveaux) et
+    applique tout de même `pas_f`. C'est exactement le cycle
+    capturer → F → melanger, à fovéa immobile — le seul régime où ce composant
+    est utilisable aujourd'hui."""
+    pyr = _pyramide()
+    _peindre_s_gradient(pyr)
+    tampon = TamponReadout(pyr)
+    centre_avant = int(pyr.centre_fin)
+    tampon.capturer(pyr)
+
+    diagnostic = pyr.frame(0)          # F appliqué, fovéa IMMOBILE
+    assert diagnostic["niveaux_deplaces"] == [], (
+        "`frame(0)` ne doit déplacer aucun niveau, sinon ce jumeau ne prouve "
+        "plus ce qu'il annonce")
+    assert int(pyr.centre_fin) == centre_avant
+
+    vue = tampon.melanger(pyr, ALPHA_INTERPOLER)   # ne doit PAS lever
+    assert vue.centre_fin == pyr.centre_fin
+
+
+def test_melanger_sans_capturer_leve():
+    """`s_prev` à l'allocation vaut ZÉRO — mélanger là-dessus est faux et muet.
+
+    Sans capture, `s_out = α·s_cur` : un état atténué, faux, positif, donc
+    `clamps == 0` et aucun symptôme. La garde le refuse au lieu de le rendre."""
+    pyr = _pyramide()
+    _peindre_s(pyr, 5.0)
+    tampon = TamponReadout(pyr)
+
+    with pytest.raises(ReadoutSansCapture):
+        tampon.melanger(pyr, ALPHA_INTERPOLER)
+
+
+@pytest.mark.parametrize("nom_module", sorted(_MODULES_ETAT))
+def test_la_serrure_mord_depuis_chaque_module_declare(nom_module):
+    """Verrou (c), face DE PILE — PARAMÉTRÉ SUR TOUTE LA LISTE.
+
+    Un seul nom était couvert (`pyramide`), et pendant ce temps la liste était
+    FAUSSE : trois modules d'état — `solver` (l'avanceur CPU
+    `lax_friedrichs_step`/`simulate`), `terrains` (`rest_residual` appelle
+    `simulate`), `rederive_borne` (pilote `run_episode`) — y manquaient, alors
+    que leurs frères `solver_wetdry` et `sediment` y étaient déjà.
+
+    CE QUE CE TEST DIT, ET CE QU'IL NE DIT PAS. Il prouve que CHAQUE entrée
+    déclarée mord réellement — donc qu'aucune n'est un nom mort, mal orthographié
+    ou rendu inopérant par un changement du comparateur. Il ne peut RIEN dire de
+    ce qui MANQUE à la liste : aucun test ne le peut, c'est la limite écrite dans
+    le module lui-même, et c'est pourquoi le verrou STRUCTUREL — et non celui-ci
+    — porte la garantie. Mais il est ce qu'une liste doit avoir : le jour où on
+    ajoute une entrée, elle est vérifiée, et non seulement écrite."""
+    pyr = _pyramide()
+    tampon = TamponReadout(pyr)
+    tampon.capturer(pyr)
+    with pytest.raises(ReadoutInterditDansEtat):
+        _appeler_depuis(nom_module, tampon.melanger, pyr, ALPHA_INTERPOLER)
+
+
+def test_un_non_fini_est_compte_a_part_et_ne_gonfle_pas_les_clamps():
+    """`sortie < 0.0` est FAUX pour un NaN — le clamp ne le voyait pas.
+
+    La docstring promettait « clamp `s ≥ 0` » et un test assertait
+    `(… >= 0.0).all()` : un NaN traversait les deux sans être compté. Traitement
+    tranché et écrit dans `melanger` — COMPTÉ à part (`non_finis`), NI clampé
+    (l'écraser à zéro déguiserait une faute de `F` en cellule sèche), NI levé
+    (§5 : le readout compte et reporte, il ne tue pas le rendu pour une faute
+    d'amont). `clamps` reste réservé à ce qu'il mesure : l'extrapolation sous
+    zéro."""
+    pyr = _pyramide()
+    _peindre_s(pyr, 2.0)
+    tampon = TamponReadout(pyr)
+    tampon.capturer(pyr)
+    _peindre_s(pyr, 8.0)
+
+    niveaux = list(pyr.geo.niveaux_gpu)
+    for j in niveaux:                  # une cellule empoisonnée par niveau
+        pyr.fenetres[j][0, 0, INDICE_CHAMP_S, 0, 0] = np.nan
+
+    vue = tampon.melanger(pyr, ALPHA_INTERPOLER)
+
+    assert vue.non_finis == len(niveaux), (
+        f"un non-fini par niveau attendu, {vue.non_finis} compté(s)")
+    assert vue.clamps == 0, (
+        "un NaN n'est pas un clamp : le compteur de clamps ne doit pas le "
+        "porter, sinon le seuil qu'un prereg futur en tirera mesurera deux "
+        "phénomènes sans rapport")
+    for j in niveaux:
+        assert np.isnan(vue.fenetres[j][0, 0, 0, 0, 0]), (
+            "le NaN doit TRAVERSER : l'écraser à zéro effacerait la preuve "
+            "d'un état corrompu en amont")
+        reste = np.delete(vue.fenetres[j][:, :, 0].ravel(), 0)
+        assert np.allclose(reste, 5.0), (
+            "le NaN ne doit contaminer que sa propre cellule")
