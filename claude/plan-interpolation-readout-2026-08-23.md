@@ -355,14 +355,27 @@ Aucune mesure, aucun cupy : §A61 tient."
   d'API.
 
 **Pourquoi cette tâche est séparée** : elle ne teste pas un comportement, elle
-teste que **le composant n'a qu'un seul chemin d'exécution**.
-
-> ⚠ **CORRIGÉ EN RONDE 1 (voir l'amendement 3 du spec).** La première version
-> de ce verrou comparait deux appels au MÊME `α` : elle testait le
-> DÉTERMINISME, que tout noyau branché sur `α` satisfait. Deux mutants la
-> passaient. Le verrou réel est l'**AFFINITÉ** — trois évaluations
-> colinéaires. Le test de déterminisme est conservé sous son vrai nom. Un relecteur peut
+teste que **le composant n'a qu'un seul chemin d'exécution**. Un relecteur peut
 légitimement accepter la tâche 1 et rejeter celle-ci.
+
+> ⚠ **CORRIGÉ EN RONDES 1 ET 2 — voir l'amendement 3 du spec.** La première
+> version de ce verrou comparait deux appels au MÊME `α` : elle testait le
+> DÉTERMINISME, que tout noyau branché sur `α` satisfait, donc elle ne pouvait
+> pas s'éteindre. Le verrou réel est l'**AFFINITÉ** — trois évaluations
+> colinéaires. Portée MESURÉE, et elle n'est pas celle qu'on avait d'abord
+> écrite : seul un mutant **conditionné au mode** l'éteint (1 failed / 6 passed) ;
+> un décalage **inconditionnel** s'y annule et n'est attrapé que par les verrous
+> de bornes (3 failed / 4 passed). Les deux familles sont NON REDONDANTES.
+>
+> **LE BLOC DE CODE CI-DESSOUS EST CELUI QUI A ÉTÉ PLANIFIÉ, PAS CELUI QUI EST
+> DANS LE DÉPÔT.** Il n'est pas réécrit : un plan est le registre de ce qui a été
+> DÉCIDÉ, et le corriger après coup lui ferait mentir sur son propre passé — même
+> raison qui rend le journal du programme append-only. Ce qui a été livré :
+> `test_les_deux_modes_partagent_un_seul_chemin` est devenu
+> `test_melanger_est_deterministe` (même corps, docstring refaite), et
+> `test_un_seul_noyau_affine_les_alphas_sont_colineaires` a été ajouté.
+> **Le fichier de test fait foi contre ce bloc** (`§A47-PRÉCISION-2` : une
+> méta-donnée n'est jamais autorité contre ce qu'elle décrit).
 
 - [ ] **Étape 1 : écrire le test qui échoue**
 
