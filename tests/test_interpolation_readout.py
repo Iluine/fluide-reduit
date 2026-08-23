@@ -81,3 +81,54 @@ def test_melange_a_un_demi():
     vue = tampon.melanger(pyr, ALPHA_INTERPOLER)
     for j in pyr.geo.niveaux_gpu:
         assert np.allclose(vue.fenetres[j][:, :, 0], 5.0)
+
+
+def test_les_deux_modes_partagent_un_seul_chemin():
+    """Verrou (b) — §2 du spec MÉCANISÉ.
+
+    `I` est annoncé INVARIANT AU MODE par construction. Non vérifié, cet
+    énoncé est une garde promise, donc une garde absente (§A62-bis-2). Ici
+    on l'exécute : à `α` ÉGAL, les deux appels doivent rendre les MÊMES
+    OCTETS — s'il existait un chemin propre à un mode, ils différeraient."""
+    pyr = _pyramide()
+    _peindre_s(pyr, 3.0)
+    tampon = TamponReadout(pyr)
+    tampon.capturer(pyr)
+    _peindre_s(pyr, 9.0)
+
+    for alpha in (ALPHA_INTERPOLER, ALPHA_EXTRAPOLER):
+        premier = {j: np.array(tampon.melanger(pyr, alpha).fenetres[j],
+                               copy=True)
+                   for j in pyr.geo.niveaux_gpu}
+        second = {j: np.array(tampon.melanger(pyr, alpha).fenetres[j],
+                              copy=True)
+                  for j in pyr.geo.niveaux_gpu}
+        for j in pyr.geo.niveaux_gpu:
+            assert premier[j].tobytes() == second[j].tobytes(), (
+                f"le mode α={alpha} n'est pas déterministe au niveau {j}")
+
+
+def test_extrapoler_depasse_et_le_clamp_compte():
+    """Verrou (d) — §5 du spec. Le clamp COMPTE et REPORTE, il ne lève pas."""
+    pyr = _pyramide()
+    _peindre_s(pyr, 10.0)
+    tampon = TamponReadout(pyr)
+    tampon.capturer(pyr)          # s_prev = 10
+    _peindre_s(pyr, 1.0)          # s_cur  = 1  ⇒ α=1½ donne −3,5
+    vue = tampon.melanger(pyr, ALPHA_EXTRAPOLER)
+
+    assert vue.clamps > 0, "l'extrapolation devait passer sous zéro"
+    for j in pyr.geo.niveaux_gpu:
+        assert (vue.fenetres[j] >= 0.0).all(), "le clamp n'a pas tenu"
+
+
+def test_interpoler_ne_depasse_jamais():
+    """Verrou (d), face FAVORABLE — un critère se vérifie aussi sur le cas
+    qui doit PASSER (§A52), sinon il punit la qualité qu'il contrôle."""
+    pyr = _pyramide()
+    _peindre_s(pyr, 10.0)
+    tampon = TamponReadout(pyr)
+    tampon.capturer(pyr)
+    _peindre_s(pyr, 1.0)
+    vue = tampon.melanger(pyr, ALPHA_INTERPOLER)
+    assert vue.clamps == 0, "α=½ entre deux états positifs ne peut pas clamper"
