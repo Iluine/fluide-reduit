@@ -295,7 +295,7 @@ tests sont de la LOGIQUE — ils ne mesurent rien.
 | **(b)** | **AFFINITÉ** : `s_out(α) = s_out(0) + α·(s_out(1) − s_out(0))`, vérifiée aux deux `α` de mode, hors zone de clamp | `§2` MÉCANISÉ — sans lui, l'invariance de `I` au mode est une promesse, donc une garde absente (`§A62-bis-2`). **Voir l'amendement 3 : la première formulation était éteinte.** |
 | **(c)** | l'état de la pyramide est **bit-identique après appel** ; `_verrouiller_consommateur()` lève sur un appelant hors rendu | `§4` — la garde éphémère |
 | **(d)** | le clamp **compte** et le compteur est rendu ; il ne lève pas | `§5` |
-| **(e)** | `chemin_de_cout` rend **les mêmes octets qu'avant** sur un `s` non interpolé | la non-régression de `§A48` — le plancher n'a pas bougé |
+| **(e)** | le MÊME gather, non modifié, lit la vue **octet pour octet** à `α = 1`, sur un champ **NON UNIFORME** | la surface de `VueInterpolee` est suffisante ET propagée. **Voir l'amendement 4 : ce verrou ne prouve PAS la non-régression — c'est le `git diff` qui la porte.** |
 | **(f)** | deux appels sur les mêmes entrées rendent les mêmes octets | fonction pure, anti-PERSIST |
 
 ---
@@ -364,6 +364,36 @@ interpoler.
 *Confondre les deux — dire « +33,3 ms de latence d'affichage » — nomme mal ce
 qui retarde. La faute a été commise en séance et corrigée avant ce document ; si
 elle survivait, une mesure future trancherait sur un chiffre mal nommé.*
+
+---
+
+> **AMENDEMENT 4 (2026-08-24) — LE VERROU (e) PROMETTAIT PLUS QU'IL NE TIENT,
+> ET SON CHAMP TÉMOIN AVAIT UN POINT AVEUGLE.** Deux constats d'une revue sur
+> pièces, tous deux dans le texte de ce spec.
+>
+> **(1) Aucun test ne peut prouver « le gather rend les mêmes octets qu'AVANT
+> l'existence de ce module »** — il y faudrait une référence historique. La
+> première rédaction le demandait pourtant, et le test qui en est sorti
+> comparait une constante repeinte **à elle-même** : n'importe quelle version
+> du gather l'aurait satisfait. **Ce qui porte réellement cette garantie est
+> `git diff --stat <base de branche> -- src/f1_gpu/chemin_de_cout.py`** — vide,
+> et complété par `git log <base>..HEAD -- <fichier>` également vide : aucun
+> commit de la série n'a jamais touché ce fichier, pas seulement l'état final
+> qui coïncide. C'est `§A62-bis-2` appliqué à un test : *une garde promise est
+> une garde absente*, et un test qui promet plus qu'il ne tient est de la même
+> famille.
+>
+> **(2) LE CHAMP TÉMOIN ÉTAIT CONSTANT, ET LE GATHER Y EST INSENSIBLE À
+> `centre_fin`.** Mesuré : en décalant `centre_fin` de +1 dans la vue, **les
+> DOUZE verrous du fichier passaient**. Une régression silencieuse de la
+> surface exposée n'était vue par rien. Le champ est désormais peint **non
+> uniforme**, et le test **vérifie d'abord qu'il l'est** — une garde sur la
+> garde, parce qu'un témoin qui redeviendrait constant rouvrirait le trou sans
+> bruit.
+>
+> **Troisième fois de la série qu'un verrou s'avère plus étroit que sa prose**
+> (après le `§7(b)` éteint et sa portée sur-vendue). Les trois ont été trouvés
+> par MUTATION, aucun par relecture — `§A53` ne se lasse pas.
 
 ---
 
