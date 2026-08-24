@@ -261,10 +261,18 @@ def test_l_etat_ne_voit_pas_le_rendu(cote, fabrique):
          readout n'y a fuité. Un verrou (a) faible ou approximatif rendrait
          l'exemption indéfendable.
 
-    D'où la comparaison sur les OCTETS de TOUS les champs de TOUTES les fenêtres
-    de TOUS les niveaux, plus `references[j]` et `centre_fin` : la garantie porte
-    sur l'état, pas sur un échantillon de l'état. Un `allclose` laisserait
-    passer exactement le genre de fuite qu'on cherche."""
+    D'OÙ LA PORTÉE DE LA COMPARAISON : elle est celle de `_etat_en_octets`, dont
+    la docstring l'énumère et la motive morceau par morceau. **Elle n'est PAS
+    réénumérée ici** — deux énumérations du même contrat dérivent l'une de
+    l'autre sans que rien ne le signale, et c'est déjà arrivé à celle-ci : elle a
+    dit « toutes les fenêtres, plus `references` et `centre_fin` » pendant tout
+    le temps où la photo en couvrait déjà cinq morceaux, `monde0` compris. Une
+    prose plus étroite que la portée est le sens sûr, mais c'est une affirmation
+    FAUSSE dans le verrou même qui mécanise l'exemption du §4-3.
+
+    Ce qui se dit ici et nulle part ailleurs : la comparaison porte sur les
+    OCTETS, la garantie porte sur l'état et non sur un échantillon de l'état, et
+    un `allclose` laisserait passer exactement le genre de fuite qu'on cherche."""
     avec = fabrique()
     _peindre_s_gradient(avec)
     depart = _etat_en_octets(avec)
@@ -670,9 +678,17 @@ def test_un_tick_qui_leve_ne_laisse_pas_un_compte_rendu_perime():
     """UN TICK INTERROMPU NE DOIT PAS LAISSER LE CHIFFRE DU TICK PRÉCÉDENT.
 
     Le cas est réel et il est silencieux. Côté `interpoler`, le couple sort
-    `(0,5 ; 1,0)` : si le gather du SECOND écran trouve un trou de couverture,
+    `(0,5 ; 1,0)` : si le gather d'un écran trouve un trou de couverture,
     `melanger` a DÉJÀ eu lieu et `frame()` a DÉJÀ avancé l'état — mais rien
-    n'aurait remis `compte_rendu` à jour. Un appelant qui rattrape par classe
+    n'aurait remis `compte_rendu` à jour.
+
+    SANS ORDINAL, ET C'EST UNE CORRECTION. Cette phrase a dit « le gather du
+    SECOND écran », ce qui décrit un scénario INATTEIGNABLE : les deux gathers
+    d'un tick partagent `geo`, `cote_px` et le MÊME `centre_fin` — rien ne
+    l'écrit entre eux (§4-6) — donc leur prédicat de couverture est identique et
+    le PREMIER échoue toujours en premier. La substance tenait, l'ordinal était
+    faux ; c'est le motif « prose plus large que la portée » qui se réintroduit
+    en miniature dans le correctif qui le poursuivait. Un appelant qui rattrape par classe
     nommée en amont et le relit lirait alors les compteurs d'un tick qui n'est
     plus, sur un état qui a changé : un chiffre qui ne décrit AUCUN tick, sans
     aucun symptôme. C'est la signature §A53 en miniature, et elle porte sur
@@ -692,7 +708,6 @@ def test_un_tick_qui_leve_ne_laisse_pas_un_compte_rendu_perime():
         "après un tick qui a levé, `compte_rendu` porte encore les compteurs "
         "du tick PRÉCÉDENT — un chiffre qui ne décrit aucun tick, rendu sans "
         "symptôme sur un état qui a pourtant avancé")
-
 
 
 @pytest.mark.parametrize("cote", COTES)

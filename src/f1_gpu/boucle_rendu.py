@@ -278,13 +278,20 @@ class BoucleRendu:
         choisir un `cote_px` couvrable appartient à l'appelant."""
         # LE COMPTE RENDU DU TICK PRÉCÉDENT EST INVALIDÉ D'ABORD, avant le
         # premier geste qui peut lever. Sans cette ligne, un tick interrompu —
-        # le gather du SECOND écran qui trouve un trou de couverture, alors que
+        # le gather d'un écran qui trouve un trou de couverture, alors que
         # `melanger` a déjà eu lieu et que `frame()` a déjà avancé l'état —
         # laisserait `compte_rendu` porter les compteurs du tick PRÉCÉDENT. Un
         # appelant qui rattrape par classe nommée en amont et le relit lirait
         # alors un chiffre qui ne décrit AUCUN tick, sans aucun symptôme : la
         # signature §A53 en miniature, dans un attribut dont un prereg futur
         # tirera un seuil.
+        #
+        # SANS ORDINAL : cette phrase a dit « le SECOND écran », ce qui décrit
+        # un scénario inatteignable. Les deux gathers d'un tick partagent `geo`,
+        # `cote_px` et le MÊME `centre_fin` (§4-6) : leur prédicat de couverture
+        # est identique, donc le PREMIER échoue toujours en premier. Ce qui rend
+        # le cas réel n'est pas le rang du gather, c'est que `melanger` et
+        # `frame()` le PRÉCÈDENT tous deux du côté `interpoler`.
         self.compte_rendu = None
         self.pyramide.frame(PAS_FOVEA)
 
