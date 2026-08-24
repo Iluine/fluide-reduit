@@ -768,13 +768,29 @@ def test_le_cote_ne_touche_pas_la_physique():
 
       2. L'ÉCRAN `α = 1,0` EST COMMUN AUX DEUX CÔTÉS — `interpoler.
          ecran_alpha_grand` et `extrapoler.ecran_alpha_petit`, à l'octet, à
-         CHAQUE tick. Le plan ne la demande pas ; le §2-3 de la spec s'appuie
-         exactement dessus (« l'écran `α = 1,0` étant COMMUN aux deux côtés »)
-         pour épingler la mesure du §10 du spec readout, et Romain a PRONONCÉ
-         cet épinglage à l'endossement (§8, point 2). Une communauté affirmée
-         dans un document et vérifiée nulle part est une garde PROMISE, donc une
-         garde ABSENTE (`PREREGISTRATION.md:10152`) : si elle tombait, c'est
-         l'épinglage qui tomberait avec elle, et rien ne le dirait.
+         CHAQUE tick. Le plan ne la demande pas. CE QU'ELLE MÉCANISE EST
+         L'UNIFORMITÉ GRAVÉE DU §2-2 — « exactement un des deux écrans vaut
+         `α = 1,0`, et le couple sort en `α` croissant » — ENDOSSÉE AU §8
+         POINT 1. Que cet écran soit NUMÉRIQUEMENT LE MÊME des deux côtés en est
+         la conséquence directe : même état `n`, même gather DIRECT sur la
+         pyramide (§2-1), même `centre_fin`. Une uniformité affirmée dans un
+         document et vérifiée nulle part est une garde PROMISE, donc une garde
+         ABSENTE (`PREREGISTRATION.md:10152`).
+
+         CE QUI NE DÉPEND PAS DE CETTE MOITIÉ — ET LA CITATION À NE PAS FAIRE.
+         Le §2-3 épingle la mesure du §10 du spec readout comme l'ÉCART PAR
+         IMAGE ENTRE LES DEUX CÔTÉS (`n − ½` contre `n + ½`), et cet écart
+         repose sur les PAIRES d'`α` du §2-2, PAS sur la communauté de l'écran
+         exact ; c'est cet épinglage-là que le §8 point 2 prononce. Ce qui
+         s'appuie sur la communauté est la TROISIÈME grandeur du §2-3 — au
+         niveau du flux 2:1, l'écart moyen entre les deux couples tombe à une
+         demi-période — que la spec déclare NON ÉPINGLÉE, dérivation de session,
+         et EMPLOYÉE NULLE PART dans le document. Si cette moitié tombait, c'est
+         ELLE qui tomberait, pas l'épinglage. Écrit parce qu'une première
+         rédaction de ce verrou a cité le §2-3 pour l'épinglage : la citation
+         était authentique et prise dans le MAUVAIS paragraphe. Une lecture
+         écartée sans être nommée revient par la porte de derrière — c'est le
+         mot du §2-3 lui-même, appliqué ici à sa propre citation.
 
       3. LES ÉCRANS NON EXACTS DIFFÈRENT — `α = 0,5` contre `α = 1,5`. Sans
          cette moitié, un côté qui n'aurait AUCUN effet passerait les deux
@@ -801,13 +817,19 @@ def test_le_cote_ne_touche_pas_la_physique():
         couple_extrapoler = boucle_extrapoler.tick(COTE_PX)
 
         # MOITIÉ 2 — l'exact est le SECOND en interpoler (`0,5` puis `1,0`) et
-        # le PREMIER en extrapoler (`1,0` puis `1,5`), §2-2.
+        # le PREMIER en extrapoler (`1,0` puis `1,5`) : c'est l'uniformité du
+        # §2-2, endossée au §8 point 1, qui rend cet écran commun.
         assert _memes_octets(couple_interpoler.ecran_alpha_grand,
                              couple_extrapoler.ecran_alpha_petit), (
             f"tick {indice_tick} : l'écran `α = 1,0` N'EST PAS commun aux deux "
-            "côtés. Le §2-3 de la spec épingle la mesure du §10 du spec readout "
-            "en s'appuyant sur cette communauté, et le §8 point 2 la prononce : "
-            "l'épinglage tombe avec ce verrou")
+            "côtés. Ce qui cesse de tenir est l'UNIFORMITÉ GRAVÉE DU §2-2 — "
+            "exactement un écran à `α = 1,0` dans chaque couple, même état `n`, "
+            "même gather DIRECT sur la pyramide, même `centre_fin` — endossée "
+            "au §8 point 1. NE PAS lire cet échec comme la chute de l'épinglage "
+            "du §10 : celui-ci est l'ÉCART PAR IMAGE entre les deux côtés et "
+            "repose sur les PAIRES d'`α`, pas sur cette communauté. Ce qui "
+            "dépend d'elle est la TROISIÈME grandeur du §2-3, que la spec "
+            "déclare NON épinglée, dérivation de session, employée nulle part")
 
         # MOITIÉ 3 — sans elle, un côté sans aucun effet passerait tout le reste.
         assert not _memes_octets(couple_interpoler.ecran_alpha_petit,
@@ -877,8 +899,12 @@ def _temoin_du_noyau(pyr, applicateur, alpha: float, centre_fin: int):
     for j in pyr.geo.niveaux_gpu:
         s_prev = applicateur.tampon.etat_precedent(j)
         s_cur = pyr.fenetres[j][:, :, INDICE_CHAMP_S, :, :]
-        bloc = np.empty((s_cur.shape[0], s_cur.shape[1], 1,
-                         s_cur.shape[2], s_cur.shape[3]), dtype=s_cur.dtype)
+        # ALLOCATION PAR `pyr.xp`, PAS PAR `np` : la `VueInterpolee` rendue
+        # ci-dessous DÉCLARE `pyr.xp`, et un témoin qui allouerait en numpy
+        # pour une vue déclarée cupy se contredirait sur la seule ligne de ce
+        # fichier qui touche au backend.
+        bloc = pyr.xp.empty((s_cur.shape[0], s_cur.shape[1], 1,
+                             s_cur.shape[2], s_cur.shape[3]), dtype=s_cur.dtype)
         bloc[:, :, 0, :, :] = (1.0 - a) * s_prev + a * s_cur
         fenetres_temoin[j] = bloc
     return VueInterpolee(pyr.xp, pyr.geo, centre_fin, fenetres_temoin, 0, 0)
