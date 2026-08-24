@@ -83,7 +83,7 @@ Après le `frame()` qui produit l'état `n`, avec `s_prev = n−1` et `s_cur = n
 > paire d'`α`. C'est elle qui rend le **tick unique** : un chemin de code, une
 > structure de garde, aucun branchement par côté hors du couple.
 
-### §2-3 — LES DEUX LATENCES, ET LA MESURE À LAQUELLE CHAQUE CHIFFRE SE RAPPORTE
+### §2-3 — LES DEUX LATENCES — **ET UN ÉPINGLAGE DE MESURE, PAS UNE SIMPLE CITATION**
 
 Le `§10` du spec readout sépare deux grandeurs, et les confondre « nomme mal ce
 qui retarde » :
@@ -92,13 +92,28 @@ qui retarde » :
 
 **La latence de VUE est NULLE des deux côtés** : les deux écrans d'un tick sont
 gatherisés au centre fovéal COURANT (garde `§4-6`). Seul l'**ÉTAT DU MONDE** retarde,
-et seulement en interpoler — mais **deux chiffres circulent pour lui et ne mesurent
-pas la même chose** : **par image interpolée**, `n − ½` contre `n + ½` font **un
-pas**, la ligne du `§10` ci-dessus, **endossée** ; **au niveau du flux 2:1**, l'écran
-`α = 1,0` étant COMMUN aux deux côtés, l'écart tombe à **une demi-période** —
-**dérivation de cette session**, du même statut que l'épinglage. ⇒ Écrire « une
-demi-période » sans dire *au niveau du flux* contredirait le `§10` à la lettre ; ce
-document n'emploie jamais l'un des deux nu.
+et seulement en interpoler.
+
+> ⚠ **CE PARAGRAPHE ÉPINGLE LA MESURE DE LA LIGNE D'ÉTAT DU MONDE CITÉE
+> CI-DESSUS, IL NE FAIT PAS QUE LA CITER.** Endosser le `§2-3`, c'est endosser **la lecture** de ce chiffre, et pas
+> seulement sa présence dans le corpus. **La mesure retenue : « un pas (33,3 ms à
+> 30 Hz) » est l'ÉCART PAR IMAGE ENTRE LES DEUX CÔTÉS** — l'image interpolée
+> d'interpoler montre `n − ½`, celle d'extrapoler `n + ½`, et l'écart vaut un pas
+> plein. **C'est la seule lecture sous laquelle le chiffre est exact.**
+>
+> **LA LECTURE ÉCARTÉE, NOMMÉE POUR QU'ELLE NE RESTE PAS DISPONIBLE** : lu comme
+> **latence ABSOLUE du mode interpoler**, le même chiffre serait **une
+> demi-période, pas 33,3 ms** — l'image interpolée montre `n − ½` alors que l'état
+> `n` existe déjà. Une lecture écartée sans être nommée revient par la porte de
+> derrière ; celle-ci est écartée **et** écrite.
+
+L'étiquette « endossée » que ce document porte sur cette ligne du `§10` ne couvrait
+jusqu'ici qu'un demi-pas de relecture — la citation, pas sa mesure. **Le prononcé
+ci-dessus ferme ce demi-pas.** Une troisième grandeur existe, du même objet et
+**non épinglée** : au niveau du flux 2:1, l'écran `α = 1,0` étant COMMUN aux deux
+côtés, l'écart moyen entre les deux couples tombe à une demi-période. C'est une
+**dérivation de cette session**, elle n'est pas ce que la ligne du `§10` mesure, et
+elle n'est employée nulle part dans ce document.
 
 ---
 
@@ -170,6 +185,17 @@ l'avance pas elle-même, et rien d'elle n'écrit dans le tenseur que `F` consomm
 > trouve avant d'agir. — Elle n'entre **pas davantage** dans `_MODULES_PERCEPTUELS`
 > de `chemin_de_cout` : code moteur, aucune fidélité jugée, aucun stimulus produit.
 
+> ⚠ **CE QUI MÉCANISE CETTE EXEMPTION — SANS LUI ELLE EST UNE PROMESSE.** Telle
+> qu'elle est écrite ci-dessus, l'exemption de `_MODULES_ETAT` est une garde
+> **promise dans un document**, c'est-à-dire, au mot du corpus repris en `§4-5`,
+> une **garde absente**. Son contre-poids est nommé et il appartient à la tâche 1 :
+> **le verrou (a) — un run de `N` ticks AVEC rendu et un run de `N` `frame()` NUS
+> doivent laisser des `fenetres` BIT-IDENTIQUES.** C'est lui, et lui seul, qui
+> porte mécaniquement ce que ce `§4-3` affirme : que la boucle **appelle** l'état
+> sans l'avancer autrement, et que rien du readout n'y a fuité. **L'exemption
+> n'est sûre que par ce verrou** ; s'il n'est pas écrit, le `§4-3` retombe au rang
+> de promesse.
+
 **§4-4 — UNE VUE N'EST PAS UN ÉCRAN.** Deux niveaux, tenus séparés. **La VUE aliase
 le tampon interne** —
 `src/f1_gpu/interpolation_readout.py:305` « ⚠ `fenetres` ALIASE le tampon interne `_s_out` du `TamponReadout` — ce n'est »
@@ -229,21 +255,26 @@ exactement dans le régime où l'on mesurera.**
 
 ---
 
-## §5. QUESTION OUVERTE NOMMÉE — LE CENTRE FOVÉAL EST À 30 Hz, LES IMAGES À 60
+## §5. QUESTION OUVERTE NOMMÉE — LE CENTRE FOVÉAL AVANCE UNE FOIS PAR TICK, LES ÉCRANS SORTENT PAR DEUX
 
-Posée, **pas tranchée**, et posée ici plutôt qu'absorbée en silence. Le `§10` écrit
-que le gather tourne au centre fovéal courant « à 60 Hz dans les deux modes ». Sous
-cette boucle la lettre tient — les 60 gathers par seconde lisent tous le centre
-COURANT, **la vue ne retarde jamais** — mais ce centre n'est **AVANCÉ que par
-`frame()`**, donc **30 fois par seconde** : les deux écrans d'un tick partagent la
-même position de caméra.
+Posée, **pas tranchée**, et posée ici plutôt qu'absorbée en silence. **Énoncée en
+cadence LOGIQUE, la seule que ce document admette** (`§1`) : compter en images par
+seconde ici contredirait sa propre portée.
+
+Le `§10` écrit que le gather tourne au centre fovéal courant « à 60 Hz dans les deux
+modes ». Sous cette boucle la lettre tient — **les DEUX gathers d'un tick lisent tous
+deux le centre COURANT, la vue ne retarde jamais** — mais ce centre n'est **AVANCÉ
+que par `frame()`**, donc **UNE FOIS PAR TICK, pour DEUX écrans** : les deux images
+d'un tick partagent la même position de caméra.
 
 Ce n'est **pas** une latence de vue, et ce document ne la renomme pas ainsi : c'est
-une **fréquence de rafraîchissement de la caméra**, jamais nommée nulle part. La
-porter à 60 Hz exigerait de déplacer la fovéa entre les deux écrans d'un tick — donc
-de rouler les fenêtres hors de `frame()`, donc de toucher `pyramide.py` : hors du
-périmètre de ce document, et interdit par `§4-6` tant qu'il n'est pas amendé.
-⇒ **DÛ, sans échéance forcée, soumis à l'ARRÊT du `§7`.**
+un **pas de rafraîchissement de la caméra — un par tick et non un par écran** —
+jamais nommé nulle part. Le porter à un par écran exigerait de déplacer la fovéa
+entre les deux écrans d'un tick, donc de rouler les fenêtres hors de `frame()`, donc
+de toucher `pyramide.py` : hors du périmètre de ce document, et interdit par `§4-6`
+tant qu'il n'est pas amendé.
+⇒ **DÛ, sans échéance forcée, soumis à l'ARRÊT du `§7`.** Le fond du dû est
+inchangé ; seule son unité l'est.
 
 ---
 
@@ -281,5 +312,28 @@ périmètre de ce document, et interdit par `§4-6` tant qu'il n'est pas amendé
 - **RIEN NE S'ENCHAÎNE.** La tâche 1 attend l'endossement de ce document —
   **notamment sur l'épinglage des deux côtés du `§2`, qui est une dérivation de
   cette session et pas un fait endossé**, et sur la question ouverte du `§5`.
+
+---
+
+## §8. FAIT CONSIGNÉ — LA RELECTURE DU 2026-08-24
+
+**Ce paragraphe consigne un fait de relecture. Il ne signe pas à la place de
+Romain, et il n'affirme pas que ce document est endossé par le commit qui l'ajoute.**
+
+Romain a relu ce document **en entier, sur pièces**, contrôlé les deux commits de la
+série et vérifié à la main les ancres load-bearing. **Verdict : ENDOSSABLE.** Ce que
+la relecture prononce :
+
+1. **L'épinglage des deux côtés (`§2`, `§2-2`) est ENDOSSÉ** — les paires d'`α`,
+   l'ordre croissant et l'uniformité « exactement un écran à `α = 1,0` » sont tenus
+   pour une **dérivation propre** des constantes du module, du tranchage des images
+   exactes du `§3` du spec readout et de la ligne `P-b` du prereg
+   `où-vit-le-rendu` — les trois ancres du `§2-1` et du `§2`. C'est le point
+   que le `§7` soumettait ; il cesse d'être une dérivation en attente.
+2. **Le `§2-3` épingle la mesure du `§10`** — « un pas (33,3 ms) » se lit comme
+   **écart PAR IMAGE entre les deux côtés**, et la lecture « latence absolue du mode
+   interpoler » (qui donnerait une demi-période) est **écartée**. Voir le `§2-3`.
+3. **Le `§5` est ENDOSSÉ COMME DÛ SANS ÉCHÉANCE**, garde `§4-6` comprise : la
+   question reste ouverte, mais son statut de dû n'est plus en suspens.
 
 Document rédigé par la session Claude ; **l'endossement est le commit de Romain.**
