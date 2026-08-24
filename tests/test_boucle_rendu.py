@@ -31,6 +31,7 @@ from src.f1_gpu.boucle_rendu import (
     COTE_EXTRAPOLER,
     COTE_INTERPOLER,
     COUPLES_PAR_COTE,
+    INDICE_CHAMP_VUE,
     BoucleRendu,
     CoteInconnu,
     MontageBoucleInvalide,
@@ -39,8 +40,10 @@ from src.f1_gpu.chemin_de_cout import gather_chemin_de_cout
 from src.f1_gpu.interpolation_readout import (
     ALPHA_EXTRAPOLER,
     ALPHA_INTERPOLER,
+    INDICE_CHAMP_S,
     ReadoutCaptureImpossible,
     TamponReadout,
+    VueInterpolee,
     _MODULES_ETAT,
     installer_capture_en_registre,
 )
@@ -741,3 +744,224 @@ def test_le_tick_rend_les_compteurs_de_la_vue_sans_prononcer_dessus(
         assert boucle.compte_rendu.clamps == vue.clamps
         assert boucle.compte_rendu.non_finis == vue.non_finis
         assert premier.shape == second.shape == (COTE_PX, COTE_PX)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VERROU (d) — LE CÔTÉ NE TOUCHE PAS LA PHYSIQUE
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_le_cote_ne_touche_pas_la_physique():
+    """VERROU (d) — `N` ticks côté INTERPOLER et `N` ticks côté EXTRAPOLER
+    depuis le même état initial : les états physiques sont BIT-IDENTIQUES, et
+    seuls les écrans diffèrent.
+
+    TROIS MOITIÉS, ET LA DEUXIÈME EST LOAD-BEARING SANS ÊTRE DANS LE PLAN :
+
+      1. LES ÉTATS SONT BIT-IDENTIQUES. Le côté ne choisit QUE la paire d'`α`
+         (§2-2) : il n'a aucune prise sur `frame()`, donc aucune sur la
+         physique. Si le côté touchait l'état, toute comparaison entre côtés —
+         celle que la lecture d'orientation fera un jour — comparerait deux
+         MONDES et non deux lectures du même monde, et son verdict porterait sur
+         un écart que personne n'aurait voulu. La portée de la comparaison est
+         celle de `_etat_en_octets` ; elle n'est PAS réénumérée ici, deux
+         énumérations du même contrat dérivant l'une de l'autre sans signal.
+
+      2. L'ÉCRAN `α = 1,0` EST COMMUN AUX DEUX CÔTÉS — `interpoler.
+         ecran_alpha_grand` et `extrapoler.ecran_alpha_petit`, à l'octet, à
+         CHAQUE tick. Le plan ne la demande pas ; le §2-3 de la spec s'appuie
+         exactement dessus (« l'écran `α = 1,0` étant COMMUN aux deux côtés »)
+         pour épingler la mesure du §10 du spec readout, et Romain a PRONONCÉ
+         cet épinglage à l'endossement (§8, point 2). Une communauté affirmée
+         dans un document et vérifiée nulle part est une garde PROMISE, donc une
+         garde ABSENTE (`PREREGISTRATION.md:10152`) : si elle tombait, c'est
+         l'épinglage qui tomberait avec elle, et rien ne le dirait.
+
+      3. LES ÉCRANS NON EXACTS DIFFÈRENT — `α = 0,5` contre `α = 1,5`. Sans
+         cette moitié, un côté qui n'aurait AUCUN effet passerait les deux
+         premières : les deux couples seraient identiques terme à terme et le
+         verrou serait vert en ne gardant rien.
+
+    POURQUOI `_pyramide_doublante` ET NON LA FABRIQUE JETABLE, ET C'EST MESURÉ.
+    Sous le `F` jetable, `s` N'ÉVOLUE PAS : `s_prev == s_cur`, tout mélange
+    affine rend `s_cur` quel que soit `α`, et la moitié 3 devient VERTE ET VIDE
+    — constaté sur les trois ticks de ce banc avant d'écrire ce verrou, pas
+    supposé. Le pas doublant (`s ← 2·s`) fait évoluer `s`, et le gradient non
+    uniforme de `_peindre_s_gradient` rend le gather sensible à `centre_fin`."""
+    pyr_interpoler = _pyramide_doublante()
+    pyr_extrapoler = _pyramide_doublante()
+    _peindre_s_gradient(pyr_interpoler)
+    _peindre_s_gradient(pyr_extrapoler)
+    depart = _etat_en_octets(pyr_interpoler)
+
+    boucle_interpoler = BoucleRendu(pyr_interpoler, COTE_INTERPOLER)
+    boucle_extrapoler = BoucleRendu(pyr_extrapoler, COTE_EXTRAPOLER)
+
+    for indice_tick in range(N_TICKS):
+        couple_interpoler = boucle_interpoler.tick(COTE_PX)
+        couple_extrapoler = boucle_extrapoler.tick(COTE_PX)
+
+        # MOITIÉ 2 — l'exact est le SECOND en interpoler (`0,5` puis `1,0`) et
+        # le PREMIER en extrapoler (`1,0` puis `1,5`), §2-2.
+        assert _memes_octets(couple_interpoler.ecran_alpha_grand,
+                             couple_extrapoler.ecran_alpha_petit), (
+            f"tick {indice_tick} : l'écran `α = 1,0` N'EST PAS commun aux deux "
+            "côtés. Le §2-3 de la spec épingle la mesure du §10 du spec readout "
+            "en s'appuyant sur cette communauté, et le §8 point 2 la prononce : "
+            "l'épinglage tombe avec ce verrou")
+
+        # MOITIÉ 3 — sans elle, un côté sans aucun effet passerait tout le reste.
+        assert not _memes_octets(couple_interpoler.ecran_alpha_petit,
+                                 couple_extrapoler.ecran_alpha_grand), (
+            f"tick {indice_tick} : les écrans `α = 0,5` et `α = 1,5` sont "
+            "IDENTIQUES à l'octet. Soit le côté n'a plus aucun effet sur la "
+            "paire d'`α`, soit `s` n'évolue pas dans ce banc — dans les deux "
+            "cas les moitiés 1 et 2 seraient vertes en ne gardant rien")
+
+    # Clôture SYMÉTRIQUE du bilan de transfert, une fois de chaque côté après la
+    # même quantité de travail : `frame()` n'en clôt aucun, et une clôture
+    # asymétrique ferait diverger le NOMBRE de bilans — le verrou échouerait
+    # alors pour une raison qui n'est pas la sienne.
+    pyr_interpoler.transferts.frame_suivante()
+    pyr_extrapoler.transferts.frame_suivante()
+
+    apres = _etat_en_octets(pyr_interpoler)
+    cles_fenetres = [cle for cle in depart
+                     if isinstance(cle, tuple) and cle[0] == "fenetres"]
+    assert any(apres[cle] != depart[cle] for cle in cles_fenetres), (
+        "AUCUNE fenêtre n'a bougé sur les N ticks : la comparaison d'états qui "
+        "suit serait vraie sans rien garder. Le delta est exigé sur les "
+        "FENÊTRES et non sur la photo entière — `centre_fin` avance de "
+        "`N_TICKS` par construction du tick, donc un garde-fou posé sur le "
+        "dictionnaire complet serait lui-même VIDE (§A62-bis-2)")
+
+    # MOITIÉ 1 — égalité EXACTE, jamais un `allclose` : une divergence de
+    # dernier bit signale déjà que le côté a atteint un chemin de calcul de
+    # l'état, et c'est exactement ce qu'on cherche.
+    etat_extrapoler = _etat_en_octets(pyr_extrapoler)
+    assert set(apres) == set(etat_extrapoler)
+    for cle, valeur in etat_extrapoler.items():
+        assert apres[cle] == valeur, (
+            f"{cle} diffère entre le run INTERPOLER et le run EXTRAPOLER : le "
+            "côté a touché la PHYSIQUE. Il ne doit choisir QUE la paire d'`α` "
+            "(§2-2) ; sinon comparer deux côtés reviendrait à comparer deux "
+            "mondes, et le verdict de la lecture d'orientation porterait sur un "
+            "écart que personne n'a voulu")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VERROU (e) — CONFORMITÉ AU NOYAU DU §2, À L'OCTET
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _temoin_du_noyau(pyr, applicateur, alpha: float, centre_fin: int):
+    """Le noyau du §2 recalculé À LA MAIN, sans passer par le module testé, et
+    présenté au gather sous la surface qu'il attend.
+
+    `s_prev` est lu dans le tampon de readout (`etat_precedent`, post-roll et en
+    REGISTRE), `s_cur` dans les fenêtres de la pyramide. Le mélange est écrit
+    dans un tableau NEUF — jamais dans `_s_out`, qui appartient au tampon —
+    puis emballé dans une `VueInterpolee` dont l'axe des champs est un
+    SINGLETON, d'où `indice_champ=INDICE_CHAMP_VUE` chez l'appelant.
+
+    L'ORDRE ET LE TYPAGE DE L'ARITHMÉTIQUE SONT CEUX DE `melanger`, À LA LETTRE :
+    `a = float(alpha)` puis `(1.0 - a) * s_prev + a * s_cur`. En numpy ≥ 2 un
+    scalaire Python NE PROMEUT PAS un tableau f32 — le résultat reste f32 —
+    mais une RÉASSOCIATION (`s_prev + a * (s_cur - s_prev)`, algébriquement
+    identique) changerait les octets. Un témoin qui ne reproduit pas l'ordre ne
+    verrouille rien : il mesure sa propre arithmétique.
+
+    Les compteurs de la vue témoin valent zéro et ne servent à rien : le gather
+    ne les lit pas. Ce qui compte, c'est que le CENTRE FOVÉAL passé ici soit
+    celui du tick — il est LU par l'appelant et vérifié là-bas."""
+    a = float(alpha)
+    fenetres_temoin = {}
+    for j in pyr.geo.niveaux_gpu:
+        s_prev = applicateur.tampon.etat_precedent(j)
+        s_cur = pyr.fenetres[j][:, :, INDICE_CHAMP_S, :, :]
+        bloc = np.empty((s_cur.shape[0], s_cur.shape[1], 1,
+                         s_cur.shape[2], s_cur.shape[3]), dtype=s_cur.dtype)
+        bloc[:, :, 0, :, :] = (1.0 - a) * s_prev + a * s_cur
+        fenetres_temoin[j] = bloc
+    return VueInterpolee(pyr.xp, pyr.geo, centre_fin, fenetres_temoin, 0, 0)
+
+
+@pytest.mark.parametrize("cote", COTES)
+def test_chaque_ecran_du_couple_vaut_le_noyau_du_paragraphe_2(cote, monkeypatch):
+    """VERROU (e) — sur le pas jouet DOUBLANT, CHACUN des deux écrans du couple
+    vaut À L'OCTET `(1−α)·s_prev + α·s_cur` gatherisé. Aucun autre noyau n'est
+    entré en douce.
+
+    LE DOUBLANT EST EXACT EN f32 (`s ← 2·s` : la mantisse ne bouge pas, seul
+    l'exposant), donc l'égalité octet pour octet est une exigence tenable et non
+    une tolérance déguisée — c'est le doublement du 13ᵉ verrou du readout.
+
+    LES DEUX ÉCRANS, PAS SEULEMENT L'INTERPOLÉ, ET POUR L'EXACT CE N'EST PAS UNE
+    FORMALITÉ. L'écran `α = 1,0` vient d'un gather DIRECT sur la pyramide, hors
+    du noyau (§2-1) ; le vérifier contre `(1−1)·s_prev + 1·s_cur = s_cur` prouve
+    que ce CONTOURNEMENT est NUMÉRIQUEMENT le noyau à `α = 1`. C'est la seule
+    chose qui interdise qu'un autre chemin soit entré en douce du côté exact —
+    un champ voisin, un système voisin, un centre décalé rendraient tous des
+    pixels plausibles sans lever.
+
+    CE QUE CE VERROU NE GARDE PAS, ET C'EST DÉLIBÉRÉ. Il ne peut pas distinguer
+    le gather direct d'un `melanger(1.0)` suivi d'un gather sur la vue : le
+    noyau affine à `α = 1` rend `s_cur`, donc les OCTETS sont les mêmes. C'est
+    précisément le point du §2-1 — le contournement est une affaire de COÛT
+    (`30·I` et non `60·I`), pas de pixels — et ce qui le garde est le COMPTE des
+    appels, dans `test_un_seul_melanger_par_tick_et_jamais_a_alpha_exact`. Les
+    deux verrous sont complémentaires ; écrit ici pour qu'aucune revue ne croie
+    que l'un rend l'autre inutile.
+
+    LE CLAMP NE DOIT PAS MORDRE, ET C'EST VÉRIFIÉ PLUTÔT QUE SUPPOSÉ. `melanger`
+    applique `s ≥ 0` APRÈS le mélange et le COMPTE ; le témoin, lui, ne clampe
+    pas. Avec `s ≥ 0` et le doublant, `α = 1,5` donne `2,5·s ≥ 0` et `α = 0,5`
+    donne `1,5·s ≥ 0` : le clamp est inerte. Si un jour il mordait, le témoin et
+    le module divergeraient pour une raison INVISIBLE dans le message d'échec —
+    d'où l'assertion sur `clamps`, qui nomme la cause avant qu'on la cherche.
+
+    LE CENTRE FOVÉAL EST LU, PAS SUPPOSÉ. Le gather témoin doit tourner au MÊME
+    `centre_fin` que le tick. Le §4-6 l'assure — rien n'écrit `centre_fin` hors
+    de `frame()` — mais une garde qu'on suppose est une garde qu'on n'a pas :
+    le centre mémorisé par la vue du tick est comparé à celui lu après le tick,
+    et c'est ce dernier qui est passé au témoin."""
+    pyr = _pyramide_doublante()
+    applicateur = installer_capture_en_registre(pyr)
+    appels = _espionner_melanger(monkeypatch)
+    _peindre_s_gradient(pyr)
+    boucle = BoucleRendu(pyr, cote, applicateur=applicateur)
+
+    for indice_tick in range(N_TICKS):
+        couple = boucle.tick(COTE_PX)
+
+        assert boucle.compte_rendu.clamps == 0, (
+            f"tick {indice_tick} : le clamp `s ≥ 0` a mordu "
+            f"({boucle.compte_rendu.clamps} cellule(s)). Le témoin de ce verrou "
+            "ne clampe pas : il divergerait du module pour une raison qui "
+            "n'apparaîtrait nulle part dans l'échec. Choisir des valeurs où le "
+            "clamp est inerte fait partie du banc")
+        assert boucle.compte_rendu.non_finis == 0, (
+            f"tick {indice_tick} : {boucle.compte_rendu.non_finis} cellule(s) "
+            "non finie(s) — l'état est corrompu en amont et l'égalité à "
+            "l'octet ne dirait plus rien du noyau")
+
+        # LE CENTRE FOVÉAL, LU. La vue du tick a mémorisé `pyramide.centre_fin`
+        # au moment du `melanger` ; s'il valait encore celui d'après le tick,
+        # alors rien ne l'a écrit entre les deux et le témoin peut gatheriser
+        # au même centre. C'est la garde du §4-6 constatée ici, pas supposée.
+        centre_du_tick = int(pyr.centre_fin)
+        _, vue_du_tick = appels[-1]
+        assert int(vue_du_tick.centre_fin) == centre_du_tick, (
+            f"tick {indice_tick} : le centre fovéal a bougé entre le `melanger` "
+            f"du tick ({int(vue_du_tick.centre_fin)}) et la lecture d'après "
+            f"tick ({centre_du_tick}). Le §4-6 l'interdit, et le témoin de ce "
+            "verrou ne pourrait plus gatheriser au centre du tick")
+
+        for alpha, ecran in zip(boucle.couple_alphas, couple):
+            temoin = _temoin_du_noyau(pyr, applicateur, alpha, centre_du_tick)
+            attendu = gather_chemin_de_cout(temoin, COTE_PX,
+                                            indice_champ=INDICE_CHAMP_VUE)
+            assert _memes_octets(ecran, attendu), (
+                f"tick {indice_tick}, `α = {alpha}` (côté {cote}) : l'écran "
+                "rendu N'EST PAS, à l'octet, `(1−α)·s_prev + α·s_cur` "
+                "gatherisé. Un autre noyau est entré en douce — ou, pour "
+                f"`α = {ALPHA_EXACT}`, le gather direct du §2-1 n'est plus "
+                "numériquement le noyau à `α = 1`")
