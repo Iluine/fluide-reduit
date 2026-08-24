@@ -26,6 +26,16 @@ physique. **Il ne modifie ni l'un, ni l'autre, ni `pyramide.py`.**
 aucun présentateur**. **DEHORS** : toute mesure ; tout chiffre de `I` ; toute cadence
 réelle ; tout branchement 3D ; toute présentation ; le choix du côté (`§6`).
 
+**LA CONVERSION `s` → IMAGE VIT DEHORS, DANS LE DRIVER.** Le tick rend des champs
+de **sédiment** ; la lecture albédo qui en fait une image est
+`src/f1_gpu/chemin_de_cout.py:344` « def albedo_ecran(ecran_s: np.ndarray, s_half: float) -> np.ndarray: »
+et **`s_half` y est un paramètre d'APPELANT, sans aucune valeur endossée dans le
+corpus**. Le graver ici serait choisir un paramètre hors de toute décision —
+exactement le motif par lequel le `§5` du spec readout refuse son propre seuil :
+`claude/spec-interpolation-readout-2026-08-23.md:239-240` « Le graver ici serait choisir un seuil hors de toute décision — exactement ce que `§A60` interdit. »
+⇒ **La boucle ne convertit rien et n'importe pas `albedo_ecran`** ; l'appelant qui
+veut une image applique la lecture lui-même, avec **son** `s_half` (`§6`).
+
 **LA CADENCE EST LOGIQUE.** « 2:1 » est un RAPPORT DE COMPTE : deux écrans par
 `frame()`, pas deux écrans par 33,3 ms. **Aucune horloge murale n'entre ici** — ni
 `time`, ni `cuda.Event`, ni attente, ni régulation. Une cadence logique n'en a pas
@@ -109,6 +119,14 @@ L'applicateur rendu est conservé ; son `.tampon` est ce que `melanger` consomme
 > Sans elle, `TamponReadout.capturer` serait nécessairement pré-roll et `melanger`
 > lèverait `ReadoutHorsRegistre` à chaque tick. **La voie 2 n'est pas un raffinement
 > de cette boucle : elle en est la condition d'existence.**
+>
+> **ET L'ORDRE DÉGÉNÉRÉ, QUI LUI NE LÈVE PAS.** `frame()` **puis**
+> `TamponReadout.capturer` ne déclenche **aucune** garde : `_centre_capture` prend
+> le centre COURANT, donc `ReadoutHorsRegistre` se tait — mais `s_prev == s_cur`,
+> **tout écran interpolé devient identique à l'exact**, `clamps == 0`, et rien ne
+> le signale. C'est l'asymétrie silencieuse que le `§4-6` chasse par ailleurs.
+> ⇒ **La boucle n'appelle JAMAIS `TamponReadout.capturer` ; son seul point de
+> capture est l'applicateur.**
 
 **LE TICK, dans l'ordre, et il est le même des deux côtés** : (1) `pyramide.frame(1)`
 — l'applicateur capture `s_prev` par niveau, post-roll et pré-pas de physique, l'état
@@ -201,6 +219,14 @@ le remplit pas, ne le compte pas pour l'ignorer — elle laisse lever.
 ⇒ La boucle n'écrit **aucun** `except RuntimeError`, ni `except Exception`. Un
 rattrapage futur se ferait par **classe nommée**, motif écrit à côté.
 
+**§4-9 — AUCUN `assert`, NULLE PART.** Le `§4` du spec readout le grave pour les
+serrures qu'il pose, et la règle vaut ici à l'identique :
+`claude/spec-interpolation-readout-2026-08-23.md:192-193` « **Jamais un `assert`** : il disparaît sous `python -O` (`§A43`). »
+Toute vérification de la boucle — ordre du montage, appartenance d'un `α` au
+couple, forme d'un écran — se fait par `if` et levée d'une **classe nommée**. **Un
+`assert` disparaît sous `python -O`, donc une garde qui en dépend est absente
+exactement dans le régime où l'on mesurera.**
+
 ---
 
 ## §5. QUESTION OUVERTE NOMMÉE — LE CENTRE FOVÉAL EST À 30 Hz, LES IMAGES À 60
@@ -232,6 +258,8 @@ périmètre de ce document, et interdit par `§4-6` tant qu'il n'est pas amendé
 - **TOUTE CADENCE RÉELLE** — le 2:1 est logique (`§1`) ; ce document ne dit ni que
   30 Hz et 60 fps sont atteignables, ni qu'ils ne le sont pas.
 - **TOUT CHIFFRE DE `I`**, et toute part de `I`.
+- **`s_half`**, et toute valeur de lecture albédo — la conversion `s` → image vit
+  DEHORS (`§1`) et son paramètre appartient à l'appelant, pas à ce document.
 - **LE PLACEMENT IMAGE du `§9`**, toujours non chiffré :
   `claude/spec-interpolation-readout-2026-08-23.md:537` « **Le `§9` reste NON CHIFFRÉ** : le placement IMAGE n'est toujours pas évalué, »
 
