@@ -15,16 +15,43 @@ signale. En particulier `_peindre_s_gradient` : un champ `s` CONSTANT rend le
 gather insensible à `centre_fin`, et un décalage de vue passerait alors tous les
 verrous de ce fichier sans bruit (fait mesuré par la revue de la tâche 4 du
 readout, pas supposé).
+
+LA TÂCHE 3 AJOUTE LA SECTION FINALE — LA SORTIE IMAGE ET LE DRIVER
+(`scripts/run_boucle_rendu_demo.py`). Elle porte le verrou (f) du plan et les
+gardes du driver. Le patron « tester un driver » est celui de la maison :
+`tests/test_p2_chiffrage.py:20` fait `from scripts import run_p2_chiffrage`, et
+`scripts/` est un package.
+
+⚠ AUCUN PNG DE RÉFÉRENCE N'EST VERSIONNÉ, et ce n'est pas une facilité :
+`.gitignore:5` porte `outputs/`, donc un golden-fichier vivrait hors du dépôt ou
+forcerait un binaire dedans. Le verrou (f) est « DEUX RUNS, MÊMES OCTETS », entre
+deux constructions COMPLÈTES et INDÉPENDANTES — jamais deux lectures du même
+appel, qui seraient vertes et vides.
 """
 from __future__ import annotations
 
 import ast
 import inspect
+import struct
+import zlib
 from pathlib import Path
 
 import numpy as np
 import pytest
 
+from scripts import run_boucle_rendu_demo
+from scripts.run_boucle_rendu_demo import (
+    COTES_DISPONIBLES,
+    COTE_PX_DEMO,
+    NIVEAUX_GRIS,
+    OCTET_FILTRE_AUCUN,
+    SIGNATURE_PNG,
+    EcranNonRepresentable,
+    construire_parseur,
+    encoder_png_gris,
+    quantifier_en_octets,
+    rendre,
+)
 from src.f1_gpu import boucle_rendu
 from src.f1_gpu.boucle_rendu import (
     ALPHA_EXACT,
@@ -36,7 +63,7 @@ from src.f1_gpu.boucle_rendu import (
     CoteInconnu,
     MontageBoucleInvalide,
 )
-from src.f1_gpu.chemin_de_cout import gather_chemin_de_cout
+from src.f1_gpu.chemin_de_cout import albedo_ecran, gather_chemin_de_cout
 from src.f1_gpu.interpolation_readout import (
     ALPHA_EXTRAPOLER,
     ALPHA_INTERPOLER,
@@ -991,3 +1018,582 @@ def test_chaque_ecran_du_couple_vaut_le_noyau_du_paragraphe_2(cote, monkeypatch)
                 "gatherisé. Un autre noyau est entré en douce — ou, pour "
                 f"`α = {ALPHA_EXACT}`, le gather direct du §2-1 n'est plus "
                 "numériquement le noyau à `α = 1`")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TÂCHE 3 — LA SORTIE IMAGE ET LE DRIVER (`scripts/run_boucle_rendu_demo.py`)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# `s_half` DE BANC, ET IL FAUT DIRE POURQUOI IL EST ÉCRIT ICI. Le §6 de la spec
+# range `s_half` parmi ce qu'elle NE TRANCHE PAS, et le corpus n'en porte AUCUNE
+# valeur (`src/albedo.py:27` et `src/f1_gpu/chemin_de_cout.py:344` en font tous
+# deux un paramètre d'appelant). Cette valeur n'endosse donc rien : c'est un
+# choix de BANC, pris pour que la quantification 8 bits ne sature ni en bas ni
+# en haut sur le substrat jetable, et aucun verrou de ce fichier ne prononce sur
+# elle. Le driver, lui, l'EXIGE de son appelant — il n'en porte aucun défaut.
+S_HALF_BANC = 0.05
+
+# Deux ticks suffisent au verrou (f) : ce qu'il compare est l'octet, pas la
+# durée. Un run plus long ne rendrait pas l'égalité plus vraie, et le banc doit
+# rester minuscule (§A61 : aucune mesure ici, donc rien à amortir).
+N_TICKS_GOLDEN = 2
+
+# Ce que le PNG du driver a le droit de contenir, et rien d'autre. `tIME` porte
+# une date par définition ; `tEXt` peut en porter une. Écrire un PNG n'est pas
+# une mesure — l'horodater en serait une, et §A61 tient.
+CHUNKS_AUTORISES = ("IHDR", "IDAT", "IEND")
+
+# LA VALEUR DU FORMAT PNG, GRAVÉE ICI ET NON IMPORTÉE DU DRIVER. Le filtre de
+# ligne « None » vaut 0 dans la spécification PNG : c'est un fait du FORMAT, pas
+# un choix de ce dépôt. L'importer du driver rendrait le verrou vide — une
+# mutation de la constante mutant du même coup l'attente, et le test comparerait
+# le module à lui-même. C'est la leçon de la tâche 2, appliquée : un verrou qui
+# compare deux fois le résultat du même appel est vert et vide. Constaté par
+# mutation sur ce fichier même, pas supposé.
+FILTRE_AUCUN_PNG = 0
+
+# Ce dont l'absence rend le driver incapable de chronométrer quoi que ce soit.
+MODULES_HORLOGE = frozenset({"time", "datetime", "timeit", "calendar"})
+ATTRIBUTS_HORLOGE = frozenset({
+    "perf_counter", "perf_counter_ns", "monotonic", "monotonic_ns", "time_ns",
+    "process_time", "now", "utcnow", "today"})
+
+
+def _chunks_png(octets: bytes) -> list[tuple[str, bytes]]:
+    """Découpe un PNG en `(type, données)`, CRC VÉRIFIÉ, sans aucune
+    bibliothèque d'image.
+
+    POURQUOI À LA MAIN PLUTÔT QU'AVEC `pillow`. `pillow` figure en ligne
+    COMMENTÉE dans `requirements.txt` : il se trouve installé dans le venv, mais
+    l'importer — fût-ce dans un test — ferait dépendre le verrou d'une
+    dépendance NON DÉCLARÉE, exactement ce que la décision D7 de la tâche
+    refuse pour le driver. Un lecteur qui ne lit que la stdlib prouve la même
+    chose et ne doit rien à personne.
+
+    Le CRC est vérifié parce qu'un PNG dont le CRC est faux n'est pas un PNG :
+    sans ce contrôle, « le fichier s'ouvre » resterait une affirmation."""
+    if not octets.startswith(SIGNATURE_PNG):
+        raise ValueError("signature PNG absente — ce n'est pas un PNG.")
+    chunks: list[tuple[str, bytes]] = []
+    position = len(SIGNATURE_PNG)
+    while position < len(octets):
+        (longueur,) = struct.unpack(">I", octets[position:position + 4])
+        type_ = octets[position + 4:position + 8]
+        donnees = octets[position + 8:position + 8 + longueur]
+        (crc,) = struct.unpack(
+            ">I", octets[position + 8 + longueur:position + 12 + longueur])
+        if crc != zlib.crc32(type_ + donnees) & 0xFFFFFFFF:
+            raise ValueError(f"CRC faux sur le chunk {type_!r}.")
+        chunks.append((type_.decode("ascii"), donnees))
+        position += 12 + longueur
+    return chunks
+
+
+def _identifiants(source: Path) -> set[str]:
+    """Tous les noms et attributs qui apparaissent dans le CODE d'un fichier.
+
+    PAR L'AST, PAS PAR UN `grep`, et pour la raison que
+    `test_la_source_ne_porte_ni_except_large_ni_assert` a déjà écrite : les
+    docstrings de ce dépôt NOMMENT ce qu'elles interdisent. L'en-tête de
+    `boucle_rendu.py` écrit `albedo_ecran` en toutes lettres pour dire qu'il ne
+    l'importe pas — un motif textuel en ferait un usage."""
+    arbre = ast.parse(source.read_text(encoding="utf-8"))
+    noms: set[str] = set()
+    for noeud in ast.walk(arbre):
+        if isinstance(noeud, ast.Name):
+            noms.add(noeud.id)
+        elif isinstance(noeud, ast.Attribute):
+            noms.add(noeud.attr)
+        elif isinstance(noeud, ast.alias):
+            noms.add(noeud.name.split(".")[0])
+            noms.add(noeud.name)
+            if noeud.asname:
+                noms.add(noeud.asname)
+        elif isinstance(noeud, ast.ImportFrom) and noeud.module:
+            noms.add(noeud.module)
+    return noms
+
+
+# ─── D5 — LA CONVERSION `s` → IMAGE VIT DEHORS, ET C'EST MÉCANISÉ ────────────
+
+def test_la_boucle_n_importe_pas_albedo_ecran_et_le_driver_si():
+    """§1 DE LA SPEC ENDOSSÉE, LES DEUX MOITIÉS.
+
+    `claude/spec-boucle-rendu-2026-08-24.md:29` « **LA CONVERSION `s` → IMAGE
+    VIT DEHORS, DANS LE DRIVER.** » — et la ligne 36 du même §1 : « **La boucle
+    ne convertit rien et n'importe pas `albedo_ecran`** ».
+
+    LE MOTIF, ET IL N'EST PAS DE STYLE. `s_half` n'a AUCUNE valeur endossée
+    dans le corpus : il est paramètre d'appelant dans `src/albedo.py:27` comme
+    dans `src/f1_gpu/chemin_de_cout.py:344`. Le graver dans le module moteur
+    serait choisir un paramètre hors de toute décision — le motif même par
+    lequel le §5 du spec readout refuse son propre seuil.
+
+    LES DEUX MOITIÉS COMPTENT. Vérifier seulement l'absence côté boucle
+    laisserait passer un driver qui réimplémente `1 − exp(−s/s_half)` à la main
+    : la lecture albédo se dédoublerait, et les deux copies dériveraient sans
+    que rien ne le signale. Vérifier seulement la présence côté driver ne dirait
+    rien de la garde. Ce verrou porte les deux."""
+    de_la_boucle = _identifiants(Path(boucle_rendu.__file__))
+    assert "albedo_ecran" not in de_la_boucle, (
+        "`boucle_rendu.py` référence `albedo_ecran` dans son CODE : le §1 de la "
+        "spec endossée range la conversion `s` → image DEHORS, dans le driver, "
+        "parce que `s_half` n'a aucune valeur endossée dans le corpus")
+
+    du_driver = _identifiants(Path(run_boucle_rendu_demo.__file__))
+    assert "albedo_ecran" in du_driver, (
+        "le driver n'utilise pas `albedo_ecran` : la lecture albédo est CELLE "
+        "de `chemin_de_cout.py:344`, elle ne se réimplémente pas — deux copies "
+        "de `1 − exp(−s/s_half)` dériveraient sans symptôme")
+
+
+# ─── LE CÔTÉ ET `s_half` — DEUX ARGUMENTS OBLIGATOIRES, MÊME MOTIF ───────────
+
+def test_le_cote_et_s_half_sont_obligatoires_et_sans_defaut():
+    """AUCUN DES DEUX N'EST TRANCHÉ, DONC AUCUN DES DEUX N'A DE DÉFAUT.
+
+    Le CÔTÉ appartient à la lecture d'orientation, qui n'est pas ordonnée et
+    dont le prereg n'est pas écrit (§6 de la spec) ; `s_half` figure dans la
+    MÊME liste du §6 (« **`s_half`**, et toute valeur de lecture albédo »). Un
+    défaut, sur l'un comme sur l'autre, trancherait en silence une question que
+    la spec laisse explicitement ouverte, et l'appelant hériterait d'un choix
+    que personne n'a fait.
+
+    C'est le pendant, côté driver, de
+    `test_le_cote_n_a_aucune_valeur_par_defaut` côté module."""
+    actions = {action.dest: action for action in construire_parseur()._actions}
+    for nom in ("cote", "s_half"):
+        assert actions[nom].required, (
+            f"`--{nom.replace('_', '-')}` n'est pas obligatoire : le driver "
+            "tranche alors en silence un paramètre que le §6 de la spec laisse "
+            "explicitement ouvert")
+        assert actions[nom].default is None, (
+            f"`--{nom.replace('_', '-')}` porte un défaut ({actions[nom].default!r})")
+
+
+def test_les_choix_du_cote_sont_les_constantes_du_module_pas_des_litteraux():
+    """LES DEUX CÔTÉS SONT IMPORTÉS, JAMAIS RECOPIÉS.
+
+    Le même geste que `test_le_couple_sort_en_alpha_croissant...` fait sur les
+    `α` : une dérive du nom d'un côté dans `boucle_rendu` doit se PROPAGER au
+    driver, pas se faire contredire par une chaîne gravée dans un `argparse`.
+    Un littéral recopié donnerait un driver qui accepte un côté que la boucle
+    refuse — `CoteInconnu` levée après le montage, loin de sa cause."""
+    actions = {action.dest: action for action in construire_parseur()._actions}
+    assert tuple(actions["cote"].choices) == COTES_DISPONIBLES
+    assert set(COTES_DISPONIBLES) == set(COUPLES_PAR_COTE), (
+        "les côtés offerts par le driver ne sont pas ceux de la table des "
+        "couples de `boucle_rendu`")
+
+    du_driver = _identifiants(Path(run_boucle_rendu_demo.__file__))
+    assert {"COTE_INTERPOLER", "COTE_EXTRAPOLER"} <= du_driver, (
+        "le driver ne référence pas les constantes de côté de `boucle_rendu` : "
+        "il les a probablement recopiées en littéraux")
+
+    # ET LA MOITIÉ QUI MANQUAIT, TROUVÉE PAR MUTATION. Les deux assertions
+    # ci-dessus sont VIDES contre un driver qui garde l'`import` et recopie
+    # quand même les valeurs : `COTES_DISPONIBLES` vient du driver, donc la
+    # comparaison confronte le module à lui-même, et les identifiants importés
+    # restent dans l'AST. Un littéral vaut aujourd'hui la constante — c'est
+    # précisément pourquoi seule la SOURCE peut les distinguer.
+    litteraux = [
+        noeud.value
+        for noeud in ast.walk(ast.parse(
+            Path(run_boucle_rendu_demo.__file__).read_text(encoding="utf-8")))
+        if isinstance(noeud, ast.Constant) and isinstance(noeud.value, str)
+        and noeud.value in COTES_DISPONIBLES]
+    assert not litteraux, (
+        f"le nom d'un côté est écrit en littéral dans le driver : {litteraux}. "
+        "Les deux côtés s'IMPORTENT de `boucle_rendu` ; recopiés, ils "
+        "survivraient à un renommage de la constante et le driver offrirait un "
+        "côté que la boucle refuse")
+
+
+@pytest.mark.parametrize("arguments, motif", [
+    ([], "côté absent"),
+    (["--s-half", str(S_HALF_BANC)], "côté absent, `s_half` présent"),
+    (["--cote", "interpolet", "--s-half", str(S_HALF_BANC)], "côté mal écrit"),
+    (["--cote", COTE_INTERPOLER], "`s_half` absent"),
+])
+def test_un_appel_incomplet_ou_faux_fait_sortir_le_driver(
+        arguments, motif, tmp_path):
+    """SORTIR PLUTÔT QUE DE TOURNER SUR UN DÉFAUT — les quatre entrées.
+
+    Le côté mal orthographié est le cas vicieux : sans `choices`, il tomberait
+    sur un défaut ou plus loin, et rendrait des images du mauvais côté sans
+    symptôme — ou lèverait `CoteInconnu` au montage, loin de sa cause.
+
+    LA SORTIE NE SUFFIT PAS, ET LA PROSE NE DOIT PAS ÊTRE PLUS LARGE QUE CE QUI
+    EST TENU. Cette docstring a dit « aucun de ces appels ne produit d'image »
+    alors que le verrou ne constatait qu'un `SystemExit` : un driver qui aurait
+    créé son dossier — ou écrit une image — AVANT de valider ses arguments
+    serait passé. Le dossier de sortie est donc donné, et son ABSENCE après
+    coup est constatée : c'est elle qui dit qu'aucun geste d'écriture n'a
+    précédé la validation."""
+    sortie = tmp_path / "sortie"
+    with pytest.raises(SystemExit):
+        run_boucle_rendu_demo.main(arguments + ["--dossier", str(sortie)])
+    assert not sortie.exists(), (
+        f"{motif} : le driver a créé son dossier de sortie avant de valider "
+        "ses arguments — un geste d'écriture a précédé la garde")
+
+
+def test_la_garde_de_s_half_est_celle_d_albedo_ecran_et_n_est_pas_redoublee():
+    """`albedo_ecran` LÈVE DÉJÀ SUR `s_half <= 0` — on la laisse lever.
+
+    `src/f1_gpu/chemin_de_cout.py:358-359` :
+    « if s_half <= 0.0: raise ValueError(f"albedo_ecran : s_half={s_half} <= 0.") »
+
+    Redoubler la garde dans le driver donnerait deux seuils à tenir d'accord,
+    et le jour où l'un bouge, le message d'erreur nommerait le mauvais fichier.
+    Le `match` porte sur le NOM DE LA FONCTION QUI LÈVE : c'est lui qui
+    distingue « la garde d'amont a mordu » de « le driver a posé la sienne »."""
+    ecran = np.full((2, 2), 1.0, dtype=np.float32)
+    with pytest.raises(ValueError, match="albedo_ecran"):
+        quantifier_en_octets(ecran, 0.0)
+    with pytest.raises(ValueError, match="albedo_ecran"):
+        quantifier_en_octets(ecran, -1.0)
+
+
+# ─── D9 — UN NON-FINI NE DEVIENT PAS UN PIXEL SILENCIEUX ─────────────────────
+
+@pytest.mark.parametrize("valeur, nom", [
+    (np.nan, "NaN"),
+    (np.inf, "+inf"),
+    (-np.inf, "−inf"),
+])
+def test_un_ecran_non_fini_leve_par_classe_nommee(valeur, nom):
+    """LA SIGNATURE §A53, ATTRAPÉE AVANT LA QUANTIFICATION.
+
+    `albedo_ecran` applique `A = 1 − exp(−s / s_half)`. Sur un `s` non fini, `A`
+    est indéfini, et une quantification en 8 bits en ferait un pixel
+    d'APPARENCE NORMALE. Le précédent de la maison est
+    `src/arcC_rendu.py:57-60` : « FAIL-LOUD, jamais un clip silencieux :
+    l'albédo vit dans [0,1) par construction […] ; une valeur hors bande, un
+    NaN ou une mauvaise forme sont un BUG AMONT, pas une donnée à rattraper en
+    douce. »
+
+    LE CONTRÔLE PORTE SUR `s`, PAS SUR `A`, ET C'EST LOAD-BEARING. Un contrôle
+    posé sur l'albédo serait AVEUGLE au `+inf` : `A = 1 − exp(−∞) = 1,0`, une
+    valeur finie, DANS la bande, qui quantifie en un pixel blanc parfaitement
+    ordinaire. C'est exactement le pixel silencieux que ce verrou doit
+    interdire, et il ne se voit qu'à l'entrée.
+
+    PAR UNE CLASSE NOMMÉE, jamais un `assert` (§4-9, §A43) et jamais un clip
+    silencieux. Le clamp de `melanger`, lui, COMPTE et ne lève pas (§5 du spec
+    readout) : deux régimes différents, à ne pas confondre."""
+    ecran = np.full((2, 2), 1.0, dtype=np.float32)
+    ecran[1, 1] = valeur
+    with pytest.raises(EcranNonRepresentable, match="non fini"):
+        quantifier_en_octets(ecran, S_HALF_BANC)
+
+
+def test_un_albedo_hors_bande_leve_plutot_que_de_boucler_en_uint8():
+    """LA MÊME FAUTE, SON AUTRE FORME — et elle est aussi silencieuse.
+
+    `A = 1 − exp(−s/s_half)` est `< 1` par construction, mais NÉGATIF dès que
+    `s < 0`. Une quantification `np.rint(A·255).astype(np.uint8)` d'un négatif
+    BOUCLE : `−1,7 · 255` devient un octet clair, un pixel d'apparence normale
+    de plus. C'est la même signature §A53 que le non-fini, par une autre porte.
+
+    OÙ CETTE FAUTE PEUT NAÎTRE, ET POURQUOI LES DEUX RÉGIMES NE SE CONFONDENT
+    PAS. `melanger` applique le clamp `s ≥ 0` APRÈS le mélange et le COMPTE
+    (§5 du spec readout) : l'écran INTERPOLÉ ne peut donc pas arriver négatif
+    ici. L'écran EXACT, lui, est un gather DIRECT sur la pyramide (§2-1) — il
+    ne passe par aucun clamp, et porte le `s` de la physique tel quel. Ce
+    verrou garde donc exactement la moitié du couple que le clamp ne couvre
+    pas, et il LÈVE là où le clamp COMPTE : deux régimes, deux réponses."""
+    ecran = np.full((2, 2), 1.0, dtype=np.float32)
+    ecran[0, 1] = -1.0
+    with pytest.raises(EcranNonRepresentable, match="hors de la bande"):
+        quantifier_en_octets(ecran, S_HALF_BANC)
+
+
+def test_la_quantification_est_celle_d_albedo_ecran_a_255_niveaux():
+    """CE QUE LE DRIVER ÉCRIT EST BIEN L'ALBÉDO DE `chemin_de_cout`.
+
+    Sans ce verrou, tous les autres tiendraient sur des pixels arbitraires :
+    ils vérifieraient qu'un PNG déterministe sort, sans rien dire de ce qu'il
+    montre. Le témoin est `albedo_ecran` appelée à côté, jamais une formule
+    recopiée."""
+    ecran = np.linspace(0.0, 0.5, 16, dtype=np.float32).reshape(4, 4)
+    octets = quantifier_en_octets(ecran, S_HALF_BANC)
+    attendu = np.rint(albedo_ecran(ecran, S_HALF_BANC) * NIVEAUX_GRIS)
+    assert octets.dtype == np.uint8
+    assert np.array_equal(octets, attendu.astype(np.uint8))
+
+
+# ─── LE PNG — ÉCRIT À LA MAIN, RELU À LA MAIN ────────────────────────────────
+
+def test_le_png_ne_porte_que_ihdr_idat_iend_donc_aucun_horodatage():
+    """D7 MÉCANISÉ : PAS DE `tIME`, PAS DE `tEXt`, PAS DE DATE.
+
+    Une liste BLANCHE, pas une liste noire — interdire `tIME` nommément
+    laisserait passer `tEXt`, `zTXt`, `iTXt` et `eXIf`, qui peuvent tous porter
+    une date. Ce qui n'est pas dans la liste n'a pas à être là.
+
+    Écrire un PNG n'est pas une mesure ; l'horodater en serait une, et §A61
+    tient tant que l'instrument n'est pas qualifié. C'est aussi ce qui rend le
+    verrou (f) possible : un `tIME` rendrait deux runs différents par
+    construction, et l'égalité à l'octet serait inatteignable."""
+    octets = encoder_png_gris(np.arange(16, dtype=np.uint8).reshape(4, 4))
+    types = tuple(type_ for type_, _ in _chunks_png(octets))
+    assert types == CHUNKS_AUTORISES, (
+        f"chunks trouvés {types}, attendus exactement {CHUNKS_AUTORISES} — "
+        "tout autre chunk peut porter une date, et §A61 tient")
+
+
+def test_le_png_se_relit_octet_par_octet_sans_bibliotheque_d_image():
+    """« LES PNG S'OUVRENT » CESSE D'ÊTRE UNE AFFIRMATION.
+
+    Le fichier est décodé À LA MAIN — signature, `IHDR` (dimensions,
+    profondeur 8, type couleur 0 = gris), `IDAT` décompressé — et les pixels
+    sont comparés au tableau d'entrée. Le filtre de CHAQUE ligne doit valoir 0 :
+    un filtre non nul rendrait un fichier toujours valide, toujours lisible,
+    mais dont les octets ne seraient plus les pixels — et le verrou (f), qui ne
+    compare que des octets, ne le verrait JAMAIS.
+
+    Aucun `pillow` : il est en ligne COMMENTÉE dans `requirements.txt`, et une
+    dépendance non déclarée dans un verrou est une dette invisible (D7)."""
+    pixels = np.arange(48, dtype=np.uint8).reshape(6, 8)
+    chunks = dict(_chunks_png(encoder_png_gris(pixels)))
+
+    largeur, hauteur, profondeur, couleur, compression, filtre, entrelacement = \
+        struct.unpack(">IIBBBBB", chunks["IHDR"])
+    assert (largeur, hauteur) == (pixels.shape[1], pixels.shape[0])
+    assert (profondeur, couleur) == (8, 0), "attendu : 8 bits, niveaux de gris"
+    assert (compression, filtre, entrelacement) == (0, 0, 0)
+
+    brut = zlib.decompress(chunks["IDAT"])
+    assert len(brut) == hauteur * (largeur + 1), (
+        "la taille des données décompressées ne vaut pas `h · (l + 1)` : il "
+        "manque ou il y a de trop un octet de filtre par ligne")
+    assert OCTET_FILTRE_AUCUN == FILTRE_AUCUN_PNG, (
+        f"le driver déclare le filtre « None » à {OCTET_FILTRE_AUCUN} : la "
+        "spécification PNG le fixe à 0, et tout autre code annonce une "
+        "transformation que l'encodeur n'applique pas")
+    for indice_ligne in range(hauteur):
+        debut = indice_ligne * (largeur + 1)
+        assert brut[debut] == FILTRE_AUCUN_PNG, (
+            f"ligne {indice_ligne} : octet de filtre {brut[debut]} ≠ "
+            f"{FILTRE_AUCUN_PNG} — le fichier ANNONCE un filtre qu'il n'a pas "
+            "appliqué : il reste valide, il s'ouvre, et ses octets ne sont plus "
+            "les pixels")
+        assert bytes(brut[debut + 1:debut + 1 + largeur]) == \
+            pixels[indice_ligne].tobytes()
+
+
+# ─── VERROU (f) — DEUX RUNS, MÊMES OCTETS ────────────────────────────────────
+
+@pytest.mark.parametrize("cote", COTES)
+def test_verrou_f_deux_runs_independants_donnent_des_png_bit_identiques(
+        cote, tmp_path):
+    """VERROU (f) — GOLDEN MINUSCULE, SUR DEUX CONSTRUCTIONS COMPLÈTES.
+
+    CE QUE CE VERROU DOIT ATTRAPER, ET COMMENT IL EST CONSTRUIT POUR L'ATTRAPER.
+    Comparer deux fois le résultat du MÊME appel serait vert et vide — la leçon
+    de la tâche 2, apprise par mutation. Ici les deux runs construisent chacun
+    LEUR pyramide, LEUR boucle et LEURS fichiers : tout ce qui pourrait dépendre
+    d'une horloge, d'une adresse mémoire, d'un ordre d'itération de dictionnaire
+    ou d'un état résiduel de processus a deux occasions de diverger.
+
+    SUR `outputs/`, JAMAIS. `.gitignore:5` porte `outputs/` : un golden-fichier
+    y serait hors du dépôt, et l'y committer serait un binaire dans l'histoire.
+    Le verrou est « deux runs, mêmes octets », et les deux runs vivent sur
+    `tmp_path`.
+
+    CE QUE CE VERROU NE PEUT PAS ATTRAPER, DIT ICI PLUTÔT QUE SUPPOSÉ. Deux
+    runs du même code ne voient aucune mutation DÉTERMINISTE de l'encodage :
+    changer le niveau de compression, inverser deux lignes, écrire un `tEXt`
+    constant laissent l'égalité intacte. Ce sont
+    `test_le_png_ne_porte_que_ihdr_idat_iend...` et
+    `test_le_png_se_relit_octet_par_octet...` qui couvrent cette moitié. Les
+    trois se partagent le travail ; aucun ne rend les autres inutiles."""
+    premier = rendre(cote, S_HALF_BANC, N_TICKS_GOLDEN, tmp_path / "run_a")
+    second = rendre(cote, S_HALF_BANC, N_TICKS_GOLDEN, tmp_path / "run_b")
+    assert premier == second == 2 * N_TICKS_GOLDEN
+
+    noms_a = sorted(p.name for p in (tmp_path / "run_a").iterdir())
+    noms_b = sorted(p.name for p in (tmp_path / "run_b").iterdir())
+    assert noms_a == noms_b, "les deux runs n'ont pas écrit les mêmes noms"
+
+    for nom in noms_a:
+        octets_a = (tmp_path / "run_a" / nom).read_bytes()
+        octets_b = (tmp_path / "run_b" / nom).read_bytes()
+        assert octets_a == octets_b, (
+            f"{nom} : deux runs indépendants ont écrit des octets différents. "
+            "Une horloge, une adresse ou un ordre non déterministe est entré "
+            "dans l'image ou dans ses métadonnées")
+
+
+@pytest.mark.parametrize("cote", COTES)
+def test_le_driver_ecrit_deux_png_par_tick_numerotes_sans_trou(cote, tmp_path):
+    """2N IMAGES POUR N TICKS, NUMÉROTÉES DANS L'ORDRE DE SORTIE.
+
+    Le couple sort en `α` CROISSANT et exactement un de ses termes vaut
+    `α = 1,0` (§2-2, endossé par le §8 point 1) : les images se numérotent donc
+    dans l'ordre où elles sortent, deux par tick, SANS TROU. Un trou dans la
+    numérotation dirait qu'un écran n'a pas été écrit — et personne ne saurait
+    lequel des deux `α` manque.
+
+    LA NUMÉROTATION PART DE ZÉRO ET AVANCE D'UN PAR IMAGE, pas par tick :
+    numéroter par tick perdrait l'ordre du couple, qui est précisément ce que
+    le §2-2 rend lisible sans savoir quel côté tourne."""
+    compte = rendre(cote, S_HALF_BANC, 3, tmp_path)
+    assert compte == 6
+
+    fichiers = sorted(tmp_path.iterdir())
+    assert len(fichiers) == compte
+    numeros = [int(p.stem.rsplit("_", 1)[1]) for p in fichiers]
+    assert numeros == list(range(compte)), (
+        f"numérotation {numeros} — attendu {list(range(compte))}, deux images "
+        "par tick dans l'ordre de sortie, sans trou")
+    for chemin in fichiers:
+        assert cote in chemin.name, (
+            "le nom de fichier ne porte pas le côté : deux runs de côtés "
+            "différents dans le même dossier se recouvriraient à moitié, et "
+            "rien ne dirait de quel côté vient quelle image")
+        assert chemin.read_bytes().startswith(SIGNATURE_PNG)
+
+
+def test_le_driver_n_imprime_que_le_nombre_d_images_ecrites(tmp_path, capsys):
+    """LE SEUL CHIFFRE IMPRIMÉ EST « n images écrites » — §A61, mécanisé.
+
+    Ni durée, ni taille, ni compte de clamps, ni compte de non-finis. §A61
+    tient : l'instrument 3D n'est pas qualifié, aucune mesure n'est autorisée,
+    et un chiffre imprimé par un driver de démo se cite ensuite comme s'il en
+    était une. Le driver ne prononce rien non plus sur `clamps` / `non_finis` :
+    le seuil qui invaliderait une mesure appartient au prereg de la lecture
+    d'orientation (§3 de la spec), pas à ce code.
+
+    L'ÉGALITÉ EST EXACTE, PAS UN `in`. Un `in` laisserait passer une ligne de
+    plus — et c'est exactement par une ligne de plus que le premier chiffre non
+    autorisé entrerait."""
+    code = run_boucle_rendu_demo.main([
+        "--cote", COTE_EXTRAPOLER, "--s-half", str(S_HALF_BANC),
+        "--ticks", "2", "--dossier", str(tmp_path)])
+    assert code == 0
+    capture = capsys.readouterr()
+    assert capture.out == "4 images écrites\n", (
+        f"sortie {capture.out!r} — le seul chiffre autorisé est le nombre "
+        "d'images écrites")
+    assert capture.err == ""
+
+
+def test_la_source_du_driver_ne_porte_ni_filet_large_ni_assert_ni_horloge():
+    """LES TROIS GARDES DE SOURCE DU DRIVER, PAR L'AST.
+
+    §4-8 — aucun `except RuntimeError`, `Exception` ni nu : les cinq serrures
+    du readout et du chemin-de-coût en héritent toutes, et le gather lève
+    `RuntimeError` pour ses trous de couverture (§4-7, qui ne se rattrape pas).
+    Un filet large les avale d'un coup.
+
+    §4-9 / §A43 — aucun `assert` : il disparaît sous `python -O`, donc une
+    garde qui en dépend est absente exactement dans le régime où l'on mesurera.
+
+    §1 ET §A61 — AUCUNE HORLOGE. « 2:1 » est un RAPPORT DE COMPTE : deux écrans
+    par `frame()`, pas deux écrans par 33,3 ms. Aucune horloge murale n'entre
+    dans ce chantier, et une date lue serait de surcroît la porte par laquelle
+    un horodatage entrerait dans un PNG. Ce contrôle porte sur les MODULES
+    importés ET sur les attributs appelés : `import time` seul ne dit rien de
+    `datetime.datetime.now()`.
+
+    Et aucun `cupy` : la démo est CPU numpy, il n'y a pas de GPU à ce banc."""
+    source = Path(run_boucle_rendu_demo.__file__)
+    arbre = ast.parse(source.read_text(encoding="utf-8"))
+
+    asserts = [n.lineno for n in ast.walk(arbre) if isinstance(n, ast.Assert)]
+    assert not asserts, (
+        f"`assert` ligne(s) {asserts} du driver — il disparaît sous `python -O`")
+
+    larges = []
+    for noeud in ast.walk(arbre):
+        if not isinstance(noeud, ast.ExceptHandler):
+            continue
+        if noeud.type is None:
+            larges.append((noeud.lineno, "except nu"))
+            continue
+        for nom in ast.walk(noeud.type):
+            if isinstance(nom, ast.Name) and nom.id in FILETS_INTERDITS:
+                larges.append((noeud.lineno, nom.id))
+            elif isinstance(nom, ast.Attribute) and nom.attr in FILETS_INTERDITS:
+                larges.append((noeud.lineno, nom.attr))
+    assert not larges, f"filet trop large dans le driver : {larges}"
+
+    identifiants = _identifiants(source)
+    horloges = sorted((identifiants & MODULES_HORLOGE)
+                      | (identifiants & ATTRIBUTS_HORLOGE))
+    assert not horloges, (
+        f"horloge dans le driver : {horloges}. La cadence est LOGIQUE (§1) et "
+        "§A61 interdit toute mesure tant que l'instrument n'est pas qualifié — "
+        "et une date lue est la porte par laquelle un horodatage entre dans un "
+        "PNG")
+    assert "cupy" not in identifiants, "la démo est CPU numpy (aucun GPU ici)"
+
+
+def test_le_cote_px_de_la_demo_est_couvrable_sur_toute_la_duree_du_run():
+    """§4-7 — LE TROU DE COUVERTURE NE SE RATTRAPE PAS, DONC IL S'ÉVITE.
+
+    Le gather LÈVE sur un pixel qu'aucune fenêtre active ne couvre, et la
+    boucle ne le rattrape pas : choisir un `cote_px` couvrable est une
+    responsabilité d'APPELANT, et le driver est cet appelant. Ce verrou constate
+    la couverture sur une durée FRANCHEMENT plus longue que celle de la démo —
+    la fovéa avance d'une cellule fine par tick, donc la couverture se dégrade
+    avec le temps, et un run un peu plus long ne doit pas tomber sur un trou
+    juste après la fin du banc.
+
+    Il ne mesure RIEN : il constate qu'aucune levée ne se produit."""
+    pyramide = run_boucle_rendu_demo.construire_pyramide()
+    boucle = BoucleRendu(pyramide, COTE_INTERPOLER)
+    for _ in range(4 * run_boucle_rendu_demo.N_TICKS_DEFAUT):
+        boucle.tick(COTE_PX_DEMO)
+
+
+def test_les_deux_ecrans_d_un_tick_ne_sont_pas_le_meme_champ():
+    """LE CAS DÉGÉNÉRÉ DU §3, ATTRAPÉ SUR LE CHAMP FLOTTANT — pas sur l'image.
+
+    LE FAIT QUI REND CE VERROU NÉCESSAIRE, ET IL A ÉTÉ MESURÉ. Sur le substrat
+    jetable de cette démo, un pas de physique déplace `s` de MOINS d'un niveau
+    de gris : les deux images d'un tick, une fois quantifiées en 8 bits, sont
+    BIT-IDENTIQUES — c'est vérifiable en ouvrant les PNG de `outputs/`. Or
+    « tout écran interpolé devient identique à l'exact » est exactement le
+    symptôme que le §3 de la spec décrit pour l'ORDRE DÉGÉNÉRÉ (`frame()` puis
+    `TamponReadout.capturer`), qui ne lève PAS et laisse `clamps == 0`. Deux
+    causes, un seul symptôme visible : sans ce verrou, la seconde se cacherait
+    derrière la première, et la démo aurait l'air de tourner.
+
+    CE QUI SÉPARE LES DEUX : le champ FLOTTANT. La coïncidence de quantification
+    laisse `ecran_alpha_petit` et `ecran_alpha_grand` DIFFÉRENTS à l'octet
+    flottant ; l'ordre dégénéré, lui, rend `s_prev == s_cur`, donc les deux
+    écrans STRICTEMENT égaux. C'est là que le verrou porte.
+
+    ET AUCUN VERROU DE LA TÂCHE 1 NE LE COUVRE.
+    `test_chaque_ecran_du_couple_vaut_le_noyau_du_paragraphe_2` compare chaque
+    écran à un TÉMOIN reconstruit depuis le même `s_prev` : sous l'ordre
+    dégénéré, le témoin dégénère avec lui et le verrou reste vert. Il faut
+    comparer les deux écrans ENTRE EUX, ce qu'aucun autre ne fait."""
+    for cote in COTES:
+        boucle = BoucleRendu(run_boucle_rendu_demo.construire_pyramide(), cote)
+        for indice_tick in range(2):
+            petit, grand = boucle.tick(COTE_PX_DEMO)
+            assert not _memes_octets(petit, grand), (
+                f"côté {cote}, tick {indice_tick} : les deux écrans du couple "
+                "sont le MÊME champ à l'octet. `s_prev == s_cur` — c'est "
+                "l'ordre dégénéré du §3, qui ne lève pas, laisse `clamps == 0` "
+                "et ne se signale par rien d'autre que ceci")
+
+
+@pytest.mark.parametrize("n_ticks", [0, -1])
+def test_un_nombre_de_ticks_nul_ou_negatif_est_refuse(n_ticks, tmp_path):
+    """UNE DÉMO QUI N'ÉCRIT RIEN NE DOIT PAS RESSEMBLER À UNE DÉMO QUI TOURNE.
+
+    Sans cette garde, `range(0)` et `range(-1)` sont tous deux vides : le
+    driver sortirait en code 0 sur « 0 images écrites », c'est-à-dire un
+    silence présenté comme un résultat. Le seul chiffre que ce driver imprime
+    doit vouloir dire quelque chose.
+
+    TROUVÉ PAR MUTATION, PAS PAR RELECTURE : la garde était écrite dans
+    `rendre` et aucun verrou ne la tenait — un mutant qui la retirait passait
+    la suite en vert. Une garde que rien ne tient est une garde absente."""
+    with pytest.raises(ValueError, match="n_ticks"):
+        rendre(COTE_INTERPOLER, S_HALF_BANC, n_ticks, tmp_path)
