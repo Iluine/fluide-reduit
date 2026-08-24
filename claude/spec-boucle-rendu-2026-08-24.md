@@ -336,4 +336,17 @@ la relecture prononce :
 3. **Le `§5` est ENDOSSÉ COMME DÛ SANS ÉCHÉANCE**, garde `§4-6` comprise : la
    question reste ouverte, mais son statut de dû n'est plus en suspens.
 
+> **CE QUE CE `§8` AMENDE — ET CE QU'IL NE RÉÉCRIT PAS.** Deux passages disent
+> encore le contraire du point 1 : l'**épigraphe de tête** (« L'ÉPINGLAGE DES DEUX
+> CÔTÉS … EST UNE DÉRIVATION DE CETTE SESSION, PAS UN FAIT ENDOSSÉ ») et le **`§7`**
+> (« notamment sur l'épinglage des deux côtés du `§2`, qui est une dérivation de
+> cette session et pas un fait endossé »). **Ils décrivent l'état du document TEL
+> QU'IL A ÉTÉ SOUMIS à cette relecture, et ils ne sont pas réécrits** — l'usage est
+> celui que le spec readout applique à lui-même :
+> `claude/spec-interpolation-readout-2026-08-23.md:402-403` « Trois clauses de ce spec sont **fausses ou sur-vendues**. Elles sont amendées ici, pas réécrites plus haut. »
+> Réécrire le haut effacerait la trace de l'état sous lequel le document a été
+> soumis, et c'est exactement ce que cet usage protège. ⇒ **C'est ce `§8` qui les
+> amende, et c'est LUI qui porte le statut courant** : sur l'épinglage des deux
+> côtés, le point 1 ci-dessus prime sur l'épigraphe et sur le `§7`.
+
 Document rédigé par la session Claude ; **l'endossement est le commit de Romain.**
