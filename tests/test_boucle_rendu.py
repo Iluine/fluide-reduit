@@ -40,6 +40,7 @@ from src.f1_gpu.interpolation_readout import (
     ALPHA_EXTRAPOLER,
     ALPHA_INTERPOLER,
     ReadoutCaptureImpossible,
+    TamponReadout,
     _MODULES_ETAT,
     installer_capture_en_registre,
 )
@@ -68,6 +69,12 @@ COTES = (COTE_INTERPOLER, COTE_EXTRAPOLER)
 # du chemin-de-coût, qui héritent toutes de `RuntimeError`.
 FILETS_INTERDITS = frozenset({"RuntimeError", "Exception", "BaseException"})
 
+# Les compteurs de `TransfertComptable` comparés par le verrou (a) : des OCTETS
+# et des NOMBRES D'APPELS. Les champs `h2d_ms` / `d2h_ms` en sont exclus
+# délibérément — ils sortent de `perf_counter` et un chronomètre n'a rien à
+# faire dans un verrou (§A61).
+COMPTEURS_TRANSFERT = ("h2d_octets", "d2h_octets", "h2d_n", "d2h_n")
+
 
 def _memes_octets(a, b) -> bool:
     """Égalité BIT À BIT — mêmes forme, même dtype, mêmes octets.
@@ -80,39 +87,84 @@ def _memes_octets(a, b) -> bool:
             and a.tobytes() == b.tobytes())
 
 
+def _octets(tableau) -> tuple:
+    """Forme, dtype et OCTETS — l'identité complète d'un tableau."""
+    return (tableau.shape, tableau.dtype, tableau.tobytes())
+
+
 def _etat_en_octets(pyr) -> dict:
-    """Tout l'état observable de la pyramide, en octets — TOUS les champs de
-    TOUTES les fenêtres de TOUS les niveaux, plus les références et le centre
-    fovéal. La garantie §13-4 porte sur l'état, pas sur un échantillon."""
+    """L'état observable de la pyramide, en octets — CINQ morceaux, et la liste
+    est celle que la garantie §4-1/§13-4 doit couvrir, pas un échantillon :
+
+      - `centre_fin` — la position de la fovéa ;
+      - `fenetres[j]` — TOUS les champs de TOUTES les fenêtres de TOUS les
+        niveaux, pas seulement le champ `s` ;
+      - `references[j]` — la référence du schéma diff, que la remontée met à
+        jour incrémentalement ;
+      - `monde0` — LE MORCEAU QUI MANQUAIT, et il est obligatoire. C'est la
+        source de TOUTE prédiction (`pyramide.py:421`), relue à chaque roll par
+        `_predire_niveau_cpu` pour remplir les colonnes ENTRANTES : ce que `F`
+        consommera aux ticks SUIVANTS. Une écriture du chemin de rendu dans
+        `monde0`, hors de la bande qui entre pendant les `N_TICKS` de ce
+        verrou, est TOTALEMENT invisible aux trois morceaux ci-dessus — ni
+        `fenetres`, ni `references`, ni `centre_fin` ne bougent, et le run nu
+        rend les mêmes octets. C'est exactement la fuite que le §4-1 interdit,
+        et le verrou la laissait passer ;
+      - les COMPTEURS de `TransfertComptable` — le §4 du spec readout fait de
+        la comptabilité le motif même de la garde (« corromprait la
+        comptabilité de conservation sans produire aucun symptôme »).
+
+    ⚠ SUR LES COMPTEURS, SEULS LES OCTETS ET LES APPELS SONT COMPARÉS, JAMAIS
+    LES CHAMPS `_ms`. Ces derniers viennent de `perf_counter`
+    (`transferts.py:66-68`) : les comparer rendrait ce verrou instable, et un
+    CHRONOMÈTRE DANS UN VERROU serait un contresens dans une maison où §A61
+    tient. Ce qui est comparé est un COMPTE, pas une durée.
+
+    Seuls les bilans CLÔTURÉS sont lisibles par l'API publique
+    (`frame_suivante()`), et `frame()` n'en clôt aucun : l'appelant clôt une
+    fois, symétriquement des deux côtés, avant de photographier."""
     photo = {"centre_fin": int(pyr.centre_fin)}
     for j in pyr.geo.niveaux_gpu:
-        photo[("fenetres", j)] = (pyr.fenetres[j].shape, pyr.fenetres[j].dtype,
-                                  pyr.fenetres[j].tobytes())
-        photo[("references", j)] = (pyr.references[j].shape,
-                                    pyr.references[j].dtype,
-                                    pyr.references[j].tobytes())
+        photo[("fenetres", j)] = _octets(pyr.fenetres[j])
+        photo[("references", j)] = _octets(pyr.references[j])
+    photo["monde0"] = _octets(pyr.monde0)
+    photo["transferts_n_bilans"] = len(pyr.transferts.bilans)
+    for rang, bilan in enumerate(pyr.transferts.bilans):
+        photo[("transferts", rang)] = tuple(
+            (cle, bilan[cle]) for cle in COMPTEURS_TRANSFERT)
     return photo
 
 
-def _espionner_melanger(tampon) -> list:
-    """Enregistre chaque `VueInterpolee` rendue par `tampon.melanger`, et rend
-    la liste des appels sous forme `(alpha, vue)`.
+def _espionner_melanger(monkeypatch) -> list:
+    """Enregistre chaque `VueInterpolee` rendue par `TamponReadout.melanger`, et
+    rend la liste des appels sous forme `(alpha, vue)`.
 
     POURQUOI UN ESPION PLUTÔT QU'UN ATTRIBUT DE LA BOUCLE. Le §4-4 interdit à la
     boucle de CONSERVER une vue au-delà de son tick ; lui faire exposer sa
     dernière vue pour rendre les tests commodes contredirait la garde qu'ils
     doivent vérifier. L'espion prend la vue là où elle naît, sans rien demander
     à la boucle. Il porte aussi le COMPTE des appels — c'est lui qui mécanise
-    « un seul `melanger` par tick » (§2-1)."""
-    appels: list = []
-    melanger_originel = tampon.melanger
+    « un seul `melanger` par tick » (§2-1).
 
-    def melanger_espion(pyramide, alpha):
-        vue = melanger_originel(pyramide, alpha)
+    SUR LA CLASSE, PAS SUR L'INSTANCE, ET CE N'EST PAS UN DÉTAIL. Poser
+    l'espion en attribut d'instance dépendrait de deux faits que rien ne
+    garantit : que `TamponReadout` n'ait pas de `__slots__` — le patron est
+    DÉJÀ appliqué à deux des trois classes de son module, `VueInterpolee` et
+    `ApplicateurCaptureRegistre` — et que la boucle déréférence `melanger` à
+    chaque appel plutôt que d'en garder une référence liée. Le jour où
+    `TamponReadout` gagne un `__slots__`, quatre verrous tomberaient SANS que
+    la boucle ait changé. `monkeypatch.setattr` sur la classe est insensible
+    aux deux, et il est RESTAURÉ automatiquement en fin de test — l'attribut
+    d'instance, lui, n'était jamais retiré."""
+    appels: list = []
+    melanger_originel = TamponReadout.melanger
+
+    def melanger_espion(self, pyramide, alpha):
+        vue = melanger_originel(self, pyramide, alpha)
         appels.append((float(alpha), vue))
         return vue
 
-    tampon.melanger = melanger_espion
+    monkeypatch.setattr(TamponReadout, "melanger", melanger_espion)
     return appels
 
 
@@ -226,11 +278,25 @@ def test_l_etat_ne_voit_pas_le_rendu(cote, fabrique):
     for _ in range(N_TICKS):
         nu.frame(1)
 
+    # Clôture SYMÉTRIQUE du bilan de transfert — une fois de chaque côté, après
+    # la même quantité de travail. `frame()` n'en clôt aucun, donc les `N` ticks
+    # se sont accumulés dans le bilan ouvert ; le clore le rend lisible par
+    # l'API publique. Une clôture asymétrique ferait diverger le NOMBRE de
+    # bilans et le verrou échouerait pour une raison qui n'est pas la sienne.
+    avec.transferts.frame_suivante()
+    nu.transferts.frame_suivante()
+
     apres = _etat_en_octets(avec)
-    assert apres != depart, (
-        "l'état n'a pas bougé sur les N ticks : la comparaison qui suit serait "
-        "vraie sans rien garder — un verrou ne garde que ce que son état de "
-        "test allume (§A53)")
+    cles_fenetres = [cle for cle in depart
+                     if isinstance(cle, tuple) and cle[0] == "fenetres"]
+    assert any(apres[cle] != depart[cle] for cle in cles_fenetres), (
+        "AUCUNE fenêtre n'a bougé sur les N ticks : la comparaison qui suit "
+        "serait vraie sans rien garder — un verrou ne garde que ce que son "
+        "état de test allume (§A53). Le delta est exigé sur les FENÊTRES et "
+        "non sur la photo entière : `centre_fin` avance de `N_TICKS` par "
+        "construction du tick, donc un garde-fou posé sur le dictionnaire "
+        "complet serait lui-même VIDE — exactement la faute qu'il prétend "
+        "attraper (§A62-bis-2)")
 
     assert set(apres) == set(_etat_en_octets(nu))
     for cle, valeur in _etat_en_octets(nu).items():
@@ -301,7 +367,8 @@ def test_deux_boucles_identiques_rendent_des_ecrans_bit_identiques(cote):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("cote", COTES)
-def test_la_vue_est_perimee_par_le_tick_suivant_mais_pas_l_ecran(cote):
+def test_la_vue_est_perimee_par_le_tick_suivant_mais_pas_l_ecran(
+        cote, monkeypatch):
     """LA VUE ALIASE `_s_out`, L'ÉCRAN EST MATÉRIALISÉ — §4-4 et §4-5.
 
     LE VERROU QUE CE TEST REMPLACE, ET POURQUOI. Le plan demandait « les deux
@@ -327,7 +394,7 @@ def test_la_vue_est_perimee_par_le_tick_suivant_mais_pas_l_ecran(cote):
     tampons distincts qui divergent."""
     pyr = _pyramide_doublante()
     applicateur = installer_capture_en_registre(pyr)
-    appels = _espionner_melanger(applicateur.tampon)
+    appels = _espionner_melanger(monkeypatch)
     _peindre_s_gradient(pyr)
     boucle = BoucleRendu(pyr, cote, applicateur=applicateur)
 
@@ -370,7 +437,8 @@ def test_la_vue_est_perimee_par_le_tick_suivant_mais_pas_l_ecran(cote):
     (COTE_INTERPOLER, ALPHA_INTERPOLER),
     (COTE_EXTRAPOLER, ALPHA_EXTRAPOLER),
 ])
-def test_un_seul_melanger_par_tick_et_jamais_a_alpha_exact(cote, alpha_attendu):
+def test_un_seul_melanger_par_tick_et_jamais_a_alpha_exact(
+        cote, alpha_attendu, monkeypatch):
     """§2-1, RULING 1 — la comptabilité gravée porte `30·I`, pas `60·I`.
 
     Deux `melanger` par tick feraient payer le noyau à deux images par pas de
@@ -385,7 +453,7 @@ def test_un_seul_melanger_par_tick_et_jamais_a_alpha_exact(cote, alpha_attendu):
     de pixels ne pourrait la distinguer. Le coût, lui, aurait doublé."""
     pyr = _pyramide_doublante()
     applicateur = installer_capture_en_registre(pyr)
-    appels = _espionner_melanger(applicateur.tampon)
+    appels = _espionner_melanger(monkeypatch)
     _peindre_s_gradient(pyr)
     boucle = BoucleRendu(pyr, cote, applicateur=applicateur)
 
@@ -578,8 +646,14 @@ def test_la_source_ne_porte_ni_except_large_ni_assert():
             larges.append((noeud.lineno, "except nu"))
             continue
         for nom in ast.walk(noeud.type):
+            # `ast.Name` attrape `except RuntimeError` ; `ast.Attribute` attrape
+            # `except builtins.RuntimeError` et `except ex.Exception`. Un verrou
+            # qui existe POUR ce que la relecture ne voit pas ne peut pas se
+            # permettre de ne reconnaître qu'une des deux formes d'écriture.
             if isinstance(nom, ast.Name) and nom.id in FILETS_INTERDITS:
                 larges.append((noeud.lineno, nom.id))
+            elif isinstance(nom, ast.Attribute) and nom.attr in FILETS_INTERDITS:
+                larges.append((noeud.lineno, nom.attr))
     assert not larges, (
         f"filet trop large dans `boucle_rendu.py` : {larges}. Les cinq "
         "serrures du readout et du chemin-de-coût héritent de `RuntimeError`, "
@@ -592,8 +666,38 @@ def test_la_source_ne_porte_ni_except_large_ni_assert():
 # LES COMPTEURS DE COMPTE RENDU — rendus, non prononcés
 # ─────────────────────────────────────────────────────────────────────────────
 
+def test_un_tick_qui_leve_ne_laisse_pas_un_compte_rendu_perime():
+    """UN TICK INTERROMPU NE DOIT PAS LAISSER LE CHIFFRE DU TICK PRÉCÉDENT.
+
+    Le cas est réel et il est silencieux. Côté `interpoler`, le couple sort
+    `(0,5 ; 1,0)` : si le gather du SECOND écran trouve un trou de couverture,
+    `melanger` a DÉJÀ eu lieu et `frame()` a DÉJÀ avancé l'état — mais rien
+    n'aurait remis `compte_rendu` à jour. Un appelant qui rattrape par classe
+    nommée en amont et le relit lirait alors les compteurs d'un tick qui n'est
+    plus, sur un état qui a changé : un chiffre qui ne décrit AUCUN tick, sans
+    aucun symptôme. C'est la signature §A53 en miniature, et elle porte sur
+    l'attribut dont un prereg futur tirera un seuil.
+
+    La correction est une ligne — `compte_rendu = None` AVANT le premier geste
+    qui peut lever — et ce verrou est ce qui la tient."""
+    pyr = _pyramide_doublante()
+    _peindre_s_gradient(pyr)
+    boucle = BoucleRendu(pyr, COTE_INTERPOLER)
+    boucle.tick(COTE_PX)
+    assert boucle.compte_rendu is not None
+
+    with pytest.raises(RuntimeError, match="couvert"):
+        boucle.tick(COTE_PX_TROP_GRAND)
+    assert boucle.compte_rendu is None, (
+        "après un tick qui a levé, `compte_rendu` porte encore les compteurs "
+        "du tick PRÉCÉDENT — un chiffre qui ne décrit aucun tick, rendu sans "
+        "symptôme sur un état qui a pourtant avancé")
+
+
+
 @pytest.mark.parametrize("cote", COTES)
-def test_le_tick_rend_les_compteurs_de_la_vue_sans_prononcer_dessus(cote):
+def test_le_tick_rend_les_compteurs_de_la_vue_sans_prononcer_dessus(
+        cote, monkeypatch):
     """Le tick rend `clamps` et `non_finis` de la vue du tick COURANT.
 
     CE QUE CE VERROU NE DEMANDE PAS, ET C'EST VOULU : aucun seuil, aucun
@@ -608,7 +712,7 @@ def test_le_tick_rend_les_compteurs_de_la_vue_sans_prononcer_dessus(cote):
     couple reste un couple, les compteurs vivent à côté."""
     pyr = _pyramide_doublante()
     applicateur = installer_capture_en_registre(pyr)
-    appels = _espionner_melanger(applicateur.tampon)
+    appels = _espionner_melanger(monkeypatch)
     _peindre_s_gradient(pyr)
     boucle = BoucleRendu(pyr, cote, applicateur=applicateur)
 

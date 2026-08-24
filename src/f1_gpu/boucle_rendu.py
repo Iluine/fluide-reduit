@@ -32,9 +32,7 @@ AUCUNE MESURE ICI, aucun chronomètre, aucun chiffre de `I` : §A61 tient.
 """
 from __future__ import annotations
 
-from typing import NamedTuple
-
-import numpy as np
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from src.f1_gpu.chemin_de_cout import gather_chemin_de_cout
 from src.f1_gpu.interpolation_readout import (
@@ -44,6 +42,15 @@ from src.f1_gpu.interpolation_readout import (
     ApplicateurCaptureRegistre,
     installer_capture_en_registre,
 )
+
+if TYPE_CHECKING:                       # pas d'import au runtime : ce module
+    from src.f1_gpu.pyramide import PyramideFovea   # ne dépend pas de l'état
+
+# UN ÉCRAN EST UN TABLEAU 2D DU BACKEND INJECTÉ (`pyramide.xp`) : numpy dans les
+# bancs, cupy en production. Le nommer `np.ndarray` serait FAUX sous cupy, et ce
+# serait la seule ligne du module à contredire le principe du backend injecté —
+# ce module ne connaît aucun backend, il transmet celui de la pyramide.
+Ecran = Any
 
 # Les deux côtés, nommés. Le côté ne choisit QUE la paire d'`α` (§2-2).
 COTE_INTERPOLER: str = "interpoler"
@@ -115,8 +122,8 @@ class CoupleEcrans(NamedTuple):
     côtés ; nommer par le rôle obligerait l'appelant à savoir quel côté tourne
     pour lire un nom de champ."""
 
-    ecran_alpha_petit: np.ndarray
-    ecran_alpha_grand: np.ndarray
+    ecran_alpha_petit: Ecran
+    ecran_alpha_grand: Ecran
 
 
 class CompteRenduTick(NamedTuple):
@@ -173,7 +180,8 @@ class BoucleRendu:
     absente exactement dans le régime où l'on mesurera).
     """
 
-    def __init__(self, pyramide, cote: str, applicateur=None):
+    def __init__(self, pyramide: "PyramideFovea", cote: str,
+                 applicateur: ApplicateurCaptureRegistre | None = None):
         """`cote` est SANS VALEUR PAR DÉFAUT — voir l'en-tête du module.
 
         `applicateur` : `None` pour que la boucle installe la capture en
@@ -268,9 +276,19 @@ class BoucleRendu:
 
         Un trou de couverture du gather LÈVE et n'est pas rattrapé (§4-7) :
         choisir un `cote_px` couvrable appartient à l'appelant."""
+        # LE COMPTE RENDU DU TICK PRÉCÉDENT EST INVALIDÉ D'ABORD, avant le
+        # premier geste qui peut lever. Sans cette ligne, un tick interrompu —
+        # le gather du SECOND écran qui trouve un trou de couverture, alors que
+        # `melanger` a déjà eu lieu et que `frame()` a déjà avancé l'état —
+        # laisserait `compte_rendu` porter les compteurs du tick PRÉCÉDENT. Un
+        # appelant qui rattrape par classe nommée en amont et le relit lirait
+        # alors un chiffre qui ne décrit AUCUN tick, sans aucun symptôme : la
+        # signature §A53 en miniature, dans un attribut dont un prereg futur
+        # tirera un seuil.
+        self.compte_rendu = None
         self.pyramide.frame(PAS_FOVEA)
 
-        ecrans: list[np.ndarray] = []
+        ecrans: list[Ecran] = []
         clamps = 0
         non_finis = 0
         for alpha in self.couple_alphas:
