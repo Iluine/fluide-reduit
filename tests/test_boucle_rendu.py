@@ -47,6 +47,7 @@ from scripts.run_boucle_rendu_demo import (
     OCTET_FILTRE_AUCUN,
     SIGNATURE_PNG,
     EcranNonRepresentable,
+    LongueurDeDemoInvalide,
     construire_parseur,
     encoder_png_gris,
     quantifier_en_octets,
@@ -163,6 +164,40 @@ def _etat_en_octets(pyr) -> dict:
         photo[("transferts", rang)] = tuple(
             (cle, bilan[cle]) for cle in COMPTEURS_TRANSFERT)
     return photo
+
+
+def _asserts_et_filets_larges(arbre: ast.AST) -> tuple[list[int], list[tuple]]:
+    """Les `assert` et les `except` TROP LARGES d'un arbre, par l'AST.
+
+    UN SEUL EXEMPLAIRE, ET C'EST LE POINT. Ce balayage sert DEUX verrous — la
+    source de `boucle_rendu.py` et celle du driver — et il a d'abord été écrit
+    DEUX FOIS, logique pour logique, seuls les messages changeant. Le jour où
+    une troisième forme d'écriture d'`except` devra être reconnue, deux copies
+    divergeraient sans que rien ne le signale : c'est exactement le motif par
+    lequel l'en-tête de ce fichier refuse de recopier les helpers du readout.
+
+    `ast.Name` attrape `except RuntimeError` ; `ast.Attribute` attrape
+    `except builtins.RuntimeError` et `except ex.Exception`. Un verrou qui
+    existe POUR ce que la relecture ne voit pas ne peut pas se permettre de ne
+    reconnaître qu'une des deux formes. `noeud.type is None` est l'`except` nu.
+
+    Rend `(lignes des asserts, [(ligne, nom du filet)])` — les MESSAGES
+    appartiennent aux verrous, qui n'ont pas le même motif à écrire."""
+    asserts = [n.lineno for n in ast.walk(arbre) if isinstance(n, ast.Assert)]
+
+    larges: list[tuple] = []
+    for noeud in ast.walk(arbre):
+        if not isinstance(noeud, ast.ExceptHandler):
+            continue
+        if noeud.type is None:
+            larges.append((noeud.lineno, "except nu"))
+            continue
+        for nom in ast.walk(noeud.type):
+            if isinstance(nom, ast.Name) and nom.id in FILETS_INTERDITS:
+                larges.append((noeud.lineno, nom.id))
+            elif isinstance(nom, ast.Attribute) and nom.attr in FILETS_INTERDITS:
+                larges.append((noeud.lineno, nom.attr))
+    return asserts, larges
 
 
 def _espionner_melanger(monkeypatch) -> list:
@@ -668,30 +703,14 @@ def test_la_source_ne_porte_ni_except_large_ni_assert():
     C'est la leçon de la mutation du 03/08, trouvée par mutation et non par
     relecture."""
     arbre = ast.parse(Path(boucle_rendu.__file__).read_text(encoding="utf-8"))
+    asserts, larges = _asserts_et_filets_larges(arbre)
 
-    asserts = [n for n in ast.walk(arbre) if isinstance(n, ast.Assert)]
     assert not asserts, (
-        f"`assert` trouvé ligne(s) {[n.lineno for n in asserts]} de "
+        f"`assert` trouvé ligne(s) {asserts} de "
         "`boucle_rendu.py` — il DISPARAÎT sous `python -O`, donc une garde qui "
         "en dépend est absente exactement dans le régime où l'on mesurera "
         "(§4-9, §A43). Une garde s'écrit `if` + levée d'une classe nommée")
 
-    larges = []
-    for noeud in ast.walk(arbre):
-        if not isinstance(noeud, ast.ExceptHandler):
-            continue
-        if noeud.type is None:
-            larges.append((noeud.lineno, "except nu"))
-            continue
-        for nom in ast.walk(noeud.type):
-            # `ast.Name` attrape `except RuntimeError` ; `ast.Attribute` attrape
-            # `except builtins.RuntimeError` et `except ex.Exception`. Un verrou
-            # qui existe POUR ce que la relecture ne voit pas ne peut pas se
-            # permettre de ne reconnaître qu'une des deux formes d'écriture.
-            if isinstance(nom, ast.Name) and nom.id in FILETS_INTERDITS:
-                larges.append((noeud.lineno, nom.id))
-            elif isinstance(nom, ast.Attribute) and nom.attr in FILETS_INTERDITS:
-                larges.append((noeud.lineno, nom.attr))
     assert not larges, (
         f"filet trop large dans `boucle_rendu.py` : {larges}. Les cinq "
         "serrures du readout et du chemin-de-coût héritent de `RuntimeError`, "
@@ -1394,8 +1413,14 @@ def test_verrou_f_deux_runs_independants_donnent_des_png_bit_identiques(
     Comparer deux fois le résultat du MÊME appel serait vert et vide — la leçon
     de la tâche 2, apprise par mutation. Ici les deux runs construisent chacun
     LEUR pyramide, LEUR boucle et LEURS fichiers : tout ce qui pourrait dépendre
-    d'une horloge, d'une adresse mémoire, d'un ordre d'itération de dictionnaire
-    ou d'un état résiduel de processus a deux occasions de diverger.
+    d'une horloge, d'une adresse mémoire ou d'un état résiduel de processus a
+    deux occasions de diverger.
+
+    ET PAS D'UN ORDRE D'ITÉRATION DÉPENDANT DU HACHAGE — cette docstring l'a
+    prétendu, et c'était une moitié de prose non tenue. Les deux runs vivent
+    dans le MÊME processus, donc sous le même `PYTHONHASHSEED` : aucun ordre
+    dérivé du hachage ne peut différer de l'un à l'autre. Le voir exigerait un
+    second run en SOUS-PROCESSUS, que ce verrou ne fait pas.
 
     SUR `outputs/`, JAMAIS. `.gitignore:5` porte `outputs/` : un golden-fichier
     y serait hors du dépôt, et l'y committer serait un binaire dans l'histoire.
@@ -1500,24 +1525,11 @@ def test_la_source_du_driver_ne_porte_ni_filet_large_ni_assert_ni_horloge():
 
     Et aucun `cupy` : la démo est CPU numpy, il n'y a pas de GPU à ce banc."""
     source = Path(run_boucle_rendu_demo.__file__)
-    arbre = ast.parse(source.read_text(encoding="utf-8"))
+    asserts, larges = _asserts_et_filets_larges(
+        ast.parse(source.read_text(encoding="utf-8")))
 
-    asserts = [n.lineno for n in ast.walk(arbre) if isinstance(n, ast.Assert)]
     assert not asserts, (
         f"`assert` ligne(s) {asserts} du driver — il disparaît sous `python -O`")
-
-    larges = []
-    for noeud in ast.walk(arbre):
-        if not isinstance(noeud, ast.ExceptHandler):
-            continue
-        if noeud.type is None:
-            larges.append((noeud.lineno, "except nu"))
-            continue
-        for nom in ast.walk(noeud.type):
-            if isinstance(nom, ast.Name) and nom.id in FILETS_INTERDITS:
-                larges.append((noeud.lineno, nom.id))
-            elif isinstance(nom, ast.Attribute) and nom.attr in FILETS_INTERDITS:
-                larges.append((noeud.lineno, nom.attr))
     assert not larges, f"filet trop large dans le driver : {larges}"
 
     identifiants = _identifiants(source)
@@ -1567,11 +1579,31 @@ def test_les_deux_ecrans_d_un_tick_ne_sont_pas_le_meme_champ():
     flottant ; l'ordre dégénéré, lui, rend `s_prev == s_cur`, donc les deux
     écrans STRICTEMENT égaux. C'est là que le verrou porte.
 
-    ET AUCUN VERROU DE LA TÂCHE 1 NE LE COUVRE.
-    `test_chaque_ecran_du_couple_vaut_le_noyau_du_paragraphe_2` compare chaque
-    écran à un TÉMOIN reconstruit depuis le même `s_prev` : sous l'ordre
-    dégénéré, le témoin dégénère avec lui et le verrou reste vert. Il faut
-    comparer les deux écrans ENTRE EUX, ce qu'aucun autre ne fait."""
+    CE QUE CETTE DOCSTRING A REVENDIQUÉ ET QUI ÉTAIT FAUX — consigné, pas
+    effacé. Elle a écrit « ET AUCUN VERROU DE LA TÂCHE 1 NE LE COUVRE […] il
+    faut comparer les deux écrans ENTRE EUX, ce qu'aucun autre ne fait ». C'est
+    faux DEUX FOIS, dans ce fichier même :
+      - `test_la_vue_est_perimee_par_le_tick_suivant_mais_pas_l_ecran` finit sur
+        `assert not _memes_octets(couple_2[0], couple_2[1])` — littéralement les
+        deux écrans d'un tick comparés entre eux ;
+      - `test_l_ecran_exact_est_le_gather_direct_sur_la_pyramide` TOMBE sous
+        l'ordre dégénéré : `melanger(α)` d'un `s_prev == s_cur` rend `s_cur`,
+        donc l'interpolé devient le gather direct et son assertion
+        `not _memes_octets(couple[1 - rang_exact], direct)` mord.
+    Seul l'argument sur `test_chaque_ecran_du_couple_vaut_le_noyau_du_
+    paragraphe_2` tenait — son témoin dégénère avec l'état et reste vert. La
+    faute est celle que ce chantier poursuit depuis §A62-bis-2, ici retournée en
+    revendication de NOUVEAUTÉ : une prose plus large que ce qui est tenu.
+
+    L'INCRÉMENT RÉEL EST UNE COUVERTURE DE SUBSTRAT, ET IL VAUT D'ÊTRE GARDÉ.
+    Tous les verrous de la tâche 1 tournent sur `_pyramide_doublante()` +
+    `_peindre_s_gradient` : un substrat SYNTHÉTIQUE, bâti pour que `s` évolue
+    franchement d'un tick à l'autre. Celui-ci tourne sur le montage et le
+    substrat DE LA DÉMO — `construire_pyramide()` et le `F` jetable par défaut —
+    c'est-à-dire là où la coïncidence de quantification a réellement été
+    mesurée, et là où `s` évolue de moins d'un niveau de gris par pas. Un `s`
+    qui cesserait d'évoluer sous le `F` JETABLE ne se verrait dans aucun banc
+    synthétique : c'est cette moitié-là, et elle seule, que ce verrou ajoute."""
     for cote in COTES:
         boucle = BoucleRendu(run_boucle_rendu_demo.construire_pyramide(), cote)
         for indice_tick in range(2):
@@ -1581,6 +1613,33 @@ def test_les_deux_ecrans_d_un_tick_ne_sont_pas_le_meme_champ():
                 "sont le MÊME champ à l'octet. `s_prev == s_cur` — c'est "
                 "l'ordre dégénéré du §3, qui ne lève pas, laisse `clamps == 0` "
                 "et ne se signale par rien d'autre que ceci")
+
+
+def test_le_dossier_de_sortie_est_celui_que_la_tache_exige():
+    """`outputs/boucle_rendu/` — UNE EXIGENCE, PAS UN CHOIX DU DRIVER.
+
+    Le texte de la tâche l'écrit noir sur blanc : « N ticks → 2N PNG numérotés
+    dans `outputs/boucle_rendu/` ». Ce chemin n'était tenu par RIEN — un mutant
+    qui l'aurait changé en `outputs/demo/` passait la suite entière en vert, et
+    les images seraient sorties ailleurs que là où on ira les chercher.
+
+    LE CHEMIN EST ÉCRIT ICI EN LITTÉRAL, ET C'EST VOULU. L'importer du driver
+    ferait comparer le module à lui-même — le patron exact qui a laissé
+    survivre deux mutants au premier tour de cette tâche. Ce qui est comparé est
+    l'EXIGENCE, pas la valeur courante du module.
+
+    LES DEUX PORTES SONT TENUES : la constante, et le défaut réellement offert
+    par `argparse`. Un driver qui garderait la constante juste et donnerait un
+    autre défaut à `--dossier` écrirait quand même au mauvais endroit."""
+    exige = Path("outputs/boucle_rendu")
+    assert run_boucle_rendu_demo.DOSSIER_SORTIE == exige, (
+        f"`DOSSIER_SORTIE` vaut {run_boucle_rendu_demo.DOSSIER_SORTIE} — la "
+        f"tâche exige {exige}")
+
+    actions = {action.dest: action for action in construire_parseur()._actions}
+    assert actions["dossier"].default == exige, (
+        f"le défaut de `--dossier` vaut {actions['dossier'].default} — la "
+        f"tâche exige {exige}, et c'est ce défaut qui décide où `main` écrit")
 
 
 @pytest.mark.parametrize("n_ticks", [0, -1])
@@ -1594,6 +1653,13 @@ def test_un_nombre_de_ticks_nul_ou_negatif_est_refuse(n_ticks, tmp_path):
 
     TROUVÉ PAR MUTATION, PAS PAR RELECTURE : la garde était écrite dans
     `rendre` et aucun verrou ne la tenait — un mutant qui la retirait passait
-    la suite en vert. Une garde que rien ne tient est une garde absente."""
-    with pytest.raises(ValueError, match="n_ticks"):
+    la suite en vert. Une garde que rien ne tient est une garde absente.
+
+    SUR LA CLASSE, PAS SUR LE TEXTE DU MESSAGE. Ce verrou s'est d'abord rabattu
+    sur `pytest.raises(ValueError, match="n_ticks")`, parce que la garde levait
+    un `ValueError` NU : la serrure tenait alors à une chaîne de caractères,
+    qu'une reformulation innocente du message aurait ouverte sans bruit. La
+    garde porte désormais une classe nommée, comme partout ailleurs dans ce
+    chantier, et le verrou porte sur elle."""
+    with pytest.raises(LongueurDeDemoInvalide):
         rendre(COTE_INTERPOLER, S_HALF_BANC, n_ticks, tmp_path)

@@ -133,6 +133,20 @@ NIVEAUX_GRIS: float = 255.0       # `A ∈ [0, 1]` → `[0, 255]`
 NIVEAU_ZLIB: int = 6
 
 
+class LongueurDeDemoInvalide(ValueError):
+    """Levée quand le nombre de ticks demandé ne peut produire aucune image.
+
+    Une CLASSE NOMMÉE et non un `ValueError` nu, comme partout dans ce chantier
+    (`CoteInconnu`, `MontageBoucleInvalide`, `EcranNonRepresentable`). Un
+    `ValueError` nu obligeait son verrou à se rabattre sur le TEXTE du message
+    pour le distinguer — une serrure tenue par une chaîne de caractères, qu'une
+    reformulation innocente du message ouvrirait sans bruit.
+
+    Hérite de `ValueError` pour le motif du §4-8 : ce qui hérite de
+    `RuntimeError` sur ce chemin risque d'être avalé par un `except
+    RuntimeError` d'appelant."""
+
+
 class EcranNonRepresentable(ValueError):
     """Levée quand un écran ne peut pas devenir une image sans mentir.
 
@@ -178,7 +192,15 @@ def quantifier_en_octets(ecran_s: np.ndarray, s_half: float) -> np.ndarray:
     négatif BOUCLE en un octet clair. L'écran INTERPOLÉ ne peut pas arriver
     négatif — `melanger` clampe `s ≥ 0` et compte —, mais l'écran EXACT est un
     gather DIRECT sur la pyramide (§2-1) : il ne passe par aucun clamp et porte
-    le `s` de la physique tel quel."""
+    le `s` de la physique tel quel.
+
+    ET LA MOITIÉ HAUTE DE CETTE BANDE EST INATTEIGNABLE — dit ici plutôt que
+    laissé croire à une branche vivante. Avec `s` FINI (garanti par le contrôle
+    ci-dessus) et `s_half > 0` (garanti par `albedo_ecran`), `exp(−s/s_half)`
+    est positif ou nul, donc `A <= 1,0` TOUJOURS : `float(albedo.max()) > 1.0`
+    ne peut pas se produire, et aucun verrou ne l'exerce. La condition est
+    gardée quand même, comme défense en profondeur si `albedo_ecran` changeait
+    de formule — mais elle n'est pas un chemin que ce code emprunte."""
     if not np.isfinite(ecran_s).all():
         raise EcranNonRepresentable(
             f"écran non fini : {int((~np.isfinite(ecran_s)).sum())} cellule(s) "
@@ -274,7 +296,7 @@ def rendre(cote: str, s_half: float, n_ticks: int, dossier: Path) -> int:
     AUCUNE LEVÉE N'EST RATTRAPÉE ICI (§4-7, §4-8) : un trou de couverture du
     gather est un fait de structure, il traverse."""
     if n_ticks <= 0:
-        raise ValueError(
+        raise LongueurDeDemoInvalide(
             f"rendre : n_ticks={n_ticks} <= 0. Une démo qui n'écrit aucune "
             "image imprimerait « 0 images écrites » et ressemblerait à un run "
             "propre — un silence, pas un résultat.")
