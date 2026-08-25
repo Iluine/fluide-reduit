@@ -10,8 +10,22 @@ ne mesure rien.
 (Depuis la racine du dépôt, et par `-m` : les imports du projet passent par
 `src.f1_gpu.…`, donc la racine doit être sur le chemin d'import.)
 
-AUCUNE MESURE, AUCUN CHRONOMÈTRE, AUCUN CHIFFRE DE COÛT. §A61 tient —
-l'instrument n'est pas qualifié, et §A63 ne l'a pas qualifié. La cadence de la
+AUCUNE MESURE, AUCUN CHIFFRE DE COÛT. §A61 tient — l'instrument n'est pas
+qualifié, et §A63 ne l'a pas qualifié.
+
+ET IL FAUT DIRE EXACTEMENT CE QUI EST TENU, PARCE QUE CETTE PHRASE A DIT
+« AUCUN CHRONOMÈTRE » ET QUE C'ÉTAIT FAUX. Ce driver importe
+`TransfertComptable`, l'instancie dans `construire_pyramide`, et chaque
+`frame()` de la démo passe par `_chronometrer`, qui appelle `time.perf_counter`
+(`src/f1_gpu/transferts.py:66-68`). UN CHRONOMÈTRE TOURNE PENDANT CETTE DÉMO,
+atteint par transitivité. Ce qui est vrai est plus étroit et se dit en deux
+temps : ce fichier ne LIT lui-même aucune horloge — mécanisé par
+`tests/test_boucle_rendu.py::test_la_source_du_driver_ne_porte_ni_filet_large_ni_assert_ni_horloge`
+— et AUCUN CHIFFRE N'EN SORT : rien ici ne lit, ne compare, n'imprime ni ne
+retourne `h2d_ms` / `d2h_ms`. C'est ce second point qui garde §A61, et non une
+absence de chronomètre qui serait imaginaire. Nommer le fait vaut mieux que le
+nier : une prose qui nie un chronomètre qui tourne réellement est plus
+dangereuse que le chronomètre. La cadence de la
 boucle est LOGIQUE (§1 de `claude/spec-boucle-rendu-2026-08-24.md`) : « 2:1 »
 est un RAPPORT DE COMPTE, deux écrans par `frame()`, pas deux écrans par
 33,3 ms. Aucune horloge murale n'entre ici, et le SEUL chiffre imprimé est le
@@ -39,8 +53,9 @@ champ flottant, et c'est
 qui tient la différence SUR LE SUBSTRAT DE LA DÉMO — et la restriction est
 load-bearing : les verrous de la tâche 1 tiennent déjà cette différence, mais
 tous sur un substrat SYNTHÉTIQUE bâti pour que `s` évolue franchement. Ce qui
-bouge d'une image à l'autre dans `outputs/`, c'est le balayage de la fovéa —
-une cellule fine par tick.
+bougera d'une image à l'autre en lançant la démo, c'est le balayage de la
+fovéa — une cellule fine par tick. (`outputs/` est ignoré par `.gitignore:5` :
+il n'existe pas dans l'arbre, c'est un dossier qu'un run produit.)
 
 POURQUOI LA CONVERSION `s` → IMAGE VIT ICI, ET NON DANS LA BOUCLE. Le §1 de la
 spec endossée la range dans le driver :

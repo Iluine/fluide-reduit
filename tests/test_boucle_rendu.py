@@ -200,6 +200,39 @@ def _asserts_et_filets_larges(arbre: ast.AST) -> tuple[list[int], list[tuple]]:
     return asserts, larges
 
 
+def _ecritures_visant(arbre: ast.AST, attributs: frozenset) -> list[tuple]:
+    """Les AFFECTATIONS dont la cible touche l'un des `attributs` nommés.
+
+    Rend `[(ligne, nom d'attribut)]`. Trois formes d'affectation sont
+    parcourues — `Assign`, `AugAssign`, `AnnAssign` —, et pour chacune la
+    CIBLE est balayée EN ENTIER, sans regarder le `ctx` du nœud `Attribute`.
+    C'est nécessaire et ce n'est pas de la prudence décorative : dans
+    `x._s_out[i] = v`, le `Subscript` porte `ctx=Store` mais l'`Attribute`
+    `_s_out` porte `ctx=Load`. Un contrôle qui ne retiendrait que les
+    `Attribute` en `Store` verrait `x._s_out = v` et manquerait la forme
+    INDEXÉE — celle qu'un vrai bug écrirait.
+
+    CE QUE CE CONTRÔLE NE VOIT PAS, dit ici plutôt que sous-entendu : une
+    mutation passant par une MÉTHODE (`x._s_out.fill(0)`, `np.copyto(...)`,
+    `x._s_out[:] = ...` via un alias local pris plus haut sous un autre nom).
+    Il tient la forme d'écriture directe, qui est celle que le §4-2 nomme ;
+    il n'est pas un contrôle de mutabilité général."""
+    trouves: list[tuple] = []
+    for noeud in ast.walk(arbre):
+        if isinstance(noeud, ast.Assign):
+            cibles = noeud.targets
+        elif isinstance(noeud, (ast.AugAssign, ast.AnnAssign)):
+            cibles = [noeud.target]
+        else:
+            continue
+        for cible in cibles:
+            for interne in ast.walk(cible):
+                if (isinstance(interne, ast.Attribute)
+                        and interne.attr in attributs):
+                    trouves.append((noeud.lineno, interne.attr))
+    return trouves
+
+
 def _espionner_melanger(monkeypatch) -> list:
     """Enregistre chaque `VueInterpolee` rendue par `TamponReadout.melanger`, et
     rend la liste des appels sous forme `(alpha, vue)`.
@@ -677,9 +710,9 @@ def test_le_trou_de_couverture_du_gather_n_est_pas_rattrape(cote):
         boucle.tick(COTE_PX_TROP_GRAND)
 
 
-def test_la_source_ne_porte_ni_except_large_ni_assert():
-    """§4-8 ET §4-9, MÉCANISÉS SUR LA SOURCE — et c'est le seul endroit où ils
-    peuvent l'être complètement.
+def test_la_source_du_module_ne_porte_ni_filet_large_ni_assert_ni_horloge():
+    """§4-8, §4-9 ET §1, MÉCANISÉS SUR LA SOURCE — et c'est le seul endroit où
+    ils peuvent l'être complètement.
 
     POURQUOI PAR L'AST PLUTÔT QUE PAR UN RUN. Un rattrapage ne se voit que sur
     le chemin qui lève, et un tick n'en emprunte que deux : un `except
@@ -701,7 +734,23 @@ def test_la_source_ne_porte_ni_except_large_ni_assert():
     `RuntimeError`, et que le gather lève `RuntimeError` pour ses trous — un
     `except RuntimeError` bien intentionné avale les cinq serrures d'un coup.
     C'est la leçon de la mutation du 03/08, trouvée par mutation et non par
-    relecture."""
+    relecture.
+
+    ET LE §1 — AUCUNE HORLOGE MURALE. L'en-tête du module PROMET « Aucune
+    horloge murale n'entre ici — ni `time`, ni `cuda.Event`, ni attente, ni
+    régulation », et la spec le grave au §1 : la cadence est LOGIQUE, « 2:1 »
+    est un rapport de COMPTE. Cette promesse n'était tenue par RIEN. La
+    machinerie existait pourtant dans ce fichier même, appliquée au SEUL
+    driver — alors que c'est le MODULE que le §1 vise en premier, et lui qui
+    portera un jour le chemin GPU, où `cuda.Event` est la tentation réelle. Une
+    garde promise dans un document est une garde absente (§4-5) : c'en était
+    une, à trois lignes de son propre outillage.
+
+    ET PAS D'INTERDICTION DE `cupy` ICI, contrairement au verrou du driver.
+    Elle serait FAUSSE pour ce module : la démo est CPU numpy, mais la boucle
+    doit pouvoir tourner sous cupy — elle ne connaît aucun backend, elle
+    transmet celui de la pyramide. Recopier l'assertion du driver aurait
+    interdit au module ce pour quoi il est écrit."""
     arbre = ast.parse(Path(boucle_rendu.__file__).read_text(encoding="utf-8"))
     asserts, larges = _asserts_et_filets_larges(arbre)
 
@@ -717,6 +766,57 @@ def test_la_source_ne_porte_ni_except_large_ni_assert():
         "et le gather lève `RuntimeError` pour ses trous de couverture : un "
         "tel `except` les avale toutes en silence et les garde redeviennent "
         "des promesses (§4-8). Rattraper par CLASSE NOMMÉE, motif à côté")
+
+    identifiants = _identifiants(Path(boucle_rendu.__file__))
+    horloges = sorted((identifiants & MODULES_HORLOGE)
+                      | (identifiants & ATTRIBUTS_HORLOGE))
+    assert not horloges, (
+        f"horloge dans `boucle_rendu.py` : {horloges}. L'en-tête du module "
+        "promet « Aucune horloge murale n'entre ici — ni `time`, ni "
+        "`cuda.Event`, ni attente, ni régulation », et le §1 de la spec le "
+        "grave : la cadence est LOGIQUE, « 2:1 » est un rapport de COMPTE et "
+        "non deux écrans par 33,3 ms. §A61 en interdit l'usage tant que "
+        "l'instrument n'est pas qualifié")
+
+
+def test_la_boucle_n_ecrit_jamais_dans_le_tampon_de_readout():
+    """§4-2, MÉCANISÉ — LE SEUL §4-x QUE LA SPEC FASSE GARDE ET QUE RIEN NE
+    TENAIT.
+
+    `claude/spec-boucle-rendu-2026-08-24.md:167-168` : « La boucle n'écrit
+    **jamais** elle-même dans le tampon de readout — c'est `frame()`, par
+    l'applicateur, qui le fait. La boucle LIT. »
+
+    POURQUOI AUCUN VERROU DE COMPORTEMENT NE PEUT LE TENIR, et c'est ce qui
+    rend le contrôle de SOURCE nécessaire ici comme il l'est pour les filets
+    larges. Une écriture dans `applicateur.tampon._s_prev` AVANT le `melanger`
+    du tick est invisible :
+      - au verrou (a) — `_etat_en_octets` photographie `centre_fin`,
+        `fenetres`, `references`, `monde0` et les compteurs de transfert ; le
+        TAMPON DE READOUT n'y est pas, et il n'a rien à y faire : ce n'est pas
+        de l'état de physique ;
+      - au verrou (e) — son témoin `_temoin_du_noyau` relit `etat_precedent`
+        depuis LE MÊME tampon, donc depuis la corruption elle-même, et
+        concorde avec elle. C'est le patron « comparer deux fois le résultat du
+        même appel », par un chemin plus long.
+    Le risque réel est nul aujourd'hui — la boucle ne nomme jamais ces
+    attributs — mais §4-5 est explicite : une garde promise dans un document
+    est une garde absente, et celle-ci était promise.
+
+    LA PORTÉE DU CONTRÔLE EST CELLE DE `_ecritures_visant`, dont la docstring
+    dit ce qu'il ne voit pas : une mutation passant par une méthode
+    (`.fill()`, `np.copyto`) lui échappe. Il tient la forme d'écriture DIRECTE,
+    qui est celle que le §4-2 nomme."""
+    ecritures = _ecritures_visant(
+        ast.parse(Path(boucle_rendu.__file__).read_text(encoding="utf-8")),
+        ATTRIBUTS_TAMPON_READOUT)
+    assert not ecritures, (
+        f"écriture visant le tampon de readout dans `boucle_rendu.py` : "
+        f"{ecritures}. Le §4-2 grave que la boucle LIT et n'écrit JAMAIS "
+        "elle-même dans ce tampon — c'est `frame()` qui le fait, par "
+        "l'applicateur. Ni le verrou (a) ni le verrou (e) ne verraient cette "
+        "écriture : le tampon n'est pas dans la photo d'état, et le témoin de "
+        "(e) relit le tampon corrompu et concorde avec lui")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1071,11 +1171,33 @@ CHUNKS_AUTORISES = ("IHDR", "IDAT", "IEND")
 # mutation sur ce fichier même, pas supposé.
 FILTRE_AUCUN_PNG = 0
 
-# Ce dont l'absence rend le driver incapable de chronométrer quoi que ce soit.
+# CE QUE CES DEUX JEUX TIENNENT, ET CE QU'ILS NE TIENNENT PAS — la prose
+# d'origine disait « ce dont l'absence rend le driver INCAPABLE DE CHRONOMÉTRER
+# QUOI QUE CE SOIT », et c'était FAUX. Le driver importe `TransfertComptable`,
+# l'instancie dans `construire_pyramide`, et chaque `frame()` de la démo passe
+# par `_chronometrer`, qui appelle `time.perf_counter`
+# (`src/f1_gpu/transferts.py:66-68`). UN CHRONOMÈTRE TOURNE PENDANT LA DÉMO.
+#
+# Ce qui est tenu, et c'est tout : ni le driver ni `boucle_rendu.py` ne LISENT
+# eux-mêmes une horloge. Ce qui garde §A61 est ailleurs et il faut le dire —
+# AUCUN CHIFFRE N'EN SORT : rien ne lit, ne compare, n'imprime ni ne retourne
+# `h2d_ms` / `d2h_ms`, et le seul `print` du driver est verrouillé par égalité
+# EXACTE. Le fait est NOMMÉ plutôt que nié : une prose qui nie un chronomètre
+# qui tourne réellement est plus dangereuse que le chronomètre.
+#
+# `Event` couvre le `cuda.Event` que le §1 de la spec nomme explicitement, et
+# `sleep` / `synchronize` l'attente et la régulation qu'il nomme aussi : ces
+# trois-là manquaient, et c'était un trou de couverture pour les DEUX sources.
 MODULES_HORLOGE = frozenset({"time", "datetime", "timeit", "calendar"})
 ATTRIBUTS_HORLOGE = frozenset({
     "perf_counter", "perf_counter_ns", "monotonic", "monotonic_ns", "time_ns",
-    "process_time", "now", "utcnow", "today"})
+    "process_time", "now", "utcnow", "today",
+    "Event", "sleep", "synchronize"})
+
+# §4-2 — LE TAMPON DE READOUT NE S'ÉCRIT PAS DEPUIS LA BOUCLE. Les deux noms
+# privés du `TamponReadout` : `_s_prev` est ce que `capturer` remplit,
+# `_s_out` ce que `melanger` produit et que `VueInterpolee.fenetres` ALIASE.
+ATTRIBUTS_TAMPON_READOUT = frozenset({"_s_prev", "_s_out"})
 
 
 def _chunks_png(octets: bytes) -> list[tuple[str, bytes]]:
@@ -1338,8 +1460,12 @@ def test_la_quantification_est_celle_d_albedo_ecran_a_255_niveaux():
     ecran = np.linspace(0.0, 0.5, 16, dtype=np.float32).reshape(4, 4)
     octets = quantifier_en_octets(ecran, S_HALF_BANC)
     attendu = np.rint(albedo_ecran(ecran, S_HALF_BANC) * NIVEAUX_GRIS)
-    assert octets.dtype == np.uint8
-    assert np.array_equal(octets, attendu.astype(np.uint8))
+    assert _memes_octets(octets, attendu.astype(np.uint8)), (
+        "la quantification n'est pas `rint(albedo_ecran(...) · 255)` en "
+        "`uint8`. `_memes_octets` et non `np.array_equal` : la ligne 113 "
+        "de ce fichier grave « Ni `allclose` ni `array_equal` », et celle-ci "
+        "en était la SEULE entorse — introduite en tâche 3 dans un fichier que "
+        "la tâche 2 avait laissé à zéro")
 
 
 # ─── LE PNG — ÉCRIT À LA MAIN, RELU À LA MAIN ────────────────────────────────
@@ -1567,7 +1693,10 @@ def test_les_deux_ecrans_d_un_tick_ne_sont_pas_le_meme_champ():
     LE FAIT QUI REND CE VERROU NÉCESSAIRE, ET IL A ÉTÉ MESURÉ. Sur le substrat
     jetable de cette démo, un pas de physique déplace `s` de MOINS d'un niveau
     de gris : les deux images d'un tick, une fois quantifiées en 8 bits, sont
-    BIT-IDENTIQUES — c'est vérifiable en ouvrant les PNG de `outputs/`. Or
+    BIT-IDENTIQUES — vérifiable en LANÇANT la démo et en ouvrant les PNG
+    qu'elle écrira (`outputs/` est ignoré par `.gitignore:5` et n'existe pas
+    dans l'arbre : ce n'est pas un artefact qu'on va relire, c'est un dossier
+    qu'un run produit). Or
     « tout écran interpolé devient identique à l'exact » est exactement le
     symptôme que le §3 de la spec décrit pour l'ORDRE DÉGÉNÉRÉ (`frame()` puis
     `TamponReadout.capturer`), qui ne lève PAS et laisse `clamps == 0`. Deux

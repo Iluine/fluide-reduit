@@ -28,7 +28,16 @@ n'est pas écrit. La boucle est PARAMÉTRABLE parce que le côté n'est pas
 choisi — c'est une garde, pas une souplesse — et `cote` n'a donc AUCUNE valeur
 par défaut : l'absence de défaut EST le refus de trancher §A62.
 
-AUCUNE MESURE ICI, aucun chronomètre, aucun chiffre de `I` : §A61 tient.
+AUCUNE MESURE ICI, aucun chiffre de `I` : §A61 tient. La phrase a dit « aucun
+chronomètre » et c'était plus large que ce qui est tenu : `tick` appelle
+`pyramide.frame()`, dont chaque transfert passe par `_chronometrer` et
+`time.perf_counter` (`src/f1_gpu/transferts.py:66-68`). Un chronomètre tourne
+donc SOUS ce module, atteint par transitivité. Ce qui est tenu, et mécanisé,
+est plus étroit : ce fichier ne LIT lui-même aucune horloge — ni `time`, ni
+`cuda.Event`, ni attente, ni régulation, contrôlé sur la SOURCE par
+`tests/test_boucle_rendu.py::test_la_source_du_module_ne_porte_ni_filet_large_ni_assert_ni_horloge`
+— et aucun chiffre de durée ne remonte d'ici : ni `tick`, ni `CoupleEcrans`, ni
+`CompteRenduTick` n'en portent un. C'est ce second point qui garde §A61.
 """
 from __future__ import annotations
 
