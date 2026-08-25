@@ -1628,9 +1628,21 @@ def test_le_dossier_de_sortie_est_celui_que_la_tache_exige():
     survivre deux mutants au premier tour de cette tâche. Ce qui est comparé est
     l'EXIGENCE, pas la valeur courante du module.
 
-    LES DEUX PORTES SONT TENUES : la constante, et le défaut réellement offert
-    par `argparse`. Un driver qui garderait la constante juste et donnerait un
-    autre défaut à `--dossier` écrirait quand même au mauvais endroit."""
+    LES DEUX PORTES SONT TENUES : la constante, et le défaut réellement
+    ENREGISTRÉ par `argparse`. Un driver qui garderait la constante juste et
+    donnerait un autre défaut à `--dossier` déclarerait quand même le mauvais
+    emplacement, et la seconde assertion est celle qui mord.
+
+    CE QUE CE VERROU NE TIENT PAS, NOMMÉ PLUTÔT QUE SOUS-ENTENDU. Sa seconde
+    assertion a d'abord dit « c'est ce défaut qui décide où `main` écrit » —
+    d'un cran plus large que ce qu'elle attrape. Elle constate le défaut
+    ENREGISTRÉ dans le parseur ; elle ne constate PAS le câblage
+    `main` → `args.dossier` → `rendre`. Un driver qui passerait `DOSSIER_SORTIE`
+    en dur à `rendre` en ignorant `args.dossier` survivrait à ce verrou, parce
+    que tous les verrous d'emplacement de ce fichier appellent `rendre`
+    directement. Le trou est nommé et NON comblé : le renforcer demanderait de
+    faire écrire `main` hors de `tmp_path`, ou d'espionner `rendre`, et ni l'un
+    ni l'autre n'est demandé ici."""
     exige = Path("outputs/boucle_rendu")
     assert run_boucle_rendu_demo.DOSSIER_SORTIE == exige, (
         f"`DOSSIER_SORTIE` vaut {run_boucle_rendu_demo.DOSSIER_SORTIE} — la "
@@ -1639,7 +1651,9 @@ def test_le_dossier_de_sortie_est_celui_que_la_tache_exige():
     actions = {action.dest: action for action in construire_parseur()._actions}
     assert actions["dossier"].default == exige, (
         f"le défaut de `--dossier` vaut {actions['dossier'].default} — la "
-        f"tâche exige {exige}, et c'est ce défaut qui décide où `main` écrit")
+        f"tâche exige {exige}. C'est l'emplacement que le driver DÉCLARE quand "
+        "l'appelant n'en donne aucun ; que `main` l'emprunte réellement n'est "
+        "pas ce que ce verrou constate")
 
 
 @pytest.mark.parametrize("n_ticks", [0, -1])

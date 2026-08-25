@@ -36,8 +36,11 @@ décrit pour l'ORDRE DÉGÉNÉRÉ du montage — qui ne lève pas et laisse
 `clamps == 0`. Deux causes, un seul symptôme à l'œil ; ce qui les sépare est le
 champ flottant, et c'est
 `tests/test_boucle_rendu.py::test_les_deux_ecrans_d_un_tick_ne_sont_pas_le_meme_champ`
-qui tient la différence. Ce qui bouge d'une image à l'autre dans `outputs/`,
-c'est le balayage de la fovéa — une cellule fine par tick.
+qui tient la différence SUR LE SUBSTRAT DE LA DÉMO — et la restriction est
+load-bearing : les verrous de la tâche 1 tiennent déjà cette différence, mais
+tous sur un substrat SYNTHÉTIQUE bâti pour que `s` évolue franchement. Ce qui
+bouge d'une image à l'autre dans `outputs/`, c'est le balayage de la fovéa —
+une cellule fine par tick.
 
 POURQUOI LA CONVERSION `s` → IMAGE VIT ICI, ET NON DANS LA BOUCLE. Le §1 de la
 spec endossée la range dans le driver :
