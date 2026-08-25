@@ -1234,7 +1234,8 @@ def _identifiants(source: Path) -> set[str]:
     """Tous les noms et attributs qui apparaissent dans le CODE d'un fichier.
 
     PAR L'AST, PAS PAR UN `grep`, et pour la raison que
-    `test_la_source_ne_porte_ni_except_large_ni_assert` a déjà écrite : les
+    `test_la_source_du_module_ne_porte_ni_filet_large_ni_assert_ni_horloge` a
+    déjà écrite : les
     docstrings de ce dépôt NOMMENT ce qu'elles interdisent. L'en-tête de
     `boucle_rendu.py` écrit `albedo_ecran` en toutes lettres pour dire qu'il ne
     l'importe pas — un motif textuel en ferait un usage."""
@@ -1642,12 +1643,16 @@ def test_la_source_du_driver_ne_porte_ni_filet_large_ni_assert_ni_horloge():
     §4-9 / §A43 — aucun `assert` : il disparaît sous `python -O`, donc une
     garde qui en dépend est absente exactement dans le régime où l'on mesurera.
 
-    §1 ET §A61 — AUCUNE HORLOGE. « 2:1 » est un RAPPORT DE COMPTE : deux écrans
-    par `frame()`, pas deux écrans par 33,3 ms. Aucune horloge murale n'entre
-    dans ce chantier, et une date lue serait de surcroît la porte par laquelle
-    un horodatage entrerait dans un PNG. Ce contrôle porte sur les MODULES
-    importés ET sur les attributs appelés : `import time` seul ne dit rien de
-    `datetime.datetime.now()`.
+    §1 ET §A61 — AUCUNE HORLOGE LUE ICI. « 2:1 » est un RAPPORT DE COMPTE : deux
+    écrans par `frame()`, pas deux écrans par 33,3 ms. Cette phrase a dit
+    « aucune horloge murale n'entre DANS CE CHANTIER » et c'était plus large que
+    ce que ce contrôle tient : un chronomètre y tourne par transitivité
+    (`TransfertComptable._chronometrer`, `src/f1_gpu/transferts.py:66-68`), et ce
+    qui garde §A61 est qu'aucun chiffre n'en sorte. Ce que ce verrou tient est
+    plus étroit et suffit : le driver ne LIT lui-même aucune horloge. Et une
+    date lue serait de surcroît la porte par laquelle un horodatage entrerait
+    dans un PNG. Ce contrôle porte sur les MODULES importés ET sur les attributs
+    appelés : `import time` seul ne dit rien de `datetime.datetime.now()`.
 
     Et aucun `cupy` : la démo est CPU numpy, il n'y a pas de GPU à ce banc."""
     source = Path(run_boucle_rendu_demo.__file__)
