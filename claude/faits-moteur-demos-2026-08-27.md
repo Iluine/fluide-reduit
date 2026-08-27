@@ -65,17 +65,36 @@ GELÉ produit la même rugosité d'eau, 0,0463 contre 0,0538 au tick 120). Le
 peigne est donc du SOLVEUR, sur pente faible et long horizon — **latent depuis
 la v3**, où il n'avait que moins de temps pour se développer.
 
-MESURÉ — période. Sur les pixels du rendu : **période 8 px = 2 cellules fines
-exactement**, harmonique à 16. C'est la fréquence maximale que la grille du
-solveur peut porter.
+MESURÉ — verrouillage sur la grille. Les dents sont espacées de MULTIPLES
+EXACTS d'une cellule : sur 617 espacements intra-faisceau relevés sur six images
+livrées (ticks 40 à 119), l'histogramme pique à 4, 8 et 12-13 px, soit 1, 2 et
+3 cellules de monde à 4 px par cellule. **La structure est verrouillée sur la
+grille du solveur** — c'est le « contraigneur invisible » du fait 4, mesuré.
 
-ATTRIBUÉ, NON ÉTABLI — mécanisme. La période 2 est la signature d'un
-découplage PAIR/IMPAIR au seuil de séchage : sous une lame mince, le flux entre
-cellules quasi sèches est coupé et des rangées alternées restent
-mouillées/sèches. Cohérent avec tout ce qui précède, mais **aucune expérience
-contrôlée ne l'a isolé** : la statistique d'alternance mesurée sur le champ
-plafonne à 0,54 dans la zone striée là où un mode pair/impair PUR donnerait
-1,00. Le mécanisme est donc une hypothèse de travail, pas un fait.
+⚠ CORRECTION DU 27/08, MÊME JOUR — une clause de ce fichier a été retirée.
+La première rédaction portait, sous le statut MESURÉ : « période 8 px = 2
+cellules fines exactement, harmonique à 16 », relevé sur la vidéo. **Ce chiffre
+n'est pas reproductible sur les images livrées** : sur le même corpus de 617
+espacements, la médiane vaut 2,25 cellules et le MODE vaut 1 cellule ; la part
+exactement à 2 cellules est de 17,7 %, celle à 3 cellules de 25,8 %. Les deux
+mesures portent peut-être sur des faisceaux ou des images différents ; en
+l'état, **la période dominante n'est pas établie**, et une clause au statut
+MESURÉ ne pouvait pas rester adossée à un chiffre que ce dépôt ne retrouve pas.
+
+ATTRIBUÉ ET DÉFAVORISÉ — mécanisme. Un découplage PAIR/IMPAIR au seuil de
+séchage impose une période de 2 cellules PARTOUT ; la mesure donne un mélange
+de 1, 2 et 3 cellules, et la statistique d'alternance plafonne à 0,54 dans la
+zone striée là où un mode pur donnerait 1,00. L'hypothèse n'est donc pas
+seulement non établie : **elle est en tension avec l'espacement mesuré**. Ce
+qui reste solide est le verrouillage sur la grille, qui ne dépend d'aucun mode
+particulier.
+
+PARTIEL — trace fossile. Sur l'image 0102 (tick 51), 85 des 150 dents détectées
+sont dans le SEC, en avant du front, et 32 % de celles-là portent une cellule
+creusée au panneau du lit. Or `_exner_step` n'agit que sur les cellules
+MOUILLÉES : ces rangées ont donc été mouillées puis se sont asséchées, laissant
+une cicatrice. Lecture cohérente — des doigts d'eau qui progressent le long de
+rangées privilégiées puis se retirent — mais 32 % n'est pas une démonstration.
 
 MESURÉ — et c'est le fait de moteur. **Le lit est plus strié que l'eau qui le
 strie** : taux d'alternance 0,232 dans l'eau du témoin à lit gelé, 0,536 dans
